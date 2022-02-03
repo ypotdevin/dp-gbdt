@@ -12,14 +12,12 @@ public:
     virtual double compute_score(std::vector<double> &y, std::vector<double> y_pred) = 0;
 };
 
-
 // uses Least Squares as cost/loss function
 class Regression : public Task
 {
 public:
-
     virtual std::vector<double> compute_gradients(std::vector<double> &y, std::vector<double> &y_pred);
-    
+
     // mean
     virtual double compute_init_score(std::vector<double> &y);
 
@@ -31,16 +29,14 @@ public:
 class BinaryClassification : public Task
 {
 public:
-
     // expit
     virtual std::vector<double> compute_gradients(std::vector<double> &y, std::vector<double> &y_pred);
-    
+
     // logit
     virtual double compute_init_score(std::vector<double> &y);
 
     // misclassification rate
     virtual double compute_score(std::vector<double> &y, std::vector<double> y_pred);
 };
-
 
 #endif /* LOSS_FUNCTION_H */
