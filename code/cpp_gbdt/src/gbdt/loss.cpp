@@ -203,7 +203,7 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
  * @param U The upper bound of the squared errors terms in s.
  * @return double The local sensitivity of the root mean squared error function.
  */
-double local_sensitivity(const double s, const unsigned int n, const double U)
+double local_sensitivity(const double s, const std::size_t n, const double U)
 {
     if (s <= 0.0)
     {
