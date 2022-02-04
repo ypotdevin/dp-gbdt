@@ -5,6 +5,7 @@
 #include "dp_ensemble.h"
 #include "logging.h"
 #include "spdlog/spdlog.h"
+#include "loss.h"
 
 extern std::ofstream verification_logfile;
 extern size_t cv_fold_index;
@@ -45,6 +46,8 @@ void DPEnsemble::train(DataSet *dataset)
     // compute initial prediction
     this->init_score = params->task->compute_init_score(dataset->y);
     LOG_DEBUG("Training initialized with score: {1}", init_score);
+
+    auto prev_loss = std::numeric_limits<double>::infinity();
 
     // each tree gets the full pb, as they train on distinct data
     TreeParams tree_params;
@@ -185,8 +188,34 @@ void DPEnsemble::train(DataSet *dataset)
             tree.fit();
             trees.push_back(tree);
 
-            // remove rows
-            *dataset = dataset->remove_rows(tree_indices);
+            /* We insert the tree-rejection here since it is easier to manage
+             * the consumed / not consumed training sample here, instead of
+             * after the case distinction on <params->use_dp>.
+             * Note that this implies the optimization is only available if
+             * using differential privacy -- not when DP is turned off (keep
+             * that in mind when comparing plots of these settings.
+             */
+            // Is it really OK to predict on the whole dataset? What are the
+            // privacy budget implications?
+            auto raw_predictions = predict(dataset->X);
+            std::vector<double> differences = std::vector<double>(dataset->length);
+            std::transform(raw_predictions.begin(), raw_predictions.end(), dataset->y.begin(), differences.begin(), std::minus<double>());
+            auto current_loss = dp_rms_cauchy(differences, params->optimization_privacy_budget, params->error_upper_bound);
+            LOG_INFO("#loss_evolution# --- fitting decision tree {1}; previous loss: {2}; current loss: {3}", tree_index, prev_loss, current_loss);
+
+            if (current_loss >= 0.0 && current_loss < prev_loss)
+            //if (true)
+            {
+                prev_loss = current_loss;
+                // remove rows, since we keep the tree
+                *dataset = dataset->remove_rows(tree_indices);
+            }
+            else
+            {
+                // TODO: Discuss if it is allowed not to remove the tree_indices
+                // from the dataset (does it have hidden privacy costs?).
+                trees.pop_back();
+            }
         }
         else
         { // build a non-dp tree

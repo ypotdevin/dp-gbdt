@@ -10,6 +10,7 @@ struct ModelParams {
     int nb_trees;
     double learning_rate = 0.1;
     double privacy_budget = 1;
+    double optimization_privacy_budget = 1.0;
     std::shared_ptr<Task> task;
     int max_depth = 6;
     int min_samples_split = 2;
@@ -21,6 +22,7 @@ struct ModelParams {
     bool use_decay = false;
     double l2_threshold = 1.0;
     double l2_lambda = 0.1;
+    double error_upper_bound = 10.0;
     std::vector<int> cat_idx;
     std::vector<int> num_idx;
 };
