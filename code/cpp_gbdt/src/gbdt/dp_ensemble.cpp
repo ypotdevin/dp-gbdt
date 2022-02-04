@@ -204,7 +204,6 @@ void DPEnsemble::train(DataSet *dataset)
             LOG_INFO("#loss_evolution# --- fitting decision tree {1}; previous loss: {2}; current loss: {3}", tree_index, prev_loss, current_loss);
 
             if (current_loss >= 0.0 && current_loss < prev_loss)
-            //if (true)
             {
                 prev_loss = current_loss;
                 // remove rows, since we keep the tree
