@@ -6,6 +6,9 @@
 #include <algorithm>
 #include <iostream>
 #include "constant_time.h"
+#include <tuple>
+#include <exception>
+#include <sstream>
 
 extern bool VERIFICATION_MODE;
 
@@ -107,4 +110,59 @@ double BinaryClassification::compute_score(std::vector<double> &y, std::vector<d
     }
     double true_preds = std::count(correct_preds.begin(), correct_preds.end(), true);
     return true_preds / y.size();
+}
+
+/**
+ * @param errors The precomputed errors (to avoid having two arguments which
+ * then have to be subtracted.)
+ * @param beta The beta defining the beta-smooth sensitivity.
+ * @param U The upper bound on the errors (not squared errors).
+ * @return std::tuple<double, double> The beta-smooth sensitivity and the result
+ * of the root mean squared error function, i.e. the function
+ *
+ *     e_1, ..., e_n |-> sqrt((e_1 ** 2 + ... + e_n ** 2) / n).
+ */
+std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, const double beta, double U)
+{
+    // TODO: Is this a side channel vulnerability?
+    if (U < errors.back())
+    {
+        std::stringstream message;
+        message << "max = " << errors.back() << " is larger than U = " << U << ".\n";
+        throw std::invalid_argument(message.str());
+    }
+
+    transform(errors.begin(), errors.end(), errors.begin(), [](double x)
+              { return x * x; });
+    U = U * U;
+    auto sqe_sum = std::accumulate(errors.begin(), errors.end(), 0.0);
+    auto n = errors.size();
+    auto rmse = std::sqrt(sqe_sum / n);
+
+    auto smooth_sens = local_sensitivity(sqe_sum, n, U) * std::exp(1.0); // for k = 0
+    auto prefix_sum = sqe_sum, suffix_sum = sqe_sum;
+    for (unsigned int k = 1; k <= n; k++) // traversing the local sensitivities
+    {
+        prefix_sum = prefix_sum - errors.at(n - k);
+        suffix_sum = suffix_sum - errors.at(k - 1) + U;
+        auto prefix_local_sens = local_sensitivity(prefix_sum, n, U);
+        auto suffix_local_sens = local_sensitivity(suffix_sum, n, U);
+        auto local_sens = std::max(prefix_local_sens, suffix_local_sens);
+        smooth_sens = std::max(smooth_sens, local_sens * std::exp(-beta * k));
+    }
+    return std::make_tuple(smooth_sens, rmse);
+}
+
+/**
+ * @param s The sum of the squared errors.
+ * @param n The number of squared error (terms) in s.
+ * @param U The upper bound of the squared errors terms in s.
+ * @return double The local sensitivity of the root mean squared error function.
+ */
+double local_sensitivity(const double s, const std::size_t n, const double U)
+{
+    auto ls_a = std::sqrt(U / n);
+    auto ls_b = std::sqrt(s / n) * std::abs(std::sqrt(1 + U / s) - 1.0);
+    auto ret = constant_time::select(s <= 0.0, ls_a, ls_b);
+    return ret;
 }

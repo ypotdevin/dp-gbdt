@@ -6,11 +6,12 @@
 #include "utils.h"
 #include "loss.h"
 
-
-struct ModelParams {
+struct ModelParams
+{
     int nb_trees;
     double learning_rate = 0.1;
     double privacy_budget = 1.0;
+    double optimization_privacy_budget = 1.0;
     std::shared_ptr<Task> task;
     int max_depth = 6;
     int min_samples_split = 2;
@@ -21,11 +22,12 @@ struct ModelParams {
     unsigned use_decay = FALSE;
     double l2_threshold = 1.0;
     double l2_lambda = 0.1;
+    double error_upper_bound = 10.0;
     int verbosity = -1;
     std::vector<int> cat_idx;
     std::vector<int> num_idx;
     unsigned use_grid = FALSE;
-    std::tuple<double,double> grid_borders;
+    std::tuple<double, double> grid_borders;
     double grid_step_size;
     std::vector<std::vector<double>> cat_values;
     unsigned scale_X = FALSE;
@@ -34,11 +36,11 @@ struct ModelParams {
 };
 
 // each tree has these additional parameters
-struct TreeParams {
+struct TreeParams
+{
     double delta_g;
     double delta_v;
     double tree_privacy_budget;
 };
-
 
 #endif /* PARAMETERS_H */
