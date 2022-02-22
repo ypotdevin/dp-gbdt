@@ -1,4 +1,3 @@
-#include "loss.h"
 #include <set>
 #include <map>
 #include <cmath>
@@ -9,6 +8,8 @@
 #include <tuple>
 #include <exception>
 #include <sstream>
+#include "loss.h"
+#include "utils.h"
 
 extern bool VERIFICATION_MODE;
 
@@ -124,16 +125,10 @@ double BinaryClassification::compute_score(std::vector<double> &y, std::vector<d
  */
 std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, const double beta, double U)
 {
-    // TODO: Is this a side channel vulnerability?
-    if (U < errors.back())
-    {
-        std::stringstream message;
-        message << "max = " << errors.back() << " is larger than U = " << U << ".\n";
-        throw std::invalid_argument(message.str());
-    }
-
-    transform(errors.begin(), errors.end(), errors.begin(), [](double x)
-              { return x * x; });
+    // If U is chosen well, i.e. a true upper bound on the errors, the clipping
+    // will have no effect.
+    transform(errors.begin(), errors.end(), errors.begin(), [U](double x)
+              { x = clamp(x, -U, U); return x * x; });
     U = U * U;
     auto sqe_sum = std::accumulate(errors.begin(), errors.end(), 0.0);
     auto n = errors.size();

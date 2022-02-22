@@ -1,4 +1,3 @@
-#include "loss.h"
 #include <set>
 #include <map>
 #include <cmath>
@@ -8,6 +7,10 @@
 #include <tuple>
 #include <exception>
 #include <sstream>
+#include "logging.h"
+#include "spdlog/spdlog.h"
+#include "loss.h"
+#include "utils.h"
 
 extern bool VERIFICATION_MODE;
 
@@ -171,9 +174,9 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
 {
     if (U < errors.back())
     {
-        std::stringstream message;
-        message << "max = " << errors.back() << " is larger than U = " << U << ".\n";
-        throw std::invalid_argument(message.str());
+        LOG_INFO("max = {1} is larger than U = {2}. The errors will be clipped.", errors.back(), U);
+        transform(errors.begin(), errors.end(), errors.begin(), [U](double x)
+              { return clamp(x, -U, U); });
     }
 
     transform(errors.begin(), errors.end(), errors.begin(), [](double x)
