@@ -114,6 +114,39 @@ double BinaryClassification::compute_score(std::vector<double> &y, std::vector<d
 }
 
 /**
+ * @brief Call the other dp_rms_cauchy function with a std::mt19937 rng, seeded
+ * with a std::random_device.
+ */
+double dp_rms_cauchy(std::vector<double> errors, const double epsilon, const double U)
+{
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    return dp_rms_cauchy(errors, epsilon, U, rng);
+}
+
+/**
+ * @param errors The errors (differences) to apply the root mean squared error
+ * function on.
+ * @param epsilon The privacy budget.
+ * @param U The upper bound on the error terms in errors.
+ * @param rng The (pseudo) random number generator to use when drawing from the
+ * Cauchy distribution.
+ * @return double The epsilon-differentially private rMSE estimate of errors.
+ */
+double dp_rms_cauchy(std::vector<double> errors, const double epsilon, const double U, std::mt19937 &rng)
+{
+    std::sort(errors.begin(), errors.end());
+    double gamma = 2.0;
+    double beta = epsilon / 2 * (gamma + 1.0);
+    double sens, rmse;
+    std::tie(sens, rmse) = rMS_smooth_sensitivity(errors, beta, U);
+    std::cauchy_distribution<double> distribution(0.0, 1.0);
+    auto noise = distribution(rng);
+    auto dp_rmse = rmse + 2 * (gamma + 1) * sens * noise / epsilon;
+    return dp_rmse;
+}
+
+/**
  * @param errors The precomputed errors (to avoid having two arguments which
  * then have to be subtracted.)
  * @param beta The beta defining the beta-smooth sensitivity.
