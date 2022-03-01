@@ -151,7 +151,7 @@ double dp_rms_cauchy(std::vector<double> errors, const double epsilon, const dou
 {
     std::sort(errors.begin(), errors.end());
     double gamma = 2.0;
-    double beta = epsilon / 2 * (gamma + 1.0);
+    double beta = epsilon / (2 * (gamma + 1.0));
     double sens, rmse;
     std::tie(sens, rmse) = rMS_smooth_sensitivity(errors, beta, U);
     std::cauchy_distribution<double> distribution(0.0, 1.0);
