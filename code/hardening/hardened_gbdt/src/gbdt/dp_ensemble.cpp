@@ -24,7 +24,7 @@ DPEnsemble::DPEnsemble(ModelParams *parameters) : params(parameters)
     }
 
     // prepare the linspace grid
-    if (is_true(params->use_grid))
+    if (utils::is_true(params->use_grid))
     {
         double grid_range = std::get<1>(params->grid_borders) - std::get<0>(params->grid_borders);
         double step_size = params->grid_step_size;
@@ -77,7 +77,7 @@ void DPEnsemble::train(DataSet *dataset)
         tree_params.delta_g = 3 * pow(params->l2_threshold, 2);
 
         // sensitivity for leaves
-        if (is_true(params->gradient_filtering) && !is_true(params->leaf_clipping))
+        if (utils::is_true(params->gradient_filtering) && !utils::is_true(params->leaf_clipping))
         {
             // you can only "turn off" leaf clipping if GDF is enabled!
             tree_params.delta_v = params->l2_threshold / (1 + params->l2_lambda);
@@ -90,7 +90,7 @@ void DPEnsemble::train(DataSet *dataset)
 
         // determine number of rows
         int number_of_rows = 0;
-        if (is_true(params->balance_partition))
+        if (utils::is_true(params->balance_partition))
         {
             // num_unused_rows / num_remaining_trees
             number_of_rows = dataset->length / (params->nb_trees - tree_index);
@@ -111,7 +111,7 @@ void DPEnsemble::train(DataSet *dataset)
         vector<int> tree_indices(dataset->length);
 
         // gradient-based data filtering
-        if (is_true(params->gradient_filtering))
+        if (utils::is_true(params->gradient_filtering))
         {
 
             // divide samples into rejected/remaining gradients
@@ -185,7 +185,7 @@ void DPEnsemble::train(DataSet *dataset)
                 bool use_row = constant_time::logical_and(permutation[i] != -1, taken_rows < num_additional_samples_required);
                 taken_rows += (int)use_row;
                 // clip gradient if this row is used
-                double clipped_gradient = clamp(dataset->gradients[i], -params->l2_threshold, params->l2_threshold);
+                double clipped_gradient = utils::clamp(dataset->gradients[i], -params->l2_threshold, params->l2_threshold);
                 dataset->gradients[i] = constant_time::select(use_row, clipped_gradient, dataset->gradients[i]);
                 // touch the entire tree_indices vector, to hide which one is added
                 for (int j = 0; j < dataset->length; j++)
@@ -251,7 +251,7 @@ void DPEnsemble::train(DataSet *dataset)
 }
 
 // Predict values from the ensemble of gradient boosted trees
-vector<double> DPEnsemble::predict(VVD &X)
+vector<double> DPEnsemble::predict(utils::VVD &X)
 {
     vector<double> predictions(X.size(), 0);
     for (auto tree : trees)

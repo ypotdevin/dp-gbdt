@@ -27,16 +27,16 @@ int Benchmark::main(int argc, char** argv)
 
     // change model params here if required:
     ModelParams params;
-    params.use_grid = FALSE;
+    params.use_grid = HAMMING_FALSE;
     params.privacy_budget = 0.5;
     params.nb_trees = 10;
-    params.leaf_clipping = TRUE;
-    params.balance_partition = TRUE;
-    params.gradient_filtering = FALSE;
+    params.leaf_clipping = HAMMING_TRUE;
+    params.balance_partition = HAMMING_TRUE;
+    params.gradient_filtering = HAMMING_FALSE;
     params.min_samples_split = 2;
     params.learning_rate = 0.1;
     params.max_depth = 6;
-    params.scale_X = FALSE;
+    params.scale_X = HAMMING_FALSE;
 
     parameters.push_back(params);
     datasets.push_back(Parser::get_abalone(parameters, 300, false));
@@ -61,7 +61,7 @@ int Benchmark::main(int argc, char** argv)
         ModelParams &param = parameters[i];
         std::cout << dataset->name << std::endl;
 
-        if(is_true(param.use_grid) and is_true(param.scale_X)) {
+        if(utils::is_true(param.use_grid) and utils::is_true(param.scale_X)) {
             param.privacy_budget -= param.scale_X_privacy_budget;
             (*dataset).scale_X_columns(param);
         }
@@ -72,20 +72,20 @@ int Benchmark::main(int argc, char** argv)
         delete dataset;
 
         std::chrono::steady_clock::time_point time_begin = std::chrono::steady_clock::now();
-        
+
         for (auto split : cv_inputs) {
 
-            if(is_true(param.scale_y)){
+            if(utils::is_true(param.scale_y)){
                 split->train.scale_y(param, -1, 1);
             }
 
             DPEnsemble ensemble = DPEnsemble(&param);
             ensemble.train(&split->train);
-            
+
             // predict with the test set
             std::vector<double> y_pred = ensemble.predict(split->test.X);
 
-            if(is_true(param.scale_y)) {
+            if(utils::is_true(param.scale_y)) {
                 inverse_scale_y(param, split->train.scaler, y_pred);
             }
 

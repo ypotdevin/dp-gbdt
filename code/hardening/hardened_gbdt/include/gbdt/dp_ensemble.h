@@ -20,7 +20,7 @@ public:
 
     // methods
     void train(DataSet *dataset);
-    std::vector<double> predict(VVD &X);
+    std::vector<double> predict(utils::VVD &X);
 
 private:
     // fields

@@ -27,7 +27,7 @@ private:
     ModelParams *params;
     TreeParams *tree_params;
     DataSet *dataset;
-    VVD X_transposed; // for hardened gbdt, we always work on the full X, so we only transpose it once
+    utils::VVD X_transposed; // for hardened gbdt, we always work on the full X, so we only transpose it once
     size_t tree_index;
     std::vector<TreeNode *> leaves;
     std::vector<double> grid;
@@ -37,10 +37,10 @@ private:
     TreeNode *make_tree_dfs(int current_depth, std::vector<int> live_samples);
     TreeNode *make_leaf_node(int current_depth, std::vector<int> &live_samples);
     double _predict(std::vector<double> *row, TreeNode *node);
-    TreeNode *find_best_split(VVD &X_transposed, std::vector<double> &gradients_live, std::vector<int> &live_samples, int current_depth, bool create_leaf_node);
-    void samples_left_right_partition(std::vector<int> &lhs, std::vector<int> &rhs, VVD &samples,  std::vector<int> &live_samples,
+    TreeNode *find_best_split(utils::VVD &X_transposed, std::vector<double> &gradients_live, std::vector<int> &live_samples, int current_depth, bool create_leaf_node);
+    void samples_left_right_partition(std::vector<int> &lhs, std::vector<int> &rhs, utils::VVD &samples,  std::vector<int> &live_samples,
                 int feature_index, double feature_value, bool categorical);
-    double compute_gain(VVD &X_transposed, std::vector<double> &gradients_live, std::vector<int> &live_samples, int feature_index,
+    double compute_gain(utils::VVD &X_transposed, std::vector<double> &gradients_live, std::vector<int> &live_samples, int feature_index,
                 double feature_value, int &lhs_size, bool categorical);
     int exponential_mechanism(std::vector<SplitCandidate> &candidates);
     void add_laplacian_noise(double laplace_scale);
@@ -54,7 +54,7 @@ public:
     TreeNode *root_node;
 
     // methods
-    std::vector<double> predict(VVD &X);
+    std::vector<double> predict(utils::VVD &X);
     void fit();
     void delete_tree(TreeNode *node);
 };
