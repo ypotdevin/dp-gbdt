@@ -28,7 +28,7 @@ DataSet::DataSet()
 }
 
 
-DataSet::DataSet(utils::VVD X, std::vector<double> y) : X(X), y(y)
+DataSet::DataSet(VVD X, std::vector<double> y) : X(X), y(y)
 {
     if(X.size() != y.size()){
         std::stringstream message;
@@ -43,7 +43,7 @@ DataSet::DataSet(utils::VVD X, std::vector<double> y) : X(X), y(y)
 
 // scale y values to be in [lower,upper]
 void DataSet::scale_y(ModelParams &params, double lower, double upper)
-{
+{   
     // return if no scaling required (y already in [-1,1])
     bool scaling_required = false;
     for(auto elem : y) {
@@ -111,7 +111,7 @@ std::tuple<double,double> dp_confidence_interval(std::vector<double> &samples, d
             r = 0.5;
         }
         int priv_qi = 0;
-
+        
         // exponential mechanism
         // https://github.com/wxindu/dp-conf-int/blob/master/algorithms/exp_mech.c
         for(int i = 0; i < m; i++) {
@@ -152,7 +152,7 @@ std::tuple<double,double> dp_confidence_interval(std::vector<double> &samples, d
 // scale numerical features of X to fit our grid borders
 void DataSet::scale_X_columns(ModelParams &params)
 {
-    // in order to legally scale X into our grid, we first need to (dp-)compute
+    // in order to legally scale X into our grid, we first need to (dp-)compute 
     // the [e.g. 95%] percentile borders, and clip all outliers.
     for(int col=0; col<num_x_cols; col++){
 
@@ -174,7 +174,7 @@ void DataSet::scale_X_columns(ModelParams &params)
 
         // clip outliers
         for(int row=0; row<length; row++) {
-            X[row][col] = utils::clamp(X[row][col], lower, upper);
+            X[row][col] = clamp(X[row][col], lower, upper);
         }
 
         // now we should be able to safely scale the feature into our grid
@@ -202,9 +202,9 @@ TrainTestSplit train_test_split_random(DataSet &dataset, double train_ratio, boo
     // [ test |      train      ]
     int border = ceil((1-train_ratio) * dataset.y.size());
 
-    utils::VVD x_test(dataset.X.begin(), dataset.X.begin() + border);
+    VVD x_test(dataset.X.begin(), dataset.X.begin() + border);
     std::vector<double> y_test(dataset.y.begin(), dataset.y.begin() + border);
-    utils::VVD x_train(dataset.X.begin() + border, dataset.X.end());
+    VVD x_train(dataset.X.begin() + border, dataset.X.end());
     std::vector<double> y_train(dataset.y.begin() + border, dataset.y.end());
 
     if(train_ratio >= 1) {
@@ -221,7 +221,7 @@ TrainTestSplit train_test_split_random(DataSet &dataset, double train_ratio, boo
 }
 
 // "reverse engineered" the python sklearn.model_selection.cross_val_score
-// Returns a std::vector of the train-test-splits. Will by default shuffle
+// Returns a std::vector of the train-test-splits. Will by default shuffle 
 // the dataset rows, unless we're in verification mode.
 std::vector<TrainTestSplit *> create_cross_validation_inputs(DataSet *dataset, int folds)
 {
@@ -245,7 +245,7 @@ std::vector<TrainTestSplit *> create_cross_validation_inputs(DataSet *dataset, i
     //                      ...
     std::deque<int> indices(folds);
     std::partial_sum(fold_sizes.begin(), fold_sizes.end(), indices.begin());
-    indices.push_front(0);
+    indices.push_front(0); 
     indices.pop_back();
 
     std::vector<TrainTestSplit *> splits;
@@ -258,17 +258,17 @@ std::vector<TrainTestSplit *> create_cross_validation_inputs(DataSet *dataset, i
         DataSet *train = &split->train;
         DataSet *test = &split->test;
 
-        utils::VVD::iterator x_iterator = (dataset->X).begin() + indices[i];
+        VVD::iterator x_iterator = (dataset->X).begin() + indices[i];
         std::vector<double>::iterator y_iterator = (dataset->y).begin() + indices[i];
 
         // extracting the test slice is easy
-        test->X = utils::VVD(x_iterator, x_iterator + fold_sizes[i]);
+        test->X = VVD(x_iterator, x_iterator + fold_sizes[i]);
         test->y = std::vector<double>(y_iterator, y_iterator + fold_sizes[i]);
 
         // building the train set from the remaining rows is slightly more tricky
         // (if you don't want to waste memory)
         if(i != 0){     // part before the test slice
-            train->X = utils::VVD((dataset->X).begin(), (dataset->X).begin() + indices[i]);
+            train->X = VVD((dataset->X).begin(), (dataset->X).begin() + indices[i]);
             train->y = std::vector<double>((dataset->y).begin(), (dataset->y).begin() + indices[i]);
         }
         if(i < folds-1){    //part after the test slice

@@ -20,9 +20,9 @@ ModelParams create_default_params()
     ModelParams params;
     params.nb_trees = 50;
     params.max_depth = 6;
-    params.gradient_filtering = HAMMING_TRUE;
-    params.balance_partition = HAMMING_TRUE;
-    params.leaf_clipping = HAMMING_TRUE;
+    params.gradient_filtering = TRUE;
+    params.balance_partition = TRUE;
+    params.leaf_clipping = TRUE;
     params.privacy_budget = 0.1;
     return params;
 };
@@ -77,8 +77,8 @@ std::string get_time_string()
 
 bool is_true(unsigned value)
 {
-    if(not (value == HAMMING_TRUE or value == HAMMING_FALSE)){
+    if(not (value == TRUE or value == FALSE)){
         throw std::runtime_error("Fault injection attack?");
     }
-    return value == HAMMING_TRUE;
+    return value == TRUE;
 }
