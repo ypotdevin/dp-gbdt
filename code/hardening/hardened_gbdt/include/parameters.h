@@ -5,6 +5,7 @@
 #include <vector>
 #include "utils.h"
 #include "loss.h"
+#include "cli_parser.h"
 
 struct ModelParams
 {
@@ -37,6 +38,25 @@ struct ModelParams
 
 // create some default parameters for quick testing
 ModelParams create_default_params();
+
+/**
+ * @brief Update given model parameters by what is passed via command line.
+ *
+ * Currently accepted model parameters:
+ *   --ensemble-privacy-budget (double)
+ *   --optimization-privacy-budget (double)
+ *   --nb-trees (int)
+ *   --max-depth (int)
+ *   --learning-rate (double)
+ *   --l2-lambda (double)
+ *   --l2-threshold (double)
+ *   --no-gradient-filtering (boolean flag)
+ *   --no-leaf-clipping (boolean flag)
+ *
+ * @param cp the parser holding the command line arguments.
+ * @param mp the model parameters to update.
+ */
+void parse_model_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp);
 
 std::ostream &operator<<(std::ostream &os, const ModelParams &mp);
 
