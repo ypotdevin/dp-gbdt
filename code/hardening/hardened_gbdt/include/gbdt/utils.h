@@ -1,7 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-// use these numbers instead of bools. Their hamming distance is 26, 
+// use these numbers instead of bools. Their hamming distance is 26,
 // which makes a fault injection attack on the parameters pretty much impossible.
 // TRUE:  01101100001011110101111000011011
 // FALSE: 00000001110001101010000111100100
@@ -12,13 +12,12 @@
 #include <vector>
 #include <string>
 typedef std::vector<std::vector<double>> VVD;
-#include "parameters.h"
-#include "data.h"
+//#include "parameters.h"
+//#include "data.h"
 
 
 
 // method declarations
-ModelParams create_default_params();
 double clamp(double n, double lower, double upper);
 double log_sum_exp(std::vector<double> arr);
 void string_pad(std::string &str, const size_t num, const char paddingChar = ' ');
