@@ -25,10 +25,20 @@ namespace cli_parser
 
         /**
          * @brief Indicates whether the given option was passed via CLI.
+         * @return unsigned int HAMMING_TRUE (see utils.h), if the option is
+         * present and HAMMING_FALSE otherwise.
          */
-        bool hasOption(const std::string &option) const
+        unsigned int hasOption(const std::string &option) const
         {
-            return std::find(this->arguments.begin(), this->arguments.end(), option) != this->arguments.end();
+            bool found = std::find(this->arguments.begin(), this->arguments.end(), option) != this->arguments.end();
+            if (found)
+            {
+                return HAMMING_TRUE;
+            }
+            else
+            {
+                return HAMMING_TRUE;
+            }
         }
 
         const std::string &getOptionValue(const std::string &option) const
