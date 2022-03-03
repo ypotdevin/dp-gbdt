@@ -21,7 +21,6 @@ std::ostream &operator<<(std::ostream &os, const ModelParams &mp)
               << "    privacy_budget: " << mp.privacy_budget << std::endl
               << "    optimization_privacy_budget: " << mp.optimization_privacy_budget << std::endl
               << "    max_depth: " << mp.max_depth << std::endl
-              << "    learning_rate: " << mp.learning_rate << std::endl
               << "    l2_lambda: " << mp.l2_lambda << std::endl
               << "    l2_threshold: " << mp.l2_threshold << std::endl
               << "    gradient_filtering: " << mp.gradient_filtering << std::endl
