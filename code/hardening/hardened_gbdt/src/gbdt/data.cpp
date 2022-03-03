@@ -1,10 +1,10 @@
-#include <vector>
 #include <numeric>
 #include <queue>
 #include <random>
 #include <algorithm>
 #include <sstream>
 #include <cmath>
+#include <tuple>
 #include "data.h"
 #include "constant_time.h"
 
@@ -43,7 +43,7 @@ DataSet::DataSet(VVD X, std::vector<double> y) : X(X), y(y)
 
 // scale y values to be in [lower,upper]
 void DataSet::scale_y(ModelParams &params, double lower, double upper)
-{   
+{
     // return if no scaling required (y already in [-1,1])
     bool scaling_required = false;
     for(auto elem : y) {
@@ -111,7 +111,7 @@ std::tuple<double,double> dp_confidence_interval(std::vector<double> &samples, d
             r = 0.5;
         }
         int priv_qi = 0;
-        
+
         // exponential mechanism
         // https://github.com/wxindu/dp-conf-int/blob/master/algorithms/exp_mech.c
         for(int i = 0; i < m; i++) {
@@ -152,7 +152,7 @@ std::tuple<double,double> dp_confidence_interval(std::vector<double> &samples, d
 // scale numerical features of X to fit our grid borders
 void DataSet::scale_X_columns(ModelParams &params)
 {
-    // in order to legally scale X into our grid, we first need to (dp-)compute 
+    // in order to legally scale X into our grid, we first need to (dp-)compute
     // the [e.g. 95%] percentile borders, and clip all outliers.
     for(int col=0; col<num_x_cols; col++){
 
@@ -221,7 +221,7 @@ TrainTestSplit train_test_split_random(DataSet &dataset, double train_ratio, boo
 }
 
 // "reverse engineered" the python sklearn.model_selection.cross_val_score
-// Returns a std::vector of the train-test-splits. Will by default shuffle 
+// Returns a std::vector of the train-test-splits. Will by default shuffle
 // the dataset rows, unless we're in verification mode.
 std::vector<TrainTestSplit *> create_cross_validation_inputs(DataSet *dataset, int folds)
 {
@@ -245,7 +245,7 @@ std::vector<TrainTestSplit *> create_cross_validation_inputs(DataSet *dataset, i
     //                      ...
     std::deque<int> indices(folds);
     std::partial_sum(fold_sizes.begin(), fold_sizes.end(), indices.begin());
-    indices.push_front(0); 
+    indices.push_front(0);
     indices.pop_back();
 
     std::vector<TrainTestSplit *> splits;
