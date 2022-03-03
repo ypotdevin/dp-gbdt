@@ -35,6 +35,11 @@ struct ModelParams
     double scale_X_privacy_budget = 0.4;
 };
 
+// create some default parameters for quick testing
+ModelParams create_default_params();
+
+std::ostream &operator<<(std::ostream &os, const ModelParams &mp);
+
 // each tree has these additional parameters
 struct TreeParams
 {
