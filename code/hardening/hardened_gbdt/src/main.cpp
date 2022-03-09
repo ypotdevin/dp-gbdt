@@ -13,87 +13,73 @@
 #include "verification.h"
 #include "benchmark.h"
 #include "spdlog/spdlog.h"
+#include "cli_parser.h"
 
 extern bool VERIFICATION_MODE;
 
+spdlog::level::level_enum select_log_level(std::string level){
+    if (level == "error")
+    {
+        return spdlog::level::err;
+    }
+    else if (level == "info")
+    {
+        return spdlog::level::info;
+    }
+    else if (level == "off")
+    {
+        return spdlog::level::off;
+    }
+    else {
+        throw std::runtime_error("Unknown log level");
+    }
+}
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     // seed randomness once and for all
     srand(time(NULL));
 
-    // parse flags, currently supporting "--verify"
-    if(argc != 1){
-        for(int i = 1; i < argc; i++){
-            if ( ! std::strcmp(argv[i], "--verify") ){
-                // go into verification mode
-                VERIFICATION_MODE = true;
-                return Verification::main(argc, argv);
-            } else if ( ! std::strcmp(argv[i], "--bench") ){
-                // go into verification mode
-                VERIFICATION_MODE = false;
-                return Benchmark::main(argc, argv);
-            } else {
-                throw std::runtime_error("unkown command line flag encountered");
-            } 
-        }
-    } else { // no flags given, continue in this file
+    cli_parser::CommandLineParser cp(argc, argv);
+    if (cp.hasOption("--verify"))
+    {
+        VERIFICATION_MODE = true;
+        return Verification::main(argc, argv);
+    }
+    if (cp.hasOption("--bench"))
+    {
         VERIFICATION_MODE = false;
+        return Benchmark::main(argc, argv);
     }
 
-    // Set up logging
-    spdlog::set_level(spdlog::level::err);
+    //////////////////////// If running regularly //////////////////////////////
+    VERIFICATION_MODE = false;
+
+    if (cp.hasOption("--log-level"))
+    {
+        spdlog::set_level(select_log_level(cp.getOptionValue("--log-level")));
+    }
+    else
+    {
+        spdlog::set_level(select_log_level("off"));
+    }
     spdlog::set_pattern("[%H:%M:%S] [%^%5l%$] %v");
 
     // Define model parameters
     // reason to use a vector is because parser expects it
-    std::vector<ModelParams> parameters;
-    ModelParams current_params = create_default_params();
-
-    // change model params here if required:
-    current_params.privacy_budget = 10;
-    current_params.nb_trees = 10;
-    current_params.gradient_filtering = FALSE;
-    current_params.balance_partition = TRUE;
-    current_params.leaf_clipping = TRUE;
-    current_params.scale_y = FALSE;
-
-    current_params.use_grid = FALSE;
-    current_params.grid_borders = std::make_tuple(0,1);
-    current_params.grid_step_size = 0.001;
-    current_params.scale_X = TRUE;
-    current_params.scale_X_percentile = 95;
-    current_params.scale_X_privacy_budget = 0.4;
-
-    parameters.push_back(current_params);
-
-    // Choose your dataset
-    DataSet *dataset = Parser::get_abalone(parameters, 5000, false);
-    ModelParams params = parameters[0];
-
-    std::cout << dataset->name << std::endl;
-    std::chrono::steady_clock::time_point time_begin = std::chrono::steady_clock::now();
-
-    if(is_true(params.use_grid) and is_true(params.scale_X)) {
-        params.privacy_budget -= params.scale_X_privacy_budget;
-        (*dataset).scale_X_columns(params);
-    }
+    ModelParams params;
+    parse_model_parameters(cp, params);
+    DataSet *dataset = parse_dataset_parameters(cp, params);
 
     // create cross validation inputs
     std::vector<TrainTestSplit *> cv_inputs = create_cross_validation_inputs(dataset, 5);
     delete dataset;
 
     // do cross validation
-    std::vector<double> rmses;
     for (auto split : cv_inputs) {
-
-        if(is_true(params.scale_y)){
-            split->train.scale_y(params, -1, 1);
-        }
-
         DPEnsemble ensemble = DPEnsemble(&params);
         ensemble.train(&split->train);
-        
+
         // predict with the test set
         std::vector<double> y_pred = ensemble.predict(split->test.X);
 
@@ -107,8 +93,4 @@ int main(int argc, char** argv)
         std::cout << score << " " << std::flush;
         delete split;
     } std::cout << std::endl;
-
-    std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
-    double elapsed = std::chrono::duration_cast<std::chrono::milliseconds> (time_end - time_begin).count();
-    std::cout << "(" << std::fixed << std::setprecision(1) << elapsed/1000 << "s)" << std::endl;
 }
