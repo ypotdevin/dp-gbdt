@@ -9,11 +9,11 @@
 
 struct ModelParams
 {
-    int nb_trees;
+    // primary model parameters
+    int nb_trees = 50;
     double learning_rate = 0.1;
     double privacy_budget = 1.0;
     double optimization_privacy_budget = 1.0;
-    std::shared_ptr<Task> task;
     int max_depth = 6;
     int min_samples_split = 2;
     unsigned balance_partition = TRUE;
@@ -23,10 +23,8 @@ struct ModelParams
     unsigned use_decay = FALSE;
     double l2_threshold = 1.0;
     double l2_lambda = 0.1;
-    double error_upper_bound = 10.0;
-    int verbosity = -1;
-    std::vector<int> cat_idx;
-    std::vector<int> num_idx;
+
+    // secondary model parameters
     unsigned use_grid = FALSE;
     std::tuple<double, double> grid_borders;
     double grid_step_size;
@@ -34,6 +32,12 @@ struct ModelParams
     unsigned scale_X = FALSE;
     double scale_X_percentile = 95;
     double scale_X_privacy_budget = 0.4;
+
+    // dataset specific parameters
+    std::shared_ptr<Task> task;
+    double error_upper_bound = 10.0;
+    std::vector<int> cat_idx;
+    std::vector<int> num_idx;
 };
 
 // create some default parameters for quick testing
