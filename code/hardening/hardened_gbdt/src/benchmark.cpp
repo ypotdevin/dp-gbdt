@@ -23,7 +23,6 @@ int Benchmark::main(int argc, char** argv)
     // Define model parameters
     // reason to use a vector is because parser expects it
     std::vector<DataSet *> datasets;
-    std::vector<ModelParams> parameters;
 
     // change model params here if required:
     ModelParams params;
@@ -38,27 +37,19 @@ int Benchmark::main(int argc, char** argv)
     params.max_depth = 6;
     params.scale_X = FALSE;
 
-    parameters.push_back(params);
-    datasets.push_back(Parser::get_abalone(parameters, 300, false));
-    parameters.push_back(params);
-    datasets.push_back(Parser::get_abalone(parameters, 1000, false));
-    parameters.push_back(params);
-    datasets.push_back(Parser::get_abalone(parameters, 4177, false));
-    parameters.push_back(params);
-    datasets.push_back(Parser::get_adult(parameters, 300, false));
-    parameters.push_back(params);
-    datasets.push_back(Parser::get_adult(parameters, 1000, false));
-    parameters.push_back(params);
-    datasets.push_back(Parser::get_adult(parameters, 5000, false));
-    parameters.push_back(params);
-    datasets.push_back(Parser::get_YearPredictionMSD(parameters, 300, false));
-    parameters.push_back(params);
-    datasets.push_back(Parser::get_YearPredictionMSD(parameters, 1000, false));
+    datasets.push_back(Parser::get_abalone(params, 300));
+    datasets.push_back(Parser::get_abalone(params, 1000));
+    datasets.push_back(Parser::get_abalone(params, 4177));
+    datasets.push_back(Parser::get_adult(params, 300));
+    datasets.push_back(Parser::get_adult(params, 1000));
+    datasets.push_back(Parser::get_adult(params, 5000));
+    datasets.push_back(Parser::get_YearPredictionMSD(params, 300));
+    datasets.push_back(Parser::get_YearPredictionMSD(params, 1000));
 
     for(size_t i=0; i<datasets.size(); i++) {
 
         DataSet *dataset = datasets[i];
-        ModelParams &param = parameters[i];
+        ModelParams param = params;
         std::cout << dataset->name << std::endl;
 
         if(is_true(param.use_grid) and is_true(param.scale_X)) {
@@ -72,7 +63,7 @@ int Benchmark::main(int argc, char** argv)
         delete dataset;
 
         std::chrono::steady_clock::time_point time_begin = std::chrono::steady_clock::now();
-        
+
         for (auto split : cv_inputs) {
 
             if(is_true(param.scale_y)){
@@ -81,7 +72,7 @@ int Benchmark::main(int argc, char** argv)
 
             DPEnsemble ensemble = DPEnsemble(&param);
             ensemble.train(&split->train);
-            
+
             // predict with the test set
             std::vector<double> y_pred = ensemble.predict(split->test.X);
 

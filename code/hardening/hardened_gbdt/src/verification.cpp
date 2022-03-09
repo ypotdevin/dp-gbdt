@@ -10,9 +10,9 @@
 #include "dataset_parser.h"
 #include "spdlog/spdlog.h"
 
-/* 
+/*
     Verification:
-    runs the model on various (small to medium size) datasets for 
+    runs the model on various (small to medium size) datasets for
     easy verification of correctness. intermediate values are written to
     verification_logfile.
 */
@@ -29,11 +29,10 @@ int Verification::main(int argc, char *argv[])
 
     // store datasets and their corresponding parameters here
     std::vector<DataSet *> datasets;
-    std::vector<ModelParams> parameters;
 
     // --------------------------------------
     // select dataset(s) here.
-    // you can either append some ModelParams to parameters here (and pass 
+    // you can either append some ModelParams to parameters here (and pass
     // "false" to the parsing function), or let the get_xy function
     // do that (it'll create and append some default ones to the vector)
     ModelParams params = create_default_params();
@@ -50,12 +49,10 @@ int Verification::main(int argc, char *argv[])
     params.scale_X_percentile = 95;
     params.scale_X_privacy_budget = 0.4;
 
-    parameters.push_back(params);
-    datasets.push_back(Parser::get_abalone(parameters, 300, false)); // full abalone
+    datasets.push_back(Parser::get_abalone(params, 300)); // full abalone
     // parameters.push_back(params);
     // datasets.push_back(Parser::get_YearPredictionMSD(parameters, 150, false)); // small yearMSD
-    parameters.push_back(params);
-    datasets.push_back(Parser::get_adult(parameters, 320, false)); // small adult
+    datasets.push_back(Parser::get_adult(params, 320)); // small adult
     // parameters.push_back(params);
     // datasets.push_back(Parser::get_abalone(parameters, 4177, false)); // full abalone
     // --------------------------------------
@@ -64,7 +61,7 @@ int Verification::main(int argc, char *argv[])
     for(size_t i=0; i<datasets.size(); i++) {
         srand(0);
         DataSet *dataset = datasets[i];
-        ModelParams &param = parameters[i];
+        ModelParams param = params;
 
         // Set up logging for verification
         verification_logfile.open(fmt::format("verification/verification_logs/{}.hardened.log", dataset->name));
@@ -89,14 +86,14 @@ int Verification::main(int argc, char *argv[])
             // train the model
             DPEnsemble ensemble = DPEnsemble(&param);
             ensemble.train(&split->train);
-            
+
             // predict with the test set
             std::vector<double> y_pred = ensemble.predict(split->test.X);
 
             if(is_true(params.scale_y)){
                 inverse_scale_y(param, split->train.scaler, y_pred);
             }
-            
+
             // compute score
             double score = param.task->compute_score(split->test.y, y_pred);
 
@@ -104,7 +101,7 @@ int Verification::main(int argc, char *argv[])
             cv_fold_index++;
             delete split;
         } std::cout << std::endl;
-    
+
         verification_logfile.close();
     }
     return 0;

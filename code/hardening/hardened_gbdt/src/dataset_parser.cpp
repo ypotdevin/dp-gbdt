@@ -20,10 +20,10 @@
     fashion as the ones below. But make sure to double check what you get.
 */
 
-DataSet *Parser::get_abalone(std::vector<ModelParams> &parameters,
-                             size_t num_samples, bool use_default_params)
+DataSet *Parser::get_abalone(ModelParams &parameters,
+                             size_t num_samples)
 {
-    std::string file = "datasets/real/abalone.data";
+    std::string file = "/home/ypo/dp-gbdt/code/hardening/hardened_gbdt/datasets/real/abalone.data";
     std::string name = "abalone";
     int num_rows = 4177;
     int num_cols = 9;
@@ -35,11 +35,11 @@ DataSet *Parser::get_abalone(std::vector<ModelParams> &parameters,
     std::vector<int> cat_values = {}; // empty -> will be filled with the present values in the dataset
 
     return parse_file(file, name, num_rows, num_cols, num_samples, task, num_idx,
-                      cat_idx, cat_values, target_idx, drop_idx, parameters, use_default_params);
+                      cat_idx, cat_values, target_idx, drop_idx, parameters);
 }
 
-DataSet *Parser::get_YearPredictionMSD(std::vector<ModelParams> &parameters,
-                                       size_t num_samples, bool use_default_params)
+DataSet *Parser::get_YearPredictionMSD(ModelParams &parameters,
+                                       size_t num_samples)
 {
     std::string file = "datasets/real/YearPredictionMSD.txt";
     std::string name = "yearMSD";
@@ -54,13 +54,13 @@ DataSet *Parser::get_YearPredictionMSD(std::vector<ModelParams> &parameters,
     std::vector<int> cat_values = {}; // empty -> will be filled with the present values in the dataset
 
     return parse_file(file, name, num_rows, num_cols, num_samples, task, num_idx,
-                      cat_idx, cat_values, target_idx, drop_idx, parameters, use_default_params);
+                      cat_idx, cat_values, target_idx, drop_idx, parameters);
 }
 
-DataSet *Parser::get_adult(std::vector<ModelParams> &parameters,
-                           size_t num_samples, bool use_default_params)
+DataSet *Parser::get_adult(ModelParams &parameters,
+                           size_t num_samples)
 {
-    std::string file = "datasets/real/adult.data";
+    std::string file = "/home/ypo/dp-gbdt/code/hardening/hardened_gbdt/datasets/real/adult.data";
     std::string name = "adult";
     int num_rows = 48842;
     int num_cols = 15;
@@ -72,7 +72,7 @@ DataSet *Parser::get_adult(std::vector<ModelParams> &parameters,
     std::vector<int> cat_values = {}; // empty -> will be filled with the present values in the dataset
 
     return parse_file(file, name, num_rows, num_cols, num_samples, task, num_idx,
-                      cat_idx, cat_values, target_idx, drop_idx, parameters, use_default_params);
+                      cat_idx, cat_values, target_idx, drop_idx, parameters);
 }
 
 /** Utility functions */
@@ -92,30 +92,21 @@ std::vector<std::string> Parser::split_string(const std::string &s, char delim)
 DataSet *Parser::parse_file(std::string dataset_file, std::string dataset_name, int num_rows,
                             int num_cols, int num_samples, std::shared_ptr<Task> task, std::vector<int> num_idx,
                             std::vector<int> cat_idx, std::vector<int> cat_values, std::vector<int> target_idx, std::vector<int> drop_idx,
-                            std::vector<ModelParams> &parameters, bool use_default_params)
+                            ModelParams &parameters)
 {
-    std::ifstream infile(dataset_file);
+    std::ifstream infile(dataset_file, std::ifstream::in);
+    if (!infile)
+    {
+        throw std::runtime_error("Could not find dataset file");
+    }
     std::string line;
     VVD X;
     std::vector<double> y;
     num_samples = std::min(num_samples, num_rows);
 
-    if (use_default_params)
-    {
-        // create some default parameters
-        ModelParams params = create_default_params();
-        params.task = task;
-        params.cat_idx = cat_idx;
-        params.num_idx = num_idx;
-        parameters.push_back(params);
-    }
-    else
-    {
-        // you have already defined your parameters, then just add dataset specific ones
-        parameters.back().num_idx = num_idx;
-        parameters.back().cat_idx = cat_idx;
-        parameters.back().task = task;
-    }
+    parameters.num_idx = num_idx;
+    parameters.cat_idx = cat_idx;
+    parameters.task = task;
 
     // parse dataset, label-encode categorical features
     int current_index = 0;
@@ -208,14 +199,14 @@ DataSet *Parser::parse_file(std::string dataset_file, std::string dataset_name, 
             std::vector<double> keys;
             if (std::find(cat_idx.begin(), cat_idx.end(), i) == cat_idx.end())
             {
-                parameters.back().cat_values.push_back(keys);
+                parameters.cat_values.push_back(keys);
                 continue;
             }
             for (auto it = map.begin(); it != map.end(); it++)
             {
                 keys.push_back(it->second);
             }
-            parameters.back().cat_values.push_back(keys);
+            parameters.cat_values.push_back(keys);
         }
     }
     else
@@ -225,14 +216,14 @@ DataSet *Parser::parse_file(std::string dataset_file, std::string dataset_name, 
             std::vector<double> keys;
             if (std::find(cat_idx.begin(), cat_idx.end(), i) == cat_idx.end())
             {
-                parameters.back().cat_values.push_back(keys);
+                parameters.cat_values.push_back(keys);
                 continue;
             }
             for (double j = 0.0; j < cat_values[i]; j++)
             {
                 keys.push_back(j);
             }
-            parameters.back().cat_values.push_back(keys);
+            parameters.cat_values.push_back(keys);
         }
     }
 
@@ -291,18 +282,17 @@ DataSet *parse_dataset_parameters(cli_parser::CommandLineParser &cp, ModelParams
  */
 DataSet *select_dataset(const std::string &dataset, const size_t num_samples, ModelParams &mp)
 {
-    std::vector<ModelParams> mp_vec = {mp};
     if (dataset == "abalone")
     {
-        return Parser::get_abalone(mp_vec, num_samples, false);
+        return Parser::get_abalone(mp, num_samples);
     }
     else if (dataset == "adult")
     {
-        return Parser::get_adult(mp_vec, num_samples, false);
+        return Parser::get_adult(mp, num_samples);
     }
     else if (dataset == "YearPredictionMSD")
     {
-        return Parser::get_YearPredictionMSD(mp_vec, num_samples, false);
+        return Parser::get_YearPredictionMSD(mp, num_samples);
     }
     else
     {
