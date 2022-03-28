@@ -4,10 +4,12 @@
 #include <numeric>
 #include <algorithm>
 #include <iostream>
-#include "constant_time.h"
 #include <tuple>
 #include <exception>
 #include <sstream>
+#include "constant_time.h"
+#include "logging.h"
+#include "spdlog/spdlog.h"
 #include "loss.h"
 #include "utils.h"
 
@@ -140,6 +142,7 @@ double dp_rms_cauchy(std::vector<double> errors, const double epsilon, const dou
     double beta = epsilon / (2 * (gamma + 1.0));
     double sens, rmse;
     std::tie(sens, rmse) = rMS_smooth_sensitivity(errors, beta, U);
+    LOG_DEBUG("#sensitivity_evolution# --- smooth_sens={1}", sens);
     std::cauchy_distribution<double> distribution(0.0, 1.0);
     auto noise = distribution(rng);
     auto dp_rmse = rmse + 2 * (gamma + 1) * sens * noise / epsilon;
@@ -148,7 +151,7 @@ double dp_rms_cauchy(std::vector<double> errors, const double epsilon, const dou
 
 /**
  * @param errors The precomputed errors (to avoid having two arguments which
- * then have to be subtracted.)
+ * then have to be subtracted), sorted ascendingly.
  * @param beta The beta defining the beta-smooth sensitivity.
  * @param U The upper bound on the errors (not squared errors).
  * @return std::tuple<double, double> The beta-smooth sensitivity and the result
