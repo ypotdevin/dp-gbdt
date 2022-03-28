@@ -21,6 +21,8 @@ public:
     static DataSet *get_YearPredictionMSD(ModelParams &parameters,
                                           size_t num_samples);
     static DataSet *get_adult(ModelParams &parameters, size_t num_samples);
+    static DataSet *get_concrete(ModelParams &parameters, size_t num_samples);
+    static DataSet *get_wine(ModelParams &parameters, size_t num_samples);
 };
 
 DataSet *parse_dataset_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp);

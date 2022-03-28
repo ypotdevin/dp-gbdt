@@ -75,6 +75,40 @@ DataSet *Parser::get_adult(ModelParams &parameters,
                       cat_idx, cat_values, target_idx, drop_idx, parameters);
 }
 
+DataSet *Parser::get_concrete(ModelParams &parameters, size_t num_samples)
+{
+    std::string file = "/home/ypo/dp-gbdt/code/hardening/hardened_gbdt/datasets/real/Concrete_Data_Yeh.csv";
+    std::string name = "concrete";
+    int num_rows = 1030;
+    int num_cols = 9;
+    std::shared_ptr<Regression> task(new Regression());
+    std::vector<int> num_idx = {0, 1, 2, 3, 4, 5, 6, 7};
+    std::vector<int> cat_idx = {};
+    std::vector<int> target_idx = {8};
+    std::vector<int> drop_idx = {};
+    std::vector<int> cat_values = {}; // empty -> will be filled with the present values in the dataset
+
+    return parse_file(file, name, num_rows, num_cols, num_samples, task, num_idx,
+                      cat_idx, cat_values, target_idx, drop_idx, parameters);
+}
+
+DataSet *Parser::get_wine(ModelParams &parameters, size_t num_samples)
+{
+    std::string file = "/home/ypo/dp-gbdt/code/hardening/hardened_gbdt/datasets/real/winequality-red.csv";
+    std::string name = "wine";
+    int num_rows = 1599;
+    int num_cols = 12;
+    std::shared_ptr<BinaryClassification> task(new BinaryClassification());
+    std::vector<int> num_idx = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    std::vector<int> cat_idx = {};
+    std::vector<int> target_idx = {11};
+    std::vector<int> drop_idx = {};
+    std::vector<int> cat_values = {};
+
+    return parse_file(file, name, num_rows, num_cols, num_samples, task, num_idx,
+                      cat_idx, cat_values, target_idx, drop_idx, parameters);
+}
+
 /** Utility functions */
 
 std::vector<std::string> Parser::split_string(const std::string &s, char delim)
@@ -293,6 +327,14 @@ DataSet *select_dataset(const std::string &dataset, const size_t num_samples, Mo
     else if (dataset == "YearPredictionMSD")
     {
         return Parser::get_YearPredictionMSD(mp, num_samples);
+    }
+    else if (dataset == "concrete")
+    {
+        return Parser::get_concrete(mp, num_samples);
+    }
+    else if (dataset == "wine")
+    {
+        return Parser::get_wine(mp, num_samples);
     }
     else
     {
