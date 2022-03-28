@@ -19,7 +19,6 @@ struct ModelParams
     unsigned balance_partition = TRUE;
     unsigned gradient_filtering = TRUE;
     unsigned leaf_clipping = TRUE;
-    unsigned scale_y = FALSE;
     unsigned use_decay = FALSE;
     double l2_threshold = 1.0;
     double l2_lambda = 0.1;
@@ -32,6 +31,7 @@ struct ModelParams
     unsigned scale_X = FALSE;
     double scale_X_percentile = 95;
     double scale_X_privacy_budget = 0.4;
+    unsigned scale_y = FALSE;
 
     // dataset specific parameters
     std::shared_ptr<Task> task;
