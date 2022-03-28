@@ -53,6 +53,15 @@ double compute_stdev(std::vector<double> &vec, double mean)
     return std::sqrt(sq_sum / vec.size() - mean * mean);
 }
 
+double compute_rmse(std::vector<double> differences)
+{
+    transform(differences.begin(), differences.end(), differences.begin(), [](double x)
+              { return x * x; });
+    auto mean = compute_mean(differences);
+    auto rmse = std::sqrt(mean);
+    return rmse;
+}
+
 std::string get_time_string()
 {
     time_t t = time(0);

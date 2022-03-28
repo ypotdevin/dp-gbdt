@@ -23,6 +23,7 @@ double log_sum_exp(std::vector<double> arr);
 void string_pad(std::string &str, const size_t num, const char paddingChar = ' ');
 double compute_mean(std::vector<double> &vec);
 double compute_stdev(std::vector<double> &vec, double mean);
+double compute_rmse(std::vector<double> differences);
 std::string get_time_string();
 bool is_true(unsigned value);
 
