@@ -170,30 +170,37 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
     auto n = errors.size();
     auto rmse = std::sqrt(sqe_sum / n);
 
-    auto smooth_sens = local_sensitivity(sqe_sum, n, U) * std::exp(1.0); // for k = 0
+    auto smooth_sens = -std::numeric_limits<double>::infinity();
     auto prefix_sum = sqe_sum, suffix_sum = sqe_sum;
-    for (unsigned int k = 1; k <= n; k++) // traversing the local sensitivities
+    for (size_t k = 1; k <= n; k++) // traversing the local sensitivities
     {
-        prefix_sum = prefix_sum - errors.at(n - k);
-        suffix_sum = suffix_sum - errors.at(k - 1) + U;
-        auto prefix_local_sens = local_sensitivity(prefix_sum, n, U);
-        auto suffix_local_sens = local_sensitivity(suffix_sum, n, U);
+        auto largest = errors.at(n - k);
+        auto smallest = errors.at(k - 1);
+        prefix_sum -= largest; // implicitly replace largest by 0)
+        suffix_sum -= smallest;
+        auto prefix_local_sens = local_sensitivity(largest, 0, prefix_sum, n, U);
+        auto suffix_local_sens = local_sensitivity(smallest, U, suffix_sum, n, U);
         auto local_sens = std::max(prefix_local_sens, suffix_local_sens);
         smooth_sens = std::max(smooth_sens, local_sens * std::exp(-beta * k));
+        suffix_sum += U; // replace smallest by U, but only after calculation
     }
     return std::make_tuple(smooth_sens, rmse);
 }
 
 /**
- * @param s The sum of the squared errors.
- * @param n The number of squared error (terms) in s.
- * @param U The upper bound of the squared errors terms in s.
+ * @brief The local sensitivity of the rMSE function, already operating on the
+ * vector of differences (not on two vectors which then will be subtracted).
+ *
+ * @param x the current squared error to replace.
+ * @param substitute the replacement for x.
+ * @param s the sum of the squared errors, but *without* x.
+ * @param n the number of squared error (terms) in s, plus 1 for x.
+ * @param U the upper bound of the squared errors terms in s, and x.
  * @return double The local sensitivity of the root mean squared error function.
  */
-double local_sensitivity(const double s, const std::size_t n, const double U)
+double local_sensitivity(const double x, const double substitute, double s, const std::size_t n, const double U)
 {
-    auto ls_a = std::sqrt(U / n);
-    auto ls_b = std::sqrt(s / n) * std::abs(std::sqrt(1 + U / s) - 1.0);
-    auto ret = constant_time::select(s <= 0.0, ls_a, ls_b);
-    return ret;
+    s = std::max(s, 1e-12); // to avoid division by zero
+    auto sens = std::sqrt(s / n) * std::abs(std::sqrt(1 + x / s) - std::sqrt(1 + substitute / s));
+    return sens;
 }
