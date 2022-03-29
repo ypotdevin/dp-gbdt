@@ -45,7 +45,8 @@ DPEnsemble::~DPEnsemble()
 }
 
 /** Methods */
-
+// Note: The training has side effects on the dataset (affecting especially
+// the gradients and the dataset rows).
 void DPEnsemble::train(DataSet *dataset)
 {
     this->dataset = dataset;
@@ -232,11 +233,25 @@ void DPEnsemble::train(DataSet *dataset)
         auto raw_predictions = predict(dataset->X);
         std::vector<double> differences = std::vector<double>(dataset->length);
         std::transform(raw_predictions.begin(), raw_predictions.end(), dataset->y.begin(), differences.begin(), std::minus<double>());
-        auto current_loss = dp_rms_cauchy(differences, params->optimization_privacy_budget, params->error_upper_bound);
+        auto mean = compute_mean(differences);
+        auto stdev = compute_stdev(differences, mean);
+        LOG_DEBUG("#error_evolution# --- mean={1}; stdev={2}", mean, stdev);
+
+        double current_loss;
+        if (params->leaky_opt)
+        {
+            current_loss = compute_rmse(differences);
+        }
+        else
+        {
+            current_loss = dp_rms_cauchy(differences, params->optimization_privacy_budget, params->error_upper_bound);
+        }
         LOG_INFO("#loss_evolution# --- fitting decision tree {1}; previous loss: {2}; current loss: {3}", tree_index, prev_loss, current_loss);
 
         if (current_loss >= 0.0 && current_loss < prev_loss)
         {
+            LOG_DEBUG("#tree_evolution# --- ensemble includes decision tree {1}. Number of trees in ensemble: {2}",
+                      tree_index, trees.size());
             prev_loss = current_loss;
             // remove rows, since we keep the tree
             *dataset = dataset->remove_rows(tree_indices);
@@ -244,6 +259,8 @@ void DPEnsemble::train(DataSet *dataset)
         else
         {
             trees.pop_back();
+            LOG_DEBUG("#tree_evolution# --- ensemble excludes decision tree {1}. Number of trees in ensemble: {2}",
+                      tree_index, trees.size());
         }
 
         LOG_INFO(YELLOW("Tree {1:2d} done. Instances left: {2}"), tree_index, dataset->length);
