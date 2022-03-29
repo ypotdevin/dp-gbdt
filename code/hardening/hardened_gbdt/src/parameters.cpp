@@ -77,6 +77,15 @@ void parse_model_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp)
     {
         mp.leaf_clipping = TRUE;
     }
+    if (cp.hasOption("--leaky-optimization"))
+    {
+        mp.leaky_opt = true;
+    }
+    else
+    {
+        mp.leaky_opt = false;
+    }
+
 }
 
 std::ostream &operator<<(std::ostream &os, const ModelParams &mp)

@@ -14,6 +14,7 @@ struct ModelParams
     double learning_rate = 0.1;
     double privacy_budget = 1.0;
     double optimization_privacy_budget = 1.0;
+    bool leaky_opt = false; // for debugging purpose
     int max_depth = 6;
     int min_samples_split = 2;
     unsigned balance_partition = TRUE;
