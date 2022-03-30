@@ -5,6 +5,7 @@
 #include <cmath>
 #include <chrono>
 #include "logging.h"
+#include "spdlog/spdlog.h"
 #include "utils.h"
 #include "parameters.h"
 #include "gbdt/dp_ensemble.h"
@@ -12,7 +13,6 @@
 #include "data.h"
 #include "verification.h"
 #include "benchmark.h"
-#include "spdlog/spdlog.h"
 #include "cli_parser.h"
 #include "evaluation.h"
 
