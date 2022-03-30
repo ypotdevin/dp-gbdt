@@ -13,6 +13,7 @@ struct ModelParams
     int nb_trees = 50;
     double learning_rate = 0.1;
     double privacy_budget = 1.0;
+    bool optimize = true; // for evaluation purpose
     double optimization_privacy_budget = 1.0;
     bool leaky_opt = false; // for debugging purpose
     int max_depth = 6;

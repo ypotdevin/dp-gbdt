@@ -230,40 +230,55 @@ void DPEnsemble::train(DataSet *dataset)
          * using differential privacy -- not when DP is turned off (keep
          * that in mind when comparing plots of these settings.
          */
-        auto raw_predictions = predict(dataset->X);
-        std::vector<double> differences = std::vector<double>(dataset->length);
-        std::transform(raw_predictions.begin(), raw_predictions.end(), dataset->y.begin(), differences.begin(), std::minus<double>());
-        auto mean = compute_mean(differences);
-        auto stdev = compute_stdev(differences, mean);
-        LOG_DEBUG("#error_evolution# --- mean={1}; stdev={2}", mean, stdev);
-
-        double current_loss;
-        if (params->leaky_opt)
+        bool keep_new_tree;
+        if (!params->optimize)
         {
-            current_loss = compute_rmse(differences);
+            // no optimization -> keep each suggested tree
+            keep_new_tree = true;
         }
         else
         {
-            current_loss = dp_rms_cauchy(differences, params->optimization_privacy_budget, params->error_upper_bound);
-        }
-        LOG_INFO("#loss_evolution# --- fitting decision tree {1}; previous loss: {2}; current loss: {3}", tree_index, prev_loss, current_loss);
+            // optimization -> keeping a tree depends on its performance gain
+            auto raw_predictions = predict(dataset->X);
+            std::vector<double> differences = std::vector<double>(dataset->length);
+            std::transform(raw_predictions.begin(), raw_predictions.end(), dataset->y.begin(), differences.begin(), std::minus<double>());
+            auto mean = compute_mean(differences);
+            auto stdev = compute_stdev(differences, mean);
+            LOG_DEBUG("#error_evolution# --- mean={1}; stdev={2}", mean, stdev);
 
-        if (current_loss >= 0.0 && current_loss < prev_loss)
+            double current_loss;
+            if (params->leaky_opt && std::isnan(params->optimization_privacy_budget))
+            {
+                current_loss = compute_rmse(differences);
+                keep_new_tree = current_loss >= 0.0 && current_loss < prev_loss;
+            }
+            else if (!params->leaky_opt && !std::isnan(params->optimization_privacy_budget))
+            {
+                current_loss = dp_rms_cauchy(differences, params->optimization_privacy_budget, params->error_upper_bound);
+                keep_new_tree = current_loss < prev_loss;
+            }
+            else
+            {
+                throw std::runtime_error("illegal combination of of optimization, leaky optimization and DP optimization budget");
+            }
+            LOG_INFO("#loss_evolution# --- fitting decision tree {1}; previous loss: {2}; current loss: {3}", tree_index, prev_loss, current_loss);
+        }
+
+        if (keep_new_tree)
         {
-            LOG_DEBUG("#tree_evolution# --- ensemble includes decision tree {1}. Number of trees in ensemble: {2}",
-                      tree_index, trees.size());
-            prev_loss = current_loss;
-            // remove rows, since we keep the tree
             *dataset = dataset->remove_rows(tree_indices);
         }
         else
         {
             trees.pop_back();
-            LOG_DEBUG("#tree_evolution# --- ensemble excludes decision tree {1}. Number of trees in ensemble: {2}",
-                      tree_index, trees.size());
         }
-
-        LOG_INFO(YELLOW("Tree {1:2d} done. Instances left: {2}"), tree_index, dataset->length);
+        LOG_DEBUG(
+            "#tree_evolution# --- ensemble {1} decision tree {2}. Number of trees in ensemble: {3}. Instances left: {4}.",
+            keep_new_tree ? "includes" : "excludes",
+            tree_index,
+            trees.size(),
+            dataset->length
+        );
     }
 }
 
