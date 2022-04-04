@@ -99,6 +99,7 @@ void parse_model_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp)
         }
         mp.leaky_opt = true;
         mp.optimization_privacy_budget = std::nan("");
+        mp.error_upper_bound = std::nan("");
     }
     else
     {
@@ -112,6 +113,7 @@ void parse_model_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp)
         }
         mp.optimize = false;
         mp.optimization_privacy_budget = std::nan("");
+        mp.error_upper_bound = std::nan("");
     }
     else
     {

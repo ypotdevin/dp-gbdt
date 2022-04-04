@@ -261,6 +261,10 @@ void DPEnsemble::train(DataSet *dataset)
             {
                 throw std::runtime_error("illegal combination of of optimization, leaky optimization and DP optimization budget");
             }
+            if (keep_new_tree)
+            {
+                prev_loss = current_loss;
+            }
             LOG_INFO("#loss_evolution# --- fitting decision tree {1}; previous loss: {2}; current loss: {3}", tree_index, prev_loss, current_loss);
         }
 
