@@ -178,8 +178,8 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
         auto smallest = errors.at(k - 1);
         prefix_sum -= largest; // implicitly replace largest by 0)
         suffix_sum -= smallest;
-        auto prefix_local_sens = local_sensitivity(largest, 0, prefix_sum, n, U);
-        auto suffix_local_sens = local_sensitivity(smallest, U, suffix_sum, n, U);
+        auto prefix_local_sens = local_sensitivity(largest, 0, prefix_sum, n);
+        auto suffix_local_sens = local_sensitivity(smallest, U, suffix_sum, n);
         auto local_sens = std::max(prefix_local_sens, suffix_local_sens);
         smooth_sens = std::max(smooth_sens, local_sens * std::exp(-beta * k));
         suffix_sum += U; // replace smallest by U, but only after calculation
@@ -198,7 +198,7 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
  * @param U the upper bound of the squared errors terms in s, and x.
  * @return double The local sensitivity of the root mean squared error function.
  */
-double local_sensitivity(const double x, const double substitute, double s, const std::size_t n, const double U)
+double local_sensitivity(const double x, const double substitute, double s, const std::size_t n)
 {
     s = std::max(s, 1e-12); // to avoid division by zero
     auto sens = std::sqrt(s / n) * std::abs(std::sqrt(1 + x / s) - std::sqrt(1 + substitute / s));
