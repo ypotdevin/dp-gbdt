@@ -26,6 +26,7 @@ double compute_stdev(std::vector<double> &vec, double mean);
 double compute_rmse(std::vector<double> differences);
 std::string get_time_string();
 bool is_true(unsigned value);
+std::vector<double> linspace(double low, double high, size_t num);
 
 
 

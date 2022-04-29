@@ -5,12 +5,10 @@
 #include "utils.h"
 #include "constant_time.h"
 
-
 /** Global Variables */
 
 bool VERIFICATION_MODE;
 size_t cv_fold_index;
-
 
 /** Methods */
 
@@ -22,21 +20,25 @@ double clamp(double n, double lower, double upper)
     return n;
 }
 
-
 double log_sum_exp(std::vector<double> vec)
 {
     size_t count = vec.size();
-    if (count > 0) {
+    if (count > 0)
+    {
         double max_val = std::numeric_limits<double>::min();
-        for (auto elem : vec) {
+        for (auto elem : vec)
+        {
             max_val = constant_time::max(max_val, elem);
         }
         double sum = 0;
-        for (size_t i = 0; i < count; i++) {
+        for (size_t i = 0; i < count; i++)
+        {
             sum += exp(vec[i] - max_val);
         }
         return log(sum) + max_val;
-    } else {
+    }
+    else
+    {
         return 0.0;
     }
 }
@@ -66,15 +68,34 @@ std::string get_time_string()
 {
     time_t t = time(0);
     struct tm *now = localtime(&t);
-    char buffer [80];
-    strftime(buffer,80,"%m.%d_%H:%M",now);
+    char buffer[80];
+    strftime(buffer, 80, "%m.%d_%H:%M", now);
     return std::string(buffer);
 }
 
 bool is_true(unsigned value)
 {
-    if(not (value == TRUE or value == FALSE)){
+    if (not(value == TRUE or value == FALSE))
+    {
         throw std::runtime_error("Fault injection attack?");
     }
     return value == TRUE;
+}
+
+std::vector<double> linspace(double low, double high, size_t num)
+{
+    std::vector<double> points(num);
+    if (num == 1)
+    {
+        points.push_back(low);
+    }
+    else
+    {
+        auto delta = (high - low) / (num - 1);
+        for (size_t i = 0; i < num; ++i)
+        {
+            points[i] = low + i * delta;
+        }
+    }
+    return points;
 }
