@@ -29,6 +29,7 @@ namespace evaluation
                 "param_max_depth",
                 "param_nb_trees",
                 "param_ensemble_privacy_budget",
+                "param_gamma",
                 "param_optimization_privacy_budget",
                 "param_error_upper_bound",
                 "score_metric"};
@@ -55,6 +56,7 @@ namespace evaluation
                 << parameters.nb_trees
                 << parameters.privacy_budget
                 << parameters.optimization_privacy_budget
+                << parameters.gamma
                 << parameters.error_upper_bound
                 << score_metric;
             for (auto train_score : train_scores)
