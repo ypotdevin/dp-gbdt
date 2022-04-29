@@ -44,6 +44,8 @@ int main(int argc, char **argv)
 {
     // seed randomness once and for all
     srand(time(NULL));
+    std::random_device dev;
+    std::mt19937_64 rng(dev());
 
     cli_parser::CommandLineParser cp(argc, argv);
     if (cp.hasOption("--verify"))
@@ -84,7 +86,7 @@ int main(int argc, char **argv)
     std::vector<double> train_scores, test_scores;
     // do cross validation
     for (auto split : cv_inputs) {
-        DPEnsemble ensemble = DPEnsemble(&params);
+        DPEnsemble ensemble = DPEnsemble(&params, rng);
         ensemble.train(&split->train);
 
         // predict with the test set

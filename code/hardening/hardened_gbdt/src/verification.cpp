@@ -23,6 +23,9 @@ std::ofstream verification_logfile;
 
 int Verification::main(int argc, char *argv[])
 {
+    std::random_device dev;
+    std::mt19937_64 rng(dev());
+
     // Set up logging for debugging
     spdlog::set_level(spdlog::level::err);
     spdlog::set_pattern("[%H:%M:%S] [%^%5l%$] %v");
@@ -84,7 +87,7 @@ int Verification::main(int argc, char *argv[])
             }
 
             // train the model
-            DPEnsemble ensemble = DPEnsemble(&param);
+            DPEnsemble ensemble = DPEnsemble(&param, rng);
             ensemble.train(&split->train);
 
             // predict with the test set

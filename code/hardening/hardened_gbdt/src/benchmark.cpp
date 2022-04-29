@@ -16,6 +16,9 @@
 
 int Benchmark::main(int argc, char** argv)
 {
+    std::random_device dev;
+    std::mt19937_64 rng(dev());
+
     // Set up logging
     spdlog::set_level(spdlog::level::err);
     spdlog::set_pattern("[%H:%M:%S] [%^%5l%$] %v");
@@ -70,7 +73,7 @@ int Benchmark::main(int argc, char** argv)
                 split->train.scale_y(param, -1, 1);
             }
 
-            DPEnsemble ensemble = DPEnsemble(&param);
+            DPEnsemble ensemble = DPEnsemble(&param, rng);
             ensemble.train(&split->train);
 
             // predict with the test set
