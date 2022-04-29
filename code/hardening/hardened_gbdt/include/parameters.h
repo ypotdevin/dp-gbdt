@@ -15,6 +15,7 @@ struct ModelParams
     double privacy_budget = 1.0;
     bool optimize = true; // for evaluation purpose
     double optimization_privacy_budget = 1.0;
+    double gamma = 2.0;
     bool leaky_opt = false; // for debugging purpose
     int max_depth = 6;
     int min_samples_split = 2;

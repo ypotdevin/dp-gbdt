@@ -16,7 +16,7 @@ using namespace std;
 
 /** Constructors */
 
-DPEnsemble::DPEnsemble(ModelParams *parameters) : params(parameters)
+DPEnsemble::DPEnsemble(ModelParams *parameters, std::mt19937_64 rng) : params(parameters)
 {
     if (parameters->privacy_budget <= 0)
     {
@@ -34,6 +34,8 @@ DPEnsemble::DPEnsemble(ModelParams *parameters) : params(parameters)
         std::generate(this->grid.begin(), this->grid.end(), [&counter, &step_size]() mutable
                       { return counter++ * step_size; });
     }
+    std::vector<double> standard_support = linspace(-10.0, 10.0, 1000001); // TODO: This support set truncates the nature of a Cauchy distribution drastically; a better solution is in progress
+    noise_distribution = custom_cauchy::CustomStandardCauchy(standard_support, params->gamma, rng);
 }
 
 DPEnsemble::~DPEnsemble()
@@ -254,7 +256,8 @@ void DPEnsemble::train(DataSet *dataset)
             }
             else if (!params->leaky_opt && !std::isnan(params->optimization_privacy_budget))
             {
-                current_loss = dp_rms_cauchy(differences, params->optimization_privacy_budget, params->error_upper_bound);
+                current_loss = dp_rms_custom_cauchy(differences, params->optimization_privacy_budget, params->error_upper_bound, noise_distribution);
+                //current_loss = dp_rms_cauchy(differences, params->optimization_privacy_budget, params->error_upper_bound);
                 keep_new_tree = current_loss < prev_loss;
             }
             else

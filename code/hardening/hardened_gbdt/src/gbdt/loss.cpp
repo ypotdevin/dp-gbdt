@@ -115,15 +115,28 @@ double BinaryClassification::compute_score(std::vector<double> &y, std::vector<d
     return true_preds / y.size();
 }
 
-/**
- * @brief Call the other dp_rms_cauchy function with a std::mt19937 rng, seeded
- * with a std::random_device.
- */
-double dp_rms_cauchy(std::vector<double> errors, const double epsilon, const double U)
+// /**
+//  * @brief Call the other dp_rms_cauchy function with a std::mt19937 rng, seeded
+//  * with a std::random_device.
+//  */
+// double dp_rms_cauchy(std::vector<double> errors, const double epsilon, const double U)
+// {
+//     std::random_device dev; // avoid doing this in an inner loop!
+//     std::mt19937 rng(dev());
+//     return dp_rms_cauchy(errors, epsilon, U, rng);
+// }
+
+double dp_rms_custom_cauchy(std::vector<double> errors, const double epsilon, const double U, custom_cauchy::CustomStandardCauchy &csc)
 {
-    std::random_device dev;
-    std::mt19937 rng(dev());
-    return dp_rms_cauchy(errors, epsilon, U, rng);
+    std::sort(errors.begin(), errors.end());
+    auto gamma = csc.get_gamma();
+    auto beta = epsilon / (2 * (gamma + 1.0));
+    double sens, rmse;
+    std::tie(sens, rmse) = rMS_smooth_sensitivity(errors, beta, U);
+    LOG_DEBUG("#sensitivity_evolution# --- smooth_sens={1}", sens);
+    auto noise = csc.draw();
+    auto dp_rmse = rmse + 2 * (gamma + 1) * sens * noise / epsilon;
+    return dp_rmse;
 }
 
 /**

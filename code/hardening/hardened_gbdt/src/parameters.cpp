@@ -55,6 +55,10 @@ void parse_model_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp)
         mp.optimize = true;
         mp.leaky_opt = false;
     }
+    if (cp.hasOption("--gamma"))
+    {
+        mp.gamma = cp.getDoubleOptionValue("--gamma");
+    }
     if (cp.hasOption("--nb-trees"))
     {
         mp.nb_trees = cp.getIntOptionValue("--nb-trees");
@@ -127,6 +131,7 @@ std::ostream &operator<<(std::ostream &os, const ModelParams &mp)
               << "    nb_trees: " << mp.nb_trees << std::endl
               << "    learning_rate: " << mp.learning_rate << std::endl
               << "    privacy_budget: " << mp.privacy_budget << std::endl
+              << "    gamma: " << mp.gamma << std::endl
               << "    optimize:" << mp.optimize << std::endl
               << "    optimization_privacy_budget: " << mp.optimization_privacy_budget << std::endl
               << "    leaky-optimization:" << mp.leaky_opt << std::endl

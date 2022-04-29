@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <random>
+#include "custom_cauchy.h"
 
 // abstract class
 class Task
@@ -40,7 +41,8 @@ public:
     virtual double compute_score(std::vector<double> &y, std::vector<double> &y_pred);
 };
 
-double dp_rms_cauchy(std::vector<double> errors, const double epsilon, const double U);
+// double dp_rms_cauchy(std::vector<double> errors, const double epsilon, const double U);
+double dp_rms_custom_cauchy(std::vector<double> errors, const double epsilon, const double U, custom_cauchy::CustomStandardCauchy &csc);
 double dp_rms_cauchy(std::vector<double> errors, const double epsilon, const double U, std::mt19937 &rng);
 std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, const double beta, double U);
 double local_sensitivity(const double x, const double substitute, double s, const std::size_t n);
