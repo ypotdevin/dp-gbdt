@@ -9,7 +9,6 @@
 #include "parameters.h"
 #include "data.h"
 
-
 class DPEnsemble
 {
 public:
@@ -30,7 +29,7 @@ private:
     DataSet *dataset;
     double init_score;
     std::vector<double> grid;
-    custom_cauchy::CustomStandardCauchy noise_distribution;
+    custom_cauchy::CustomCauchy *noise_distribution;
 
     // methods
     void update_gradients(std::vector<double> &gradients, int tree_index);

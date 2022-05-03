@@ -2,7 +2,8 @@
 
 namespace custom_cauchy
 {
-    CustomStandardCauchy::CustomStandardCauchy(const std::vector<double> standard_support, double gamma, const std::mt19937_64 &rng)
+
+    NaiveCustomCauchy::NaiveCustomCauchy(const std::vector<double> standard_support, double gamma, const std::mt19937_64 &rng)
     {
         this->gamma = gamma;
         this->standard_support = standard_support;
@@ -15,23 +16,10 @@ namespace custom_cauchy
         index_distribution = std::discrete_distribution<size_t>(densities.begin(), densities.end());
     }
 
-    /**
-     * @brief Draw a single sample from the standard support (which was provided
-     * at initialization of the standard custom Cauchy distribution), according
-     * to the pdf.
-     */
-    double CustomStandardCauchy::draw()
+    double NaiveCustomCauchy::draw()
     {
         auto index = index_distribution(rng);
         return standard_support[index];
-    }
-
-    /**
-     * @brief Return the gamma used to initialize the distribution.
-     */
-    double CustomStandardCauchy::get_gamma()
-    {
-        return gamma;
     }
 
     std::vector<double> pdf(std::vector<double> zs, const double gamma)
@@ -39,5 +27,40 @@ namespace custom_cauchy
         std::transform(zs.begin(), zs.end(), zs.begin(), [gamma](double z)
                        { return 1 / (1 + std::pow(std::abs(z), gamma)); });
         return zs;
+    }
+
+    AdvancedCustomCauchy::AdvancedCustomCauchy(double gamma, const std::mt19937_64 &rng)
+    {
+        this->gamma = gamma;
+        this->rng = rng;
+        alpha_gamma = std::gamma_distribution<double>(1.0 - 1.0 / gamma);
+        beta_gamma = std::gamma_distribution<double>(1.0 / gamma);
+        maybe_negate = std::bernoulli_distribution(0.5);
+    }
+
+    double AdvancedCustomCauchy::draw()
+    /*
+     * This solution is based upon whuber's suggestions made in
+     * https://stats.stackexchange.com/a/573470/182357. But that solution would
+     * require a beta distribution. Since this kind of distribution is not
+     * available in the standard library, I use the link between the gamma
+     * distribution and the beta distribution, described here:
+     * https://en.wikipedia.org/wiki/Beta_distribution#Derived_from_other_distributions
+     *
+     */
+    {
+        auto x = alpha_gamma(rng);
+        x = std::max(1e-100, x); // to avoid possible, but very unlikely, division by 0 later
+        auto y = alpha_gamma(rng);
+        auto z = x / (x + y); // now z is distributed according to the beta distribution
+        z = std::pow(1.0 / z - 1.0, 1.0 / gamma);
+        if (maybe_negate(rng))
+        {
+            return -z;
+        }
+        else
+        {
+            return z;
+        }
     }
 }
