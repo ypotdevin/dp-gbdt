@@ -16,7 +16,7 @@ using namespace std;
 
 /** Constructors */
 
-DPEnsemble::DPEnsemble(ModelParams *parameters, std::mt19937_64 rng) : params(parameters)
+DPEnsemble::DPEnsemble(ModelParams *parameters, const std::mt19937_64 &rng) : params(parameters)//, noise_distribution(parameters->gamma, rng)
 {
     if (parameters->privacy_budget <= 0)
     {
@@ -34,7 +34,7 @@ DPEnsemble::DPEnsemble(ModelParams *parameters, std::mt19937_64 rng) : params(pa
         std::generate(this->grid.begin(), this->grid.end(), [&counter, &step_size]() mutable
                       { return counter++ * step_size; });
     }
-    *noise_distribution = custom_cauchy::AdvancedCustomCauchy(params->gamma, rng);
+    noise_distribution = custom_cauchy::AdvancedCustomCauchy(params->gamma, rng);
 }
 
 DPEnsemble::~DPEnsemble()

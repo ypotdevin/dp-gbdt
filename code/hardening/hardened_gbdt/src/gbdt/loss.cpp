@@ -126,15 +126,15 @@ double BinaryClassification::compute_score(std::vector<double> &y, std::vector<d
 //     return dp_rms_cauchy(errors, epsilon, U, rng);
 // }
 
-double dp_rms_custom_cauchy(std::vector<double> errors, const double epsilon, const double U, custom_cauchy::CustomCauchy *cc)
+double dp_rms_custom_cauchy(std::vector<double> errors, const double epsilon, const double U, custom_cauchy::CustomCauchy &cc)
 {
     std::sort(errors.begin(), errors.end());
-    auto gamma = cc->get_gamma();
+    auto gamma = cc.get_gamma();
     auto beta = epsilon / (2 * (gamma + 1.0));
     double sens, rmse;
     std::tie(sens, rmse) = rMS_smooth_sensitivity(errors, beta, U);
     LOG_DEBUG("#sensitivity_evolution# --- smooth_sens={1}", sens);
-    auto noise = cc->draw();
+    auto noise = cc.draw();
     auto dp_rmse = rmse + 2 * (gamma + 1) * sens * noise / epsilon;
     return dp_rmse;
 }
