@@ -15,7 +15,7 @@ namespace evaluation
      * @param test_scores the scores on the test set splits.
      * @author Yannik Potdevin
      */
-    void write_csv_file(const std::string filename, const ModelParams &parameters, const std::string score_metric, const std::vector<double> &train_scores, const std::vector<double> &test_scores)
+    void write_csv_file(const std::string filename, const ModelParams &parameters, const std::string score_metric, const std::vector<double> &train_scores, const std::vector<double> &test_scores, const int seed)
     {
         try
         {
@@ -29,9 +29,10 @@ namespace evaluation
                 "param_max_depth",
                 "param_nb_trees",
                 "param_ensemble_privacy_budget",
-                "param_gamma",
                 "param_optimization_privacy_budget",
+                "param_gamma",
                 "param_error_upper_bound",
+                "seed",
                 "score_metric"};
             for (std::size_t i = 0; i < train_scores.size(); i++)
             {
@@ -58,6 +59,7 @@ namespace evaluation
                 << parameters.optimization_privacy_budget
                 << parameters.gamma
                 << parameters.error_upper_bound
+                << seed
                 << score_metric;
             for (auto train_score : train_scores)
             {

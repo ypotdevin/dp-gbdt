@@ -18,7 +18,8 @@
 
 extern bool VERIFICATION_MODE;
 
-spdlog::level::level_enum select_log_level(std::string level){
+spdlog::level::level_enum select_log_level(std::string level)
+{
     if (level == "off")
     {
         return spdlog::level::off;
@@ -35,18 +36,14 @@ spdlog::level::level_enum select_log_level(std::string level){
     {
         return spdlog::level::debug;
     }
-    else {
+    else
+    {
         throw std::runtime_error("Unknown log level");
     }
 }
 
 int main(int argc, char **argv)
 {
-    // seed randomness once and for all
-    srand(time(NULL));
-    std::random_device dev;
-    std::mt19937_64 rng(dev());
-
     cli_parser::CommandLineParser cp(argc, argv);
     if (cp.hasOption("--verify"))
     {
@@ -60,6 +57,17 @@ int main(int argc, char **argv)
     }
 
     //////////////////////// If running regularly //////////////////////////////
+    int seed;
+    std::mt19937_64 rng;
+    if (cp.hasOption("--seed"))
+    {
+        seed = cp.getIntOptionValue("--seed");
+        rng = std::mt19937_64(seed);
+    }
+    else
+    {
+        throw std::runtime_error("Parameter seed is missing.");
+    }
     VERIFICATION_MODE = false;
 
     if (cp.hasOption("--log-level"))
@@ -85,7 +93,8 @@ int main(int argc, char **argv)
 
     std::vector<double> train_scores, test_scores;
     // do cross validation
-    for (auto split : cv_inputs) {
+    for (auto split : cv_inputs)
+    {
         DPEnsemble ensemble = DPEnsemble(&params, rng);
         ensemble.train(&split->train);
 
@@ -93,10 +102,12 @@ int main(int argc, char **argv)
         std::vector<double> y_train_pred = ensemble.predict(split->train.X);
         std::vector<double> y_test_pred = ensemble.predict(split->test.X);
 
-        if(is_true(params.scale_y)) {
+        if (is_true(params.scale_y))
+        {
             inverse_scale_y(params, split->train.scaler, y_train_pred);
         }
-        if(is_true(params.scale_y)) {
+        if (is_true(params.scale_y))
+        {
             inverse_scale_y(params, split->train.scaler, y_test_pred);
         }
 
@@ -111,7 +122,6 @@ int main(int argc, char **argv)
     if (cp.hasOption("--results-file"))
     {
         auto filename = cp.getOptionValue("--results-file");
-        evaluation::write_csv_file(filename, params, "rmse", train_scores, test_scores);
+        evaluation::write_csv_file(filename, params, "rmse", train_scores, test_scores, seed);
     }
-
 }

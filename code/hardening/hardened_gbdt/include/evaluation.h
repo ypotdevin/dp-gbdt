@@ -5,7 +5,7 @@
 
 namespace evaluation
 {
-    void write_csv_file(const std::string filename, const ModelParams &parameters, const std::string score_metric, const std::vector<double> &train_scores, const std::vector<double> &test_scores);
+    void write_csv_file(const std::string filename, const ModelParams &parameters, const std::string score_metric, const std::vector<double> &train_scores, const std::vector<double> &test_scores, const int seed);
 }
 
 #endif /* EVALUATION_H */
