@@ -23,7 +23,7 @@
 DataSet *Parser::get_abalone(ModelParams &parameters,
                              size_t num_samples)
 {
-    std::string file = "/home/ypo/dp-gbdt/code/hardening/hardened_gbdt/datasets/real/abalone.data";
+    std::string file = "datasets/real/abalone.data";
     std::string name = "abalone";
     int num_rows = 4177;
     int num_cols = 9;
@@ -60,7 +60,7 @@ DataSet *Parser::get_YearPredictionMSD(ModelParams &parameters,
 DataSet *Parser::get_adult(ModelParams &parameters,
                            size_t num_samples)
 {
-    std::string file = "/home/ypo/dp-gbdt/code/hardening/hardened_gbdt/datasets/real/adult.data";
+    std::string file = "datasets/real/adult.data";
     std::string name = "adult";
     int num_rows = 48842;
     int num_cols = 15;
@@ -77,7 +77,7 @@ DataSet *Parser::get_adult(ModelParams &parameters,
 
 DataSet *Parser::get_concrete(ModelParams &parameters, size_t num_samples)
 {
-    std::string file = "/home/ypo/dp-gbdt/code/hardening/hardened_gbdt/datasets/real/Concrete_Data_Yeh.csv";
+    std::string file = "datasets/real/Concrete_Data_Yeh.csv";
     std::string name = "concrete";
     int num_rows = 1030;
     int num_cols = 9;
@@ -94,7 +94,7 @@ DataSet *Parser::get_concrete(ModelParams &parameters, size_t num_samples)
 
 DataSet *Parser::get_wine(ModelParams &parameters, size_t num_samples)
 {
-    std::string file = "/home/ypo/dp-gbdt/code/hardening/hardened_gbdt/datasets/real/winequality-red.csv";
+    std::string file = "datasets/real/winequality-red.csv";
     std::string name = "wine";
     int num_rows = 1599;
     int num_cols = 12;
