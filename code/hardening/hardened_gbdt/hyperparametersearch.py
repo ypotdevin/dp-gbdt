@@ -65,11 +65,11 @@ def add_repetitions(settings: Settings, num_repetitions: int, rng) -> Settings:
     for setting in settings:
         seeds = rng.integers(2**30 - 1, size=num_repetitions)
         for seed in seeds:
-            _setting = {
+            assert "--seed" not in setting.keys()
+            yield {
                 "--seed": seed,
                 **setting,
             }
-            yield _setting
 
 
 def add_dp_opt_settings(settings: Settings) -> Settings:
@@ -77,6 +77,8 @@ def add_dp_opt_settings(settings: Settings) -> Settings:
     op_budgets = [0.01, 0.05, 1.0, 5.0]
     for setting in settings:
         for (epb, opb) in product(ep_budgets, op_budgets):
+            assert "--ensemble-privacy-budget" not in setting.keys()
+            assert "--optimization-privacy-budget" not in setting.keys()
             yield {
                 "--ensemble-privacy-budget": epb,
                 "--optimization-privacy-budget": opb,
@@ -88,6 +90,8 @@ def add_nodp_opt_setting(settings: Settings, variant: str) -> Settings:
     ep_budgets = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
     for setting in settings:
         for epb in ep_budgets:
+            assert "--ensemble-privacy-budget" not in setting.keys()
+            assert variant not in setting.keys()
             _setting = {
                 "--ensemble-privacy-budget": epb,
                 variant: "",
@@ -109,12 +113,13 @@ def add_no_opt_settings(settings: Settings) -> Settings:
 def add_filenames(settings: Settings, template) -> Settings:
     for i, setting in enumerate(settings):
         filename = template.format(i)
-        _setting = {
+        assert "--results-file" not in setting.keys()
+        assert "log_filename" not in setting.keys()
+        yield {
             "--results-file": filename + ".csv",
             "log_filename": filename + ".log",
             **setting,
         }
-        yield _setting
 
 
 def settings_loop(
