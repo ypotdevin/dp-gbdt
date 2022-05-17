@@ -1,6 +1,6 @@
 # Enclave hardening for private ML
 
-This in an optimized implementation of
+This in an optimized implementation of "DPBoost" (Li et al.).
 
 ## Versions
 
