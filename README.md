@@ -40,19 +40,23 @@ this is just to show that our algorithm results are consistent with the python i
 
 
 ### Running
-- **Running the verification script to compare Python and C++**
-```bash
-cd code/
-./verify.sh
-```
 - **Running C++ gbdt**
 ```bash
-cd code/cpp_gbdt/
+cd hardening/hardened_gbdt/
 make
-./run
-(./run --verify)
-(./run --eval)
-(./run --bench)
+./run --ensemble-privacy-budget 1.0 \
+      --optimization-privacy-budget 0.01 \
+      --gamma 1.3 \
+      --nb-trees 1 \
+      --max_depth 5 \
+      --learning-rate 5.01 \
+      --l2-lambda 7.7 \
+      --l2-threshold 0.3 \
+      --dataset abalone \
+      --num-samples 4177 \
+      --error-upper-bound 13.8 \
+      --log-level debug \
+      --results-file out.csv
 ```
 
 ## Limitations
