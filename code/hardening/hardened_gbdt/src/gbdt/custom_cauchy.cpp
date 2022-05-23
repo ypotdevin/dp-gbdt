@@ -1,3 +1,5 @@
+#include <ostream>
+
 #include "custom_cauchy.h"
 
 namespace custom_cauchy
@@ -14,6 +16,13 @@ namespace custom_cauchy
                        { return density / normalization_factor; });
         // after transformation, the densities are treated like probabilities
         index_distribution = std::discrete_distribution<size_t>(densities.begin(), densities.end());
+    }
+
+    void NaiveCustomCauchy::print(std::ostream &os) const
+    {
+        os << "NaiveCustomCauchy(gamma="
+           << this->gamma
+           << ")";
     }
 
     double NaiveCustomCauchy::draw()
@@ -36,6 +45,13 @@ namespace custom_cauchy
         alpha_gamma = std::gamma_distribution<double>(1.0 - 1.0 / gamma);
         beta_gamma = std::gamma_distribution<double>(1.0 / gamma);
         maybe_negate = std::bernoulli_distribution(0.5);
+    }
+
+    void AdvancedCustomCauchy::print(std::ostream &os) const
+    {
+        os << "AdvancedCustomCauchy(gamma="
+           << this->gamma
+           << ")";
     }
 
     double AdvancedCustomCauchy::draw()

@@ -21,6 +21,12 @@ namespace custom_cauchy
          * @brief Draw a single sample from this distribution.
          */
         virtual double draw() = 0;
+        virtual void print(std::ostream &os) const = 0;
+        friend std::ostream &operator<<(std::ostream &os, const CustomCauchy &cc)
+        {
+            cc.print(os);
+            return os;
+        };
     };
 
     /**
@@ -40,6 +46,7 @@ namespace custom_cauchy
     public:
         NaiveCustomCauchy() = default;
         NaiveCustomCauchy(const std::vector<double> standard_support, double gamma, const std::mt19937_64 &rng);
+        void print(std::ostream &os) const;
         /**
          * @brief Draw a single sample from the standard support (which was provided
          * at initialization of the standard custom Cauchy distribution), according
@@ -65,10 +72,11 @@ namespace custom_cauchy
     public:
         AdvancedCustomCauchy() = default;
         AdvancedCustomCauchy(double gamma, const std::mt19937_64 &rng);
+        void print(std::ostream &os) const;
 
         /**
          * @brief Draw a single sample according to this distribution. In
-         * constrast to `CustomStandardCauchy::draw()`, there are no artificial
+         * contrast to `CustomStandardCauchy::draw()`, there are no artificial
          * boundaries on the drawn values.
          */
         double draw();
