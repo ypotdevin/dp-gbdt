@@ -5,6 +5,7 @@
 #include "constant_time.h"
 #include "logging.h"
 #include "spdlog/spdlog.h"
+#include "tree_rejection.h"
 #include "utils.h"
 #include "loss.h"
 
@@ -16,12 +17,14 @@ using namespace std;
 
 /** Constructors */
 
-DPEnsemble::DPEnsemble(ModelParams *parameters, const std::mt19937_64 &rng) : params(parameters)//, noise_distribution(parameters->gamma, rng)
+DPEnsemble::DPEnsemble(ModelParams *parameters, const std::mt19937_64 &rng) : params(parameters) //, noise_distribution(parameters->gamma, rng)
 {
     if (parameters->privacy_budget <= 0)
     {
         throw std::runtime_error("hardened gbdt cannot be run with pb<=0");
     }
+
+    this->rng = rng;
 
     // prepare the linspace grid
     if (is_true(params->use_grid))
@@ -56,8 +59,6 @@ void DPEnsemble::train(DataSet *dataset)
     // compute initial prediction
     this->init_score = params->task->compute_init_score(dataset->y);
     LOG_DEBUG("Training initialized with score: {1}", init_score);
-
-    auto prev_loss = std::numeric_limits<double>::infinity();
 
     // each tree gets the full pb, as they train on distinct data
     TreeParams tree_params;
@@ -231,43 +232,9 @@ void DPEnsemble::train(DataSet *dataset)
          * using differential privacy -- not when DP is turned off (keep
          * that in mind when comparing plots of these settings.
          */
-        bool keep_new_tree;
-        if (!params->optimize)
-        {
-            // no optimization -> keep each suggested tree
-            keep_new_tree = true;
-        }
-        else
-        {
-            // optimization -> keeping a tree depends on its performance gain
-            auto raw_predictions = predict(dataset->X);
-            std::vector<double> differences = std::vector<double>(dataset->length);
-            std::transform(raw_predictions.begin(), raw_predictions.end(), dataset->y.begin(), differences.begin(), std::minus<double>());
-            auto mean = compute_mean(differences);
-            auto stdev = compute_stdev(differences, mean);
-            LOG_DEBUG("#error_evolution# --- mean={1}; stdev={2}", mean, stdev);
-
-            double current_loss;
-            if (params->leaky_opt && std::isnan(params->optimization_privacy_budget))
-            {
-                current_loss = compute_rmse(differences);
-                keep_new_tree = current_loss >= 0.0 && current_loss < prev_loss;
-            }
-            else if (!params->leaky_opt && !std::isnan(params->optimization_privacy_budget))
-            {
-                current_loss = dp_rms_custom_cauchy(differences, params->optimization_privacy_budget, params->error_upper_bound, noise_distribution);
-                keep_new_tree = current_loss < prev_loss;
-            }
-            else
-            {
-                throw std::runtime_error("illegal combination of of optimization, leaky optimization and DP optimization budget");
-            }
-            if (keep_new_tree)
-            {
-                prev_loss = current_loss;
-            }
-            LOG_INFO("#loss_evolution# --- fitting decision tree {1}; previous loss: {2}; current loss: {3}", tree_index, prev_loss, current_loss);
-        }
+        tree_rejection::DPrMSERejector rejector(params->optimization_privacy_budget, params->error_upper_bound, params->gamma, this->rng);
+        auto raw_predictions = predict(dataset->X);
+        auto keep_new_tree = rejector.reject_tree(dataset->y, raw_predictions);
 
         if (keep_new_tree)
         {

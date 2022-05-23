@@ -29,6 +29,7 @@ private:
     DataSet *dataset;
     double init_score;
     std::vector<double> grid;
+    std::mt19937_64 rng;
     custom_cauchy::AdvancedCustomCauchy noise_distribution;
 
     // methods
