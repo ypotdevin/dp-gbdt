@@ -264,19 +264,6 @@ DataSet *Parser::parse_file(std::string dataset_file, std::string dataset_name, 
     return dataset;
 }
 
-/**
- * @brief Read from CLI which dataset to use and update model parameters accordingly.
- *
- * Currently parsed parameters:
- *   --dataset (string, like "abalone", "adult", …)
- *   --num-samples (int)
- *   --error-upper-bound (double, needed for DP-rMSE-loss)
- *
- * @param cp the parser holding the command line arguments.
- * @param mp the model parameters to update.
- * @return DataSet* the dataset identified by argument "--dataset", reading the
- * first "--num-samples" lines.
- */
 DataSet *parse_dataset_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp)
 {
     if (cp.hasOption("--error-upper-bound"))
