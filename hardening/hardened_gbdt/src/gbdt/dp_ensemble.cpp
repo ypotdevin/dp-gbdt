@@ -5,23 +5,24 @@
 #include "constant_time.h"
 #include "logging.h"
 #include "spdlog/spdlog.h"
+#include "tree_rejection.h"
 #include "utils.h"
 #include "loss.h"
 
-extern std::ofstream verification_logfile;
 extern size_t cv_fold_index;
-extern bool VERIFICATION_MODE;
 
 using namespace std;
 
 /** Constructors */
 
-DPEnsemble::DPEnsemble(ModelParams *parameters, const std::mt19937_64 &rng) : params(parameters)//, noise_distribution(parameters->gamma, rng)
+DPEnsemble::DPEnsemble(ModelParams *parameters) : params(parameters)
 {
     if (parameters->privacy_budget <= 0)
     {
         throw std::runtime_error("hardened gbdt cannot be run with pb<=0");
     }
+
+    this->rng = rng;
 
     // prepare the linspace grid
     if (is_true(params->use_grid))
@@ -34,7 +35,6 @@ DPEnsemble::DPEnsemble(ModelParams *parameters, const std::mt19937_64 &rng) : pa
         std::generate(this->grid.begin(), this->grid.end(), [&counter, &step_size]() mutable
                       { return counter++ * step_size; });
     }
-    noise_distribution = custom_cauchy::AdvancedCustomCauchy(params->gamma, rng);
 }
 
 DPEnsemble::~DPEnsemble()
@@ -57,8 +57,6 @@ void DPEnsemble::train(DataSet *dataset)
     this->init_score = params->task->compute_init_score(dataset->y);
     LOG_DEBUG("Training initialized with score: {1}", init_score);
 
-    auto prev_loss = std::numeric_limits<double>::infinity();
-
     // each tree gets the full pb, as they train on distinct data
     TreeParams tree_params;
     tree_params.tree_privacy_budget = params->privacy_budget;
@@ -66,12 +64,6 @@ void DPEnsemble::train(DataSet *dataset)
     // train all trees
     for (int tree_index = 0; tree_index < params->nb_trees; tree_index++)
     {
-
-        if (VERIFICATION_MODE)
-        {
-            VERIFICATION_LOG("Tree {0} CV-Ensemble {1}", tree_index, cv_fold_index);
-        }
-
         // update/init gradients
         update_gradients(dataset->gradients, tree_index);
 
@@ -135,10 +127,7 @@ void DPEnsemble::train(DataSet *dataset)
             // generate random index permutation
             std::vector<int> permutation(dataset->length);
             std::iota(std::begin(permutation), std::end(permutation), 1); // [1,2,3,...]
-            if (!VERIFICATION_MODE)
-            {
-                std::random_shuffle(permutation.begin(), permutation.end());
-            }
+            std::random_shuffle(permutation.begin(), permutation.end());
             // zero out all elements that are not part of the remaining array
             for (auto &elem : permutation)
             {
@@ -167,10 +156,7 @@ void DPEnsemble::train(DataSet *dataset)
 
             // generate random index permutation
             std::iota(std::begin(permutation), std::end(permutation), 1); // [1,2,3,...]
-            if (!VERIFICATION_MODE)
-            {
-                std::random_shuffle(permutation.begin(), permutation.end());
-            }
+            std::random_shuffle(permutation.begin(), permutation.end());
             // zero out all elements that are not part of the rejected array
             for (auto &elem : permutation)
             {
@@ -203,10 +189,7 @@ void DPEnsemble::train(DataSet *dataset)
             // Note, this causes the leaves to be clipped after building the tree.
             vector<int> all_indices(dataset->length);
             std::iota(std::begin(all_indices), std::end(all_indices), 0);
-            if (!VERIFICATION_MODE)
-            {
-                std::random_shuffle(all_indices.begin(), all_indices.end());
-            }
+            std::random_shuffle(all_indices.begin(), all_indices.end());
             for (int i = 0; i < number_of_rows; i++)
             {
                 tree_indices[all_indices[i]] = 1;
@@ -231,43 +214,8 @@ void DPEnsemble::train(DataSet *dataset)
          * using differential privacy -- not when DP is turned off (keep
          * that in mind when comparing plots of these settings.
          */
-        bool keep_new_tree;
-        if (!params->optimize)
-        {
-            // no optimization -> keep each suggested tree
-            keep_new_tree = true;
-        }
-        else
-        {
-            // optimization -> keeping a tree depends on its performance gain
-            auto raw_predictions = predict(dataset->X);
-            std::vector<double> differences = std::vector<double>(dataset->length);
-            std::transform(raw_predictions.begin(), raw_predictions.end(), dataset->y.begin(), differences.begin(), std::minus<double>());
-            auto mean = compute_mean(differences);
-            auto stdev = compute_stdev(differences, mean);
-            LOG_DEBUG("#error_evolution# --- mean={1}; stdev={2}", mean, stdev);
-
-            double current_loss;
-            if (params->leaky_opt && std::isnan(params->optimization_privacy_budget))
-            {
-                current_loss = compute_rmse(differences);
-                keep_new_tree = current_loss >= 0.0 && current_loss < prev_loss;
-            }
-            else if (!params->leaky_opt && !std::isnan(params->optimization_privacy_budget))
-            {
-                current_loss = dp_rms_custom_cauchy(differences, params->optimization_privacy_budget, params->error_upper_bound, noise_distribution);
-                keep_new_tree = current_loss < prev_loss;
-            }
-            else
-            {
-                throw std::runtime_error("illegal combination of of optimization, leaky optimization and DP optimization budget");
-            }
-            if (keep_new_tree)
-            {
-                prev_loss = current_loss;
-            }
-            LOG_INFO("#loss_evolution# --- fitting decision tree {1}; previous loss: {2}; current loss: {3}", tree_index, prev_loss, current_loss);
-        }
+        auto raw_predictions = predict(dataset->X);
+        auto keep_new_tree = params->tree_rejector->reject_tree(dataset->y, raw_predictions);
 
         if (keep_new_tree)
         {
@@ -320,11 +268,5 @@ void DPEnsemble::update_gradients(vector<double> &gradients, int tree_index)
         // update gradients
         vector<double> y_pred = predict(dataset->X);
         gradients = (params->task)->compute_gradients(dataset->y, y_pred);
-    }
-    if (VERIFICATION_MODE)
-    {
-        double sum = std::accumulate(gradients.begin(), gradients.end(), 0.0);
-        sum = sum < 0 && sum >= -1e-10 ? 0 : sum; // avoid "-0.00000.. != 0.00000.."
-        VERIFICATION_LOG("GRADIENTSUM {0:.8f}", sum);
     }
 }

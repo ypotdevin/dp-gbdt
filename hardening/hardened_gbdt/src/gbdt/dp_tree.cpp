@@ -1,4 +1,3 @@
-
 #include <numeric>
 #include <iostream>
 #include <iomanip>
@@ -9,17 +8,14 @@
 #include "constant_time.h"
 #include "spdlog/spdlog.h"
 
-extern std::ofstream verification_logfile;
-extern bool VERIFICATION_MODE;
-
 using namespace std;
 
 
 /** Constructors */
 
-DPTree::DPTree(ModelParams *params, TreeParams *tree_params, DataSet *dataset, size_t tree_index, std::vector<double> grid): 
+DPTree::DPTree(ModelParams *params, TreeParams *tree_params, DataSet *dataset, size_t tree_index, std::vector<double> grid):
     params(params),
-    tree_params(tree_params), 
+    tree_params(tree_params),
     dataset(dataset),
     tree_index(tree_index),
     grid(grid)
@@ -77,7 +73,7 @@ TreeNode *DPTree::make_tree_dfs(int current_depth, vector<int> live_samples)
     // // (3) a dummy node (if we already created a legitimate leaf node on this path)
 
     // bool fake_continuation = constant_time::logical_or(node->is_leaf, is_dummy);
-    // // in case (1) and (3) we still need to ensure the continuation of the recursion. For this a random 
+    // // in case (1) and (3) we still need to ensure the continuation of the recursion. For this a random
     // // feature and feature_value are selected.
     // int random_feature = std::rand() % dataset->num_x_cols ;
     // double random_feature_value = X_transposed[random_feature][ std::rand() % live_samples.size() ];
@@ -93,8 +89,8 @@ TreeNode *DPTree::make_tree_dfs(int current_depth, vector<int> live_samples)
     // } else if(fake_continuation) {
     //     LOG_DEBUG("no split found -> leaf");
     // } else {
-    //     LOG_DEBUG("best split @ {1}, val {2:.2f}, gain {3:.5f}, depth {4}, samples {5} ->({6},{7})", 
-    //         node->split_attr, node->split_value, node->split_gain, current_depth, 
+    //     LOG_DEBUG("best split @ {1}, val {2:.2f}, gain {3:.5f}, depth {4}, samples {5} ->({6},{7})",
+    //         node->split_attr, node->split_value, node->split_gain, current_depth,
     //         node->lhs_size + node->rhs_size, node->lhs_size, node->rhs_size);
     // }
 
@@ -113,7 +109,7 @@ TreeNode *DPTree::make_tree_dfs(int current_depth, vector<int> live_samples)
 
     // // always recurse until we reach max_depth
     // if(current_depth < params->max_depth){
-    //     node->left = make_tree_dfs(current_depth + 1, left_live_samples, 
+    //     node->left = make_tree_dfs(current_depth + 1, left_live_samples,
     //         constant_time::logical_or(is_dummy, create_leaf_node));
     //     node->right = make_tree_dfs(current_depth + 1, right_live_samples,
     //         constant_time::logical_or(is_dummy, create_leaf_node));
@@ -209,7 +205,7 @@ double DPTree::_predict(vector<double> *row, TreeNode *node)
     //     double right_result = _predict(row, node->right);
     //     // to hide the real path a sample row takes, we will go down both paths at every
     //     // internal node.
-    //     // Further we hide whether the current node splits on a categorical/numerical feature. 
+    //     // Further we hide whether the current node splits on a categorical/numerical feature.
     //     // Which is kinda unnecessary, as the proof gives this
     //     // to the adversary. however it might allow for a tighter proof later.
     //     next_level_prediction = constant_time::select(categorical,
@@ -234,7 +230,7 @@ double DPTree::_predict(vector<double> *row, TreeNode *node)
         double right_result = _predict(row, node->right);
         // to hide the real path a sample row takes, we will go down both paths at every
         // internal node.
-        // Further we hide whether the current node splits on a categorical/numerical feature. 
+        // Further we hide whether the current node splits on a categorical/numerical feature.
         // Which is kinda unnecessary, as the proof gives this
         // to the adversary. however it might allow for a tighter proof later.
         next_level_prediction = constant_time::select(categorical,
@@ -265,12 +261,12 @@ TreeNode *DPTree::find_best_split(VVD &X_transposed, vector<double> &gradients_l
 
     vector<SplitCandidate> probabilities;
     int lhs_size;
-    
+
     // iterate over features
     for (int feature_index=0; feature_index < dataset->num_x_cols; feature_index++) {
 
         bool categorical = std::find( params->cat_idx.begin(), params->cat_idx.end(), feature_index) != params->cat_idx.end();
-        
+
         if(is_true(params->use_grid)){
 
             if (categorical) {
@@ -290,7 +286,7 @@ TreeNode *DPTree::find_best_split(VVD &X_transposed, vector<double> &gradients_l
                     SplitCandidate candidate = SplitCandidate(feature_index, feature_value, gain);
                     candidate.lhs_size = lhs_size;
                     candidate.rhs_size = std::accumulate(live_samples.begin(), live_samples.end(), 0) - lhs_size;
-                    probabilities.push_back(candidate); 
+                    probabilities.push_back(candidate);
                 }
             } else {
                 for (double feature_value : this->grid) {
@@ -418,11 +414,6 @@ double DPTree::compute_gain(VVD &X_transposed, vector<double> &gradients_live, v
     // total_gain = max(total_gain, 0.0);
     total_gain = constant_time::select(total_gain < 0.0, 0.0, total_gain);
 
-    if(VERIFICATION_MODE){
-        // round to 10 decimals to avoid numeric issues in verification
-        total_gain = std::floor(total_gain * 1e10) / 1e10;
-    }
-
     // useless split -> return (-1) instead
     total_gain = constant_time::select(useless_split, -1., total_gain);
 
@@ -439,7 +430,7 @@ void DPTree::samples_left_right_partition(vector<int> &lhs, vector<int> &rhs, VV
     //     categorical = constant_time::logical_or(categorical, cat_feature == feature_index);
     // }
 
-    // the resulting partition is stored in "lhs/rhs". 
+    // the resulting partition is stored in "lhs/rhs".
     // - lhs[row]=1 means the row is live and goes to the left child on this split index/value
     // - rhs[row]=1 means the row is live and goes to the right child on this split index/value
     // for(size_t row=0; row<live_samples.size(); row++){
@@ -460,7 +451,7 @@ void DPTree::samples_left_right_partition(vector<int> &lhs, vector<int> &rhs, VV
 }
 
 
-// Computes probabilities from the gains. (Larger gain -> larger probability to 
+// Computes probabilities from the gains. (Larger gain -> larger probability to
 // be chosen for split). Then a cumulative distribution function is created from
 // these probabilities. Then we can sample from it using a RNG.
 // The function returns the index of the chosen split.
@@ -469,7 +460,7 @@ int DPTree::exponential_mechanism(vector<SplitCandidate> &candidates)
     // if no split has a positive gain -> return -1. Node will become a leaf
     int num_viable_candidates = 0;
     for(auto candidate : candidates){
-        num_viable_candidates += (candidate.gain > 0);                    
+        num_viable_candidates += (candidate.gain > 0);
     }
     bool no_split_available = (num_viable_candidates == 0);
 
@@ -482,14 +473,7 @@ int DPTree::exponential_mechanism(vector<SplitCandidate> &candidates)
     for (auto prob : candidates) {
         // let probability be 0 when gain is <= 0
         double probability = constant_time::select(prob.gain <= 0, 0.0, exp(prob.gain - lse));
-        probabilities.push_back(probability);   
-    }
-
-    if (VERIFICATION_MODE) {
-        // non-dp: deterministically choose the best split
-        auto max_elem = std::max_element(probabilities.begin(), probabilities.end());
-        // return index of the max_elem
-        return no_split_available ? -1 : std::distance(probabilities.begin(), max_elem);
+        probabilities.push_back(probability);
     }
 
     // create a cumulative distribution from the probabilities.
@@ -511,21 +495,6 @@ int DPTree::exponential_mechanism(vector<SplitCandidate> &candidates)
 void DPTree::
 add_laplacian_noise(double laplace_scale)
 {
-    if(VERIFICATION_MODE){
-        int num_real_leaves = 0;
-        double sum = 0;
-        for (auto node : leaves) {
-            if(node->is_leaf){
-                sum += node->prediction;
-                num_real_leaves++;
-            }
-        }
-        sum = sum < 0 && sum >= -1e-10 ? 0 : sum;
-        LOG_DEBUG("NUMLEAVES {1} LEAFSUM {2:.8f}", num_real_leaves, sum);
-        VERIFICATION_LOG("LEAFVALUESSUM {0:.10f}", sum);
-        return;
-    }
-
     LOG_DEBUG("Adding Laplace noise to leaves (Scale {1:.2f})", laplace_scale);
 
     Laplace lap(laplace_scale, rand());

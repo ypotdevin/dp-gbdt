@@ -3,6 +3,7 @@
 #include "cli_parser.h"
 #include "logging.h"
 #include "spdlog/spdlog.h"
+#include "tree_rejection.h"
 
 ModelParams create_default_params()
 {
@@ -16,48 +17,22 @@ ModelParams create_default_params()
     return params;
 };
 
-/**
- * @brief Update given model parameters by what is passed via command line.
- *
- * Currently accepted model parameters:
- *   --ensemble-privacy-budget (double)
- *   --no-optimization (boolean flag, default: true)
- *   --optimization-privacy-budget (double)
- *   --leaky-optimization (boolean flag, default: false)
- *   --nb-trees (int)
- *   --max-depth (int)
- *   --learning-rate (double)
- *   --l2-lambda (double)
- *   --l2-threshold (double)
- *   --no-gradient-filtering (boolean flag, default: true)
- *   --no-leaf-clipping (boolean flag, default: true)
- *
- * @param cp the parser holding the command line arguments.
- * @param mp the model parameters to update.
- */
 void parse_model_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp)
 {
+    if (cp.hasOption("--seed"))
+    {
+        mp.rng = std::mt19937_64(cp.getIntOptionValue("--seed"));
+    }
+    else
+    {
+        throw std::runtime_error("Parameter seed is missing.");
+    }
+
+    mp.tree_rejector = tree_rejection::from_CommandLineParser(cp, mp.rng);
+
     if (cp.hasOption("--ensemble-privacy-budget"))
     {
         mp.privacy_budget = cp.getDoubleOptionValue("--ensemble-privacy-budget");
-    }
-    if (cp.hasOption("--optimization-privacy-budget"))
-    {
-        if (cp.hasOption("--no-optimization"))
-        {
-            LOG_INFO("conflicting command line options: --optimization-privacy-budget vs --no-optimization");
-        }
-        if (cp.hasOption("--leaky-optimization"))
-        {
-            LOG_INFO("conflicting command line options: --optimization-privacy-budget vs --leaky-optimization");
-        }
-        mp.optimization_privacy_budget = cp.getDoubleOptionValue("--optimization-privacy-budget");
-        mp.optimize = true;
-        mp.leaky_opt = false;
-    }
-    if (cp.hasOption("--gamma"))
-    {
-        mp.gamma = cp.getDoubleOptionValue("--gamma");
     }
     if (cp.hasOption("--nb-trees"))
     {
@@ -95,34 +70,6 @@ void parse_model_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp)
     {
         mp.leaf_clipping = TRUE;
     }
-    if (cp.hasOption("--leaky-optimization"))
-    {
-        if (cp.hasOption("--no-optimization"))
-        {
-            LOG_INFO("conflicting command line options: --leaky-optimization vs --no-optimization");
-        }
-        mp.leaky_opt = true;
-        mp.optimization_privacy_budget = std::nan("");
-        mp.error_upper_bound = std::nan("");
-    }
-    else
-    {
-        mp.leaky_opt = false;
-    }
-    if (cp.hasOption("--no-optimization"))
-    {
-        if (cp.hasOption("--leaky-optimization"))
-        {
-            LOG_INFO("conflicting command line options: --no-optimization vs --leaky-optimization");
-        }
-        mp.optimize = false;
-        mp.optimization_privacy_budget = std::nan("");
-        mp.error_upper_bound = std::nan("");
-    }
-    else
-    {
-        mp.optimize = true;
-    }
 }
 
 std::ostream &operator<<(std::ostream &os, const ModelParams &mp)
@@ -131,14 +78,10 @@ std::ostream &operator<<(std::ostream &os, const ModelParams &mp)
               << "    nb_trees: " << mp.nb_trees << std::endl
               << "    learning_rate: " << mp.learning_rate << std::endl
               << "    privacy_budget: " << mp.privacy_budget << std::endl
-              << "    gamma: " << mp.gamma << std::endl
-              << "    optimize:" << mp.optimize << std::endl
-              << "    optimization_privacy_budget: " << mp.optimization_privacy_budget << std::endl
-              << "    leaky-optimization:" << mp.leaky_opt << std::endl
+              << "    tree_rejector: " << *mp.tree_rejector << std::endl
               << "    max_depth: " << mp.max_depth << std::endl
               << "    l2_lambda: " << mp.l2_lambda << std::endl
               << "    l2_threshold: " << mp.l2_threshold << std::endl
               << "    gradient_filtering: " << mp.gradient_filtering << std::endl
-              << "    leaf_clipping: " << mp.leaf_clipping << std::endl
-              << "    error_upper_bound: " << mp.error_upper_bound << std::endl;
+              << "    leaf_clipping: " << mp.leaf_clipping << std::endl;
 }

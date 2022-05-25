@@ -2,21 +2,21 @@
 #define PARAMETERS_H
 
 #include <memory>
+#include <random>
 #include <vector>
-#include "utils.h"
-#include "loss.h"
 #include "cli_parser.h"
+#include "loss.h"
+#include "utils.h"
+#include "tree_rejection.h"
 
 struct ModelParams
 {
     // primary model parameters
+    std::mt19937_64 rng;
     int nb_trees = 50;
     double learning_rate = 0.1;
     double privacy_budget = 1.0;
-    bool optimize = true; // for evaluation purpose
-    double optimization_privacy_budget = 1.0;
-    double gamma = 2.0;
-    bool leaky_opt = false; // for debugging purpose
+    std::unique_ptr<tree_rejection::TreeRejector> tree_rejector;
     int max_depth = 6;
     int min_samples_split = 2;
     unsigned balance_partition = TRUE;
@@ -38,7 +38,6 @@ struct ModelParams
 
     // dataset specific parameters
     std::shared_ptr<Task> task;
-    double error_upper_bound = 10.0;
     std::vector<int> cat_idx;
     std::vector<int> num_idx;
 };
@@ -51,14 +50,21 @@ ModelParams create_default_params();
  *
  * Currently accepted model parameters:
  *   --ensemble-privacy-budget (double)
- *   --optimization-privacy-budget (double)
+ *   --no-tree-rejection (selection flag)
+ *   --quantile-rejection (selection flag)
+ *   --quantile-rejection-q (double)
+ *   --dp-rmse-tree-rejection (selection flag)
+ *   --rejection-budget (double)
+ *   --error-upper-bound (double)
+ *   --dp-rmse-gamma (double)
  *   --nb-trees (int)
  *   --max-depth (int)
  *   --learning-rate (double)
  *   --l2-lambda (double)
  *   --l2-threshold (double)
- *   --no-gradient-filtering (boolean flag)
- *   --no-leaf-clipping (boolean flag)
+ *   --seed (int)
+ *   --no-gradient-filtering (boolean flag, default: active gradient filtering)
+ *   --no-leaf-clipping (boolean flag, default: active leaf clipping)
  *
  * @param cp the parser holding the command line arguments.
  * @param mp the model parameters to update.
