@@ -13,7 +13,6 @@
 #include "loss.h"
 #include "utils.h"
 
-extern bool VERIFICATION_MODE;
 
 /* ---------- Regression ---------- */
 
@@ -31,15 +30,6 @@ std::vector<double> Regression::compute_gradients(std::vector<double> &y, std::v
     {
         gradients[i] = y_pred[i] - y[i];
     }
-
-    if (VERIFICATION_MODE)
-    {
-        // limit the numbers of decimals to avoid numeric inconsistencies
-        std::transform(gradients.begin(), gradients.end(),
-                       gradients.begin(), [](double c)
-                       { return std::floor(c * 1e15) / 1e15; });
-    }
-
     return gradients;
 }
 
@@ -83,14 +73,6 @@ std::vector<double> BinaryClassification::compute_gradients(std::vector<double> 
     {
         gradients[i] = 1 / (1 + std::exp(-y_pred[i])) - y[i];
     }
-
-    if (VERIFICATION_MODE)
-    {
-        // limit the numbers of decimals to avoid numeric inconsistencies
-        std::transform(gradients.begin(), gradients.end(),
-                       gradients.begin(), [](double c)
-                       { return std::floor(c * 1e15) / 1e15; });
-    }
     return gradients;
 }
 
@@ -114,17 +96,6 @@ double BinaryClassification::compute_score(std::vector<double> &y, std::vector<d
     double true_preds = std::count(correct_preds.begin(), correct_preds.end(), true);
     return true_preds / y.size();
 }
-
-// /**
-//  * @brief Call the other dp_rms_cauchy function with a std::mt19937 rng, seeded
-//  * with a std::random_device.
-//  */
-// double dp_rms_cauchy(std::vector<double> errors, const double epsilon, const double U)
-// {
-//     std::random_device dev; // avoid doing this in an inner loop!
-//     std::mt19937 rng(dev());
-//     return dp_rms_cauchy(errors, epsilon, U, rng);
-// }
 
 double dp_rms_custom_cauchy(std::vector<double> errors, const double epsilon, const double U, custom_cauchy::CustomCauchy &cc)
 {

@@ -9,9 +9,6 @@
 #include "constant_time.h"
 
 
-extern bool VERIFICATION_MODE;
-
-
 Scaler::Scaler(double min_val, double max_val, double fmin, double fmax, bool scaling_required) : data_min(min_val), data_max(max_val),
         feature_min(fmin), feature_max(fmax), scaling_required(scaling_required)
 {
@@ -107,9 +104,6 @@ std::tuple<double,double> dp_confidence_interval(std::vector<double> &samples, d
         std::vector<double> probs(n+1);
         std::iota(probs.begin(), probs.end(), 1.0);   // [1,2,...,n+1]
         double r = ((double)std::rand()/(double)RAND_MAX);
-        if(VERIFICATION_MODE) {
-            r = 0.5;
-        }
         int priv_qi = 0;
 
         // exponential mechanism
@@ -140,9 +134,6 @@ std::tuple<double,double> dp_confidence_interval(std::vector<double> &samples, d
         std::uniform_real_distribution<double> unif(distr_lower, distr_upper);
         std::default_random_engine re;
         double a_random_double = unif(re);
-        if(VERIFICATION_MODE){
-            a_random_double = db[priv_qi];
-        }
         results.push_back(a_random_double);
     }
     return std::make_tuple(results[0],results[1]);
@@ -222,14 +213,10 @@ TrainTestSplit train_test_split_random(DataSet &dataset, double train_ratio, boo
 
 // "reverse engineered" the python sklearn.model_selection.cross_val_score
 // Returns a std::vector of the train-test-splits. Will by default shuffle
-// the dataset rows, unless we're in verification mode.
+// the dataset rows.
 std::vector<TrainTestSplit *> create_cross_validation_inputs(DataSet *dataset, int folds)
 {
-    bool shuffle = !VERIFICATION_MODE;
-    if(shuffle) {
-        dataset->shuffle_dataset();
-    }
-
+    dataset->shuffle_dataset();
     int fold_size = dataset->length / folds;
     std::vector<int> fold_sizes(folds, fold_size);
     int remainder = dataset->length % folds;

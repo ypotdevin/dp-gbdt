@@ -9,9 +9,7 @@
 #include "utils.h"
 #include "loss.h"
 
-extern std::ofstream verification_logfile;
 extern size_t cv_fold_index;
-extern bool VERIFICATION_MODE;
 
 using namespace std;
 
@@ -67,12 +65,6 @@ void DPEnsemble::train(DataSet *dataset)
     // train all trees
     for (int tree_index = 0; tree_index < params->nb_trees; tree_index++)
     {
-
-        if (VERIFICATION_MODE)
-        {
-            VERIFICATION_LOG("Tree {0} CV-Ensemble {1}", tree_index, cv_fold_index);
-        }
-
         // update/init gradients
         update_gradients(dataset->gradients, tree_index);
 
@@ -136,10 +128,7 @@ void DPEnsemble::train(DataSet *dataset)
             // generate random index permutation
             std::vector<int> permutation(dataset->length);
             std::iota(std::begin(permutation), std::end(permutation), 1); // [1,2,3,...]
-            if (!VERIFICATION_MODE)
-            {
-                std::random_shuffle(permutation.begin(), permutation.end());
-            }
+            std::random_shuffle(permutation.begin(), permutation.end());
             // zero out all elements that are not part of the remaining array
             for (auto &elem : permutation)
             {
@@ -168,10 +157,7 @@ void DPEnsemble::train(DataSet *dataset)
 
             // generate random index permutation
             std::iota(std::begin(permutation), std::end(permutation), 1); // [1,2,3,...]
-            if (!VERIFICATION_MODE)
-            {
-                std::random_shuffle(permutation.begin(), permutation.end());
-            }
+            std::random_shuffle(permutation.begin(), permutation.end());
             // zero out all elements that are not part of the rejected array
             for (auto &elem : permutation)
             {
@@ -204,10 +190,7 @@ void DPEnsemble::train(DataSet *dataset)
             // Note, this causes the leaves to be clipped after building the tree.
             vector<int> all_indices(dataset->length);
             std::iota(std::begin(all_indices), std::end(all_indices), 0);
-            if (!VERIFICATION_MODE)
-            {
-                std::random_shuffle(all_indices.begin(), all_indices.end());
-            }
+            std::random_shuffle(all_indices.begin(), all_indices.end());
             for (int i = 0; i < number_of_rows; i++)
             {
                 tree_indices[all_indices[i]] = 1;
@@ -287,11 +270,5 @@ void DPEnsemble::update_gradients(vector<double> &gradients, int tree_index)
         // update gradients
         vector<double> y_pred = predict(dataset->X);
         gradients = (params->task)->compute_gradients(dataset->y, y_pred);
-    }
-    if (VERIFICATION_MODE)
-    {
-        double sum = std::accumulate(gradients.begin(), gradients.end(), 0.0);
-        sum = sum < 0 && sum >= -1e-10 ? 0 : sum; // avoid "-0.00000.. != 0.00000.."
-        VERIFICATION_LOG("GRADIENTSUM {0:.8f}", sum);
     }
 }

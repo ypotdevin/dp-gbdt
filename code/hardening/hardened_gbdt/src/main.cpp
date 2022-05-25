@@ -11,12 +11,9 @@
 #include "gbdt/dp_ensemble.h"
 #include "dataset_parser.h"
 #include "data.h"
-#include "verification.h"
 #include "benchmark.h"
 #include "cli_parser.h"
 #include "evaluation.h"
-
-extern bool VERIFICATION_MODE;
 
 spdlog::level::level_enum select_log_level(std::string level)
 {
@@ -45,14 +42,8 @@ spdlog::level::level_enum select_log_level(std::string level)
 int main(int argc, char **argv)
 {
     cli_parser::CommandLineParser cp(argc, argv);
-    if (cp.hasOption("--verify"))
-    {
-        VERIFICATION_MODE = true;
-        return Verification::main(argc, argv);
-    }
     if (cp.hasOption("--bench"))
     {
-        VERIFICATION_MODE = false;
         return Benchmark::main(argc, argv);
     }
 
@@ -68,7 +59,6 @@ int main(int argc, char **argv)
     {
         throw std::runtime_error("Parameter seed is missing.");
     }
-    VERIFICATION_MODE = false;
 
     if (cp.hasOption("--log-level"))
     {
