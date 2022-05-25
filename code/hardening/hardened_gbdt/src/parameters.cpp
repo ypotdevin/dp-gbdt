@@ -16,25 +16,6 @@ ModelParams create_default_params()
     return params;
 };
 
-/**
- * @brief Update given model parameters by what is passed via command line.
- *
- * Currently accepted model parameters:
- *   --ensemble-privacy-budget (double)
- *   --no-optimization (boolean flag, default: true)
- *   --optimization-privacy-budget (double)
- *   --leaky-optimization (boolean flag, default: false)
- *   --nb-trees (int)
- *   --max-depth (int)
- *   --learning-rate (double)
- *   --l2-lambda (double)
- *   --l2-threshold (double)
- *   --no-gradient-filtering (boolean flag, default: true)
- *   --no-leaf-clipping (boolean flag, default: true)
- *
- * @param cp the parser holding the command line arguments.
- * @param mp the model parameters to update.
- */
 void parse_model_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp)
 {
     if (cp.hasOption("--ensemble-privacy-budget"))
