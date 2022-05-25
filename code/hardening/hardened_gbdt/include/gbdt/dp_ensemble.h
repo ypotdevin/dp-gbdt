@@ -13,7 +13,7 @@ class DPEnsemble
 {
 public:
     // constructors
-    DPEnsemble(ModelParams *params, const std::mt19937_64 &rng);
+    DPEnsemble(ModelParams *params);
     ~DPEnsemble();
 
     // fields
@@ -30,7 +30,6 @@ private:
     double init_score;
     std::vector<double> grid;
     std::mt19937_64 rng;
-    custom_cauchy::AdvancedCustomCauchy noise_distribution;
 
     // methods
     void update_gradients(std::vector<double> &gradients, int tree_index);
