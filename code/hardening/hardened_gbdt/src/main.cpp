@@ -11,8 +11,6 @@
 #include "gbdt/dp_ensemble.h"
 #include "dataset_parser.h"
 #include "data.h"
-#include "verification.h"
-#include "benchmark.h"
 #include "cli_parser.h"
 #include "evaluation.h"
 
