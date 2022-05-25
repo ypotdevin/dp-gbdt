@@ -51,14 +51,21 @@ ModelParams create_default_params();
  *
  * Currently accepted model parameters:
  *   --ensemble-privacy-budget (double)
- *   --optimization-privacy-budget (double)
+ *   --no-tree-rejection (selection flag)
+ *   --quantile-rejection (selection flag)
+ *   --quantile-rejection-q (double)
+ *   --dp-rmse-tree-rejection (selection flag)
+ *   --rejection-budget (double)
+ *   --error-upper-bound (double)
+ *   --dp-rmse-gamma (double)
  *   --nb-trees (int)
  *   --max-depth (int)
  *   --learning-rate (double)
  *   --l2-lambda (double)
  *   --l2-threshold (double)
- *   --no-gradient-filtering (boolean flag)
- *   --no-leaf-clipping (boolean flag)
+ *   --seed (int)
+ *   --no-gradient-filtering (boolean flag, default: active gradient filtering)
+ *   --no-leaf-clipping (boolean flag, default: active leaf clipping)
  *
  * @param cp the parser holding the command line arguments.
  * @param mp the model parameters to update.
