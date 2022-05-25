@@ -266,11 +266,6 @@ DataSet *Parser::parse_file(std::string dataset_file, std::string dataset_name, 
 
 DataSet *parse_dataset_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp)
 {
-    if (cp.hasOption("--error-upper-bound"))
-    {
-        mp.error_upper_bound = cp.getDoubleOptionValue("--error-upper-bound");
-    }
-
     std::string dataset;
     if (cp.hasOption("--dataset"))
     {

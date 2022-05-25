@@ -6,11 +6,51 @@
 #include <ostream>
 #include <sstream>
 
-#include "loss.h"
 #include "tree_rejection.h"
+#include "loss.h"
 
 namespace tree_rejection
 {
+    std::unique_ptr<TreeRejector> from_CommandLineParser(cli_parser::CommandLineParser &cp, const std::mt19937_64 &rng)
+    {
+        std::unique_ptr<TreeRejector> tr;
+        if (cp.hasOption("--no-tree-rejection"))
+        {
+            tr = std::unique_ptr<ConstantRejector>(new ConstantRejector(false));
+        }
+        else if (cp.hasOption("--dp-rmse-tree-rejection"))
+        {
+            if (cp.hasOption("--rejection-budget") && cp.hasOption("--error-upper-bound") && cp.hasOption("--dp-rmse-gamma"))
+            {
+                auto budget = cp.getDoubleOptionValue("--rejection-budget");
+                auto U = cp.getDoubleOptionValue("--error-upper-bound");
+                auto gamma = cp.getDoubleOptionValue("--dp-rmse-gamma");
+                tr = std::unique_ptr<DPrMSERejector>(new DPrMSERejector(budget, U, gamma, rng));
+            }
+            else
+            {
+                throw std::runtime_error("Some arguments necessary for DP rMSE tree rejection are missing.");
+            }
+        }
+        else if (cp.hasOption("--quantile-rejection"))
+        {
+            if (cp.hasOption("--quantile-rejection-q"))
+            {
+                auto q = cp.getDoubleOptionValue("--quantile-rejection-q");
+                tr = std::unique_ptr<QuantileRejector>(new QuantileRejector(q));
+            }
+            else
+            {
+                throw std::runtime_error("Argument q for quantile tree rejection is missing.");
+            }
+        }
+        else
+        {
+            throw std::runtime_error("Selected tree rejection mechanism is unknown.");
+        }
+        return tr;
+    }
+
     ConstantRejector::ConstantRejector(bool decision)
     {
         this->decision = decision;
@@ -18,7 +58,7 @@ namespace tree_rejection
 
     void ConstantRejector::print(std::ostream &os) const
     {
-        os << "ConstantRejector(decision=" << this->decision << ")";
+        os << "\"ConstantRejector(decision=" << this->decision << "\")";
     }
 
     bool ConstantRejector::reject_tree(std::vector<double> &y, std::vector<double> &y_pred)
@@ -50,7 +90,7 @@ namespace tree_rejection
 
     void QuantileRejector::print(std::ostream &os) const
     {
-        os << "QuantileRejector(q=" << this->q << ")";
+        os << "\"QuantileRejector(q=" << this->q << ")\"";
     }
 
     bool QuantileRejector::reject_tree(std::vector<double> &y, std::vector<double> &y_pred)
@@ -95,11 +135,11 @@ namespace tree_rejection
 
     void QuantileCombinationRejector::print(std::ostream &os) const
     {
-        os << "QuantileCombinationRejector(qs=["
+        os << "\"QuantileCombinationRejector(qs=["
            << dvec2listrepr(this->qs)
            << "],weights=["
            << dvec2listrepr(this->weights)
-           << "])";
+           << "])\"";
     }
 
     bool QuantileCombinationRejector::reject_tree(std::vector<double> &y, std::vector<double> &y_pred)
@@ -136,13 +176,13 @@ namespace tree_rejection
 
     void DPrMSERejector::print(std::ostream &os) const
     {
-        os << "DPrMSERejector(eps="
+        os << "\"DPrMSERejector(eps="
            << this->epsilon
            << ",U="
            << this->U
            << ",custom_cauchy="
            << *this->cc
-           << ")";
+           << ")\"";
     }
 
     bool DPrMSERejector::reject_tree(std::vector<double> &y, std::vector<double> &y_pred)

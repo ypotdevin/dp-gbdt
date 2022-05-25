@@ -41,12 +41,10 @@ spdlog::level::level_enum select_log_level(std::string level)
 int main(int argc, char **argv)
 {
     cli_parser::CommandLineParser cp(argc, argv);
-    int seed;
-    std::mt19937_64 rng;
+    int root_seed;
     if (cp.hasOption("--seed"))
     {
-        seed = cp.getIntOptionValue("--seed");
-        rng = std::mt19937_64(seed);
+        root_seed = cp.getIntOptionValue("--seed");
     }
     else
     {
@@ -78,7 +76,7 @@ int main(int argc, char **argv)
     // do cross validation
     for (auto split : cv_inputs)
     {
-        DPEnsemble ensemble = DPEnsemble(&params, rng);
+        DPEnsemble ensemble = DPEnsemble(&params);
         ensemble.train(&split->train);
 
         // predict with the test set
@@ -105,6 +103,6 @@ int main(int argc, char **argv)
     if (cp.hasOption("--results-file"))
     {
         auto filename = cp.getOptionValue("--results-file");
-        evaluation::write_csv_file(filename, params, "rmse", train_scores, test_scores, seed);
+        evaluation::write_csv_file(filename, params, "rmse", train_scores, test_scores, root_seed);
     }
 }

@@ -15,7 +15,7 @@ using namespace std;
 
 /** Constructors */
 
-DPEnsemble::DPEnsemble(ModelParams *parameters, const std::mt19937_64 &rng) : params(parameters) //, noise_distribution(parameters->gamma, rng)
+DPEnsemble::DPEnsemble(ModelParams *parameters) : params(parameters)
 {
     if (parameters->privacy_budget <= 0)
     {
@@ -35,7 +35,6 @@ DPEnsemble::DPEnsemble(ModelParams *parameters, const std::mt19937_64 &rng) : pa
         std::generate(this->grid.begin(), this->grid.end(), [&counter, &step_size]() mutable
                       { return counter++ * step_size; });
     }
-    noise_distribution = custom_cauchy::AdvancedCustomCauchy(params->gamma, rng);
 }
 
 DPEnsemble::~DPEnsemble()
@@ -215,9 +214,8 @@ void DPEnsemble::train(DataSet *dataset)
          * using differential privacy -- not when DP is turned off (keep
          * that in mind when comparing plots of these settings.
          */
-        tree_rejection::DPrMSERejector rejector(params->optimization_privacy_budget, params->error_upper_bound, params->gamma, this->rng);
         auto raw_predictions = predict(dataset->X);
-        auto keep_new_tree = rejector.reject_tree(dataset->y, raw_predictions);
+        auto keep_new_tree = params->tree_rejector->reject_tree(dataset->y, raw_predictions);
 
         if (keep_new_tree)
         {
