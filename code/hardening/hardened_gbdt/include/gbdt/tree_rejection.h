@@ -4,6 +4,7 @@
 #include <memory>
 #include <random>
 #include <vector>
+#include "cli_parser.h"
 #include "custom_cauchy.h"
 
 namespace tree_rejection
@@ -21,8 +22,18 @@ namespace tree_rejection
     };
 
     /**
+     * @brief Depending on the passed command line arguments, create the
+     * demanded tree rejector and initialize it with the given parameters.
+     *
+     * @param cp the parser containing the command line arguments.
+     * @param rng the random number generator used by this program, eventually
+     * needed by the tree rejector.
+     */
+    std::unique_ptr<TreeRejector> from_CommandLineParser(cli_parser::CommandLineParser &cp, const std::mt19937_64 &rng);
+
+    /**
      * @brief Either always keep the considered tree, or always reject the
-     * considered tree (depending on the
+     * considered tree.
      *
      */
     class ConstantRejector : public TreeRejector
