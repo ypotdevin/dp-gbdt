@@ -24,8 +24,10 @@ sudo apt-get install icdiff
 cd hardening/hardened_gbdt/
 make
 ./run --ensemble-privacy-budget 1.0 \
-      --optimization-privacy-budget 0.01 \
-      --gamma 1.3 \
+      --dp-rmse-tree-rejection \
+      --rejection-budget 0.01 \
+      --error-upper-bound 13.8 \
+      --dp-rmse-gamma 1.3 \
       --nb-trees 1 \
       --max_depth 5 \
       --learning-rate 5.01 \
@@ -33,7 +35,6 @@ make
       --l2-threshold 0.3 \
       --dataset abalone \
       --num-samples 4177 \
-      --error-upper-bound 13.8 \
       --log-level debug \
       --seed 42 \
       --results-file out.csv
