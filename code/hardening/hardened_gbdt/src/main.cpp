@@ -11,7 +11,6 @@
 #include "gbdt/dp_ensemble.h"
 #include "dataset_parser.h"
 #include "data.h"
-#include "benchmark.h"
 #include "cli_parser.h"
 #include "evaluation.h"
 
@@ -42,12 +41,6 @@ spdlog::level::level_enum select_log_level(std::string level)
 int main(int argc, char **argv)
 {
     cli_parser::CommandLineParser cp(argc, argv);
-    if (cp.hasOption("--bench"))
-    {
-        return Benchmark::main(argc, argv);
-    }
-
-    //////////////////////// If running regularly //////////////////////////////
     int seed;
     std::mt19937_64 rng;
     if (cp.hasOption("--seed"))
