@@ -41,7 +41,7 @@ void DPTree::fit()
     this->root_node = make_tree_dfs(0, live_samples);
 
     // leaf clipping. Note, it can only be disabled if GDF is enabled.
-    if (is_true(params->leaf_clipping) or !is_true(params->gradient_filtering)) {
+    if (params->leaf_clipping or !params->gradient_filtering) {
         double threshold = params->l2_threshold * std::pow((1 - params->learning_rate), tree_index);
         for (auto &node : this->leaves) {
             node->prediction = clamp(node->prediction, -threshold, threshold);
@@ -248,7 +248,7 @@ TreeNode *DPTree::find_best_split(VVD &X_transposed, vector<double> &gradients_l
     int current_depth, bool create_leaf_node)
 {
     double privacy_budget_for_node;
-    if (is_true(params->use_decay)) {
+    if (params->use_decay) {
         if (current_depth == 0) {
             privacy_budget_for_node = tree_params->tree_privacy_budget /
                 (2 * pow(2, params->max_depth + 1) + 2 * pow(2, current_depth + 1));
@@ -267,7 +267,7 @@ TreeNode *DPTree::find_best_split(VVD &X_transposed, vector<double> &gradients_l
 
         bool categorical = std::find( params->cat_idx.begin(), params->cat_idx.end(), feature_index) != params->cat_idx.end();
 
-        if(is_true(params->use_grid)){
+        if(params->use_grid){
 
             if (categorical) {
                 for (double feature_value : params->cat_values[feature_index]) {

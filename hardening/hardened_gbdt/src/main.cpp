@@ -83,11 +83,11 @@ int main(int argc, char **argv)
         std::vector<double> y_train_pred = ensemble.predict(split->train.X);
         std::vector<double> y_test_pred = ensemble.predict(split->test.X);
 
-        if (is_true(params.scale_y))
+        if (params.scale_y)
         {
             inverse_scale_y(params, split->train.scaler, y_train_pred);
         }
-        if (is_true(params.scale_y))
+        if (params.scale_y)
         {
             inverse_scale_y(params, split->train.scaler, y_test_pred);
         }

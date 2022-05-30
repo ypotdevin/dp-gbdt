@@ -19,22 +19,22 @@ struct ModelParams
     std::unique_ptr<tree_rejection::TreeRejector> tree_rejector;
     int max_depth = 6;
     int min_samples_split = 2;
-    unsigned balance_partition = TRUE;
-    unsigned gradient_filtering = TRUE;
-    unsigned leaf_clipping = TRUE;
-    unsigned use_decay = FALSE;
+    unsigned balance_partition = true;
+    unsigned gradient_filtering = true;
+    unsigned leaf_clipping = true;
+    unsigned use_decay = false;
     double l2_threshold = 1.0;
     double l2_lambda = 0.1;
 
     // secondary model parameters
-    unsigned use_grid = FALSE;
+    unsigned use_grid = false;
     std::tuple<double, double> grid_borders;
     double grid_step_size;
     std::vector<std::vector<double>> cat_values;
-    unsigned scale_X = FALSE;
+    unsigned scale_X = false;
     double scale_X_percentile = 95;
     double scale_X_privacy_budget = 0.4;
-    unsigned scale_y = FALSE;
+    unsigned scale_y = false;
 
     // dataset specific parameters
     std::shared_ptr<Task> task;

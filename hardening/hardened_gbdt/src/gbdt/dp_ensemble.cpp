@@ -25,7 +25,7 @@ DPEnsemble::DPEnsemble(ModelParams *parameters) : params(parameters)
     this->rng = rng;
 
     // prepare the linspace grid
-    if (is_true(params->use_grid))
+    if (params->use_grid)
     {
         double grid_range = std::get<1>(params->grid_borders) - std::get<0>(params->grid_borders);
         double step_size = params->grid_step_size;
@@ -71,7 +71,7 @@ void DPEnsemble::train(DataSet *dataset)
         tree_params.delta_g = 3 * pow(params->l2_threshold, 2);
 
         // sensitivity for leaves
-        if (is_true(params->gradient_filtering) && !is_true(params->leaf_clipping))
+        if (params->gradient_filtering && !params->leaf_clipping)
         {
             // you can only "turn off" leaf clipping if GDF is enabled!
             tree_params.delta_v = params->l2_threshold / (1 + params->l2_lambda);
@@ -84,7 +84,7 @@ void DPEnsemble::train(DataSet *dataset)
 
         // determine number of rows
         int number_of_rows = 0;
-        if (is_true(params->balance_partition))
+        if (params->balance_partition)
         {
             // num_unused_rows / num_remaining_trees
             number_of_rows = dataset->length / (params->nb_trees - tree_index);
@@ -105,7 +105,7 @@ void DPEnsemble::train(DataSet *dataset)
         vector<int> tree_indices(dataset->length);
 
         // gradient-based data filtering
-        if (is_true(params->gradient_filtering))
+        if (params->gradient_filtering)
         {
 
             // divide samples into rejected/remaining gradients

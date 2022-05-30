@@ -56,19 +56,19 @@ void parse_model_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp)
     }
     if (cp.hasOption("--no-gradient-filtering"))
     {
-        mp.gradient_filtering = FALSE;
+        mp.gradient_filtering = false;
     }
     else
     {
-        mp.gradient_filtering = TRUE;
+        mp.gradient_filtering = true;
     }
     if (cp.hasOption("--no-leaf-clipping"))
     {
-        mp.leaf_clipping = FALSE;
+        mp.leaf_clipping = false;
     }
     else
     {
-        mp.leaf_clipping = TRUE;
+        mp.leaf_clipping = true;
     }
 }
 

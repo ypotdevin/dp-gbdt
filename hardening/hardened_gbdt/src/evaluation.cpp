@@ -47,7 +47,7 @@ namespace evaluation
             csv.write_header(header);
 
             // pay attention to match the sequence of the header
-            csv << is_true(parameters.gradient_filtering)
+            csv << parameters.gradient_filtering
                 << parameters.l2_lambda
                 << parameters.l2_threshold
                 << parameters.learning_rate

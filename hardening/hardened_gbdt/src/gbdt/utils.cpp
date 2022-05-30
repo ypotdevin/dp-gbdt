@@ -72,15 +72,6 @@ std::string get_time_string()
     return std::string(buffer);
 }
 
-bool is_true(unsigned value)
-{
-    if (not(value == TRUE or value == FALSE))
-    {
-        throw std::runtime_error("Fault injection attack?");
-    }
-    return value == TRUE;
-}
-
 std::vector<double> linspace(double low, double high, size_t num)
 {
     std::vector<double> points(num);
