@@ -5,18 +5,6 @@
 #include "spdlog/spdlog.h"
 #include "tree_rejection.h"
 
-ModelParams create_default_params()
-{
-    ModelParams params;
-    params.nb_trees = 50;
-    params.max_depth = 6;
-    params.gradient_filtering = TRUE;
-    params.balance_partition = TRUE;
-    params.leaf_clipping = TRUE;
-    params.privacy_budget = 0.1;
-    return params;
-};
-
 void parse_model_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp)
 {
     if (cp.hasOption("--seed"))

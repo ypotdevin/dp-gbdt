@@ -42,9 +42,6 @@ struct ModelParams
     std::vector<int> num_idx;
 };
 
-// create some default parameters for quick testing
-ModelParams create_default_params();
-
 /**
  * @brief Update given model parameters by what is passed via command line.
  *
