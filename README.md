@@ -40,6 +40,21 @@ make
       --results-file out.csv
 ```
 
+### Command Line Interface (CLI)
+| Group | Parameter                 | Type         | Meaning                                                               |
+| ----- | ------------------------- | ------------ | --------------------------------------------------------------------- |
+| 0     | --ensemble-privacy-budget | float        | The privacy budget used for the ensemble (the boosted trees) creation |
+| 1a    | --dp-rmse-tree-rejection  | boolean flag | Perform DP-rMSE tree rejection (using Cauchy distribution)            |
+| 1a    | --rejection-budget        | float        | The per-loop DP budget for the tree rejection mechanism               |
+| 1a    | --dp-rmse-gamma           | float        | Gamma defines the custom distribution to sample from                  |
+| 1a    | --error-upper-bound       | float        | An upper bound to the prediction errors, needed for sensitivity calculation (larger values will be clipped; large values will increase the sensitivity and require more noise, low values do not reflect the true prediction errors) |
+| 1b    | --no-tree-rejection       | boolean flag | Perform no rejection (keep every tree)                                |
+| 1c    | --quantile-rejection      | boolean flag | Perform leaky tree rejection via quantiles                            |
+| 1c    | --quantile-rejection-q    | float        | The quantile to use (0 <= q <= 1)                                     |
+| 2     | --nb-trees                | int          | The (maximal) number of trees an ensemble may contain (is affected by tree rejection) |
+…
+
+Note: Groups with same number but different letter are mutually exclusive.
 
 ## Limitations
 - the C++ implementations can only do **regression** (no classification).
