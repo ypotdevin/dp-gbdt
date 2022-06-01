@@ -152,11 +152,11 @@ namespace tree_rejection
 
     void QuantileCombinationRejector::print(std::ostream &os) const
     {
-        os << "\"QuantileCombinationRejector(qs=["
+        os << "\"QuantileCombinationRejector(qs="
            << dvec2listrepr(this->qs)
-           << "],weights=["
+           << ",weights="
            << dvec2listrepr(this->weights)
-           << "])\"";
+           << ")\"";
     }
 
     bool QuantileCombinationRejector::reject_tree(std::vector<double> &y, std::vector<double> &y_pred)
