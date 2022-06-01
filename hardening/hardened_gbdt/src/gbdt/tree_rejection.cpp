@@ -92,7 +92,7 @@ namespace tree_rejection
      */
     double quantile(std::vector<double> samples, double q)
     {
-        auto n = samples.size();
+        auto n = samples.size() - 1;
         std::size_t quantile_position = std::ceil(q * n);
         std::nth_element(samples.begin(), samples.begin() + quantile_position, samples.end());
         return samples.at(quantile_position);
@@ -165,7 +165,7 @@ namespace tree_rejection
                        y_pred.begin(), y_pred.begin(), std::minus<double>());
         std::sort(y_pred.begin(), y_pred.end());
 
-        auto n = y_pred.size();
+        auto n = y_pred.size() - 1;
         double current_error = 0.0;
         for (size_t i = 0; i < this->qs.size(); ++i)
         {
