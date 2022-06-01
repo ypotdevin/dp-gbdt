@@ -89,3 +89,10 @@ std::vector<double> linspace(double low, double high, size_t num)
     }
     return points;
 }
+
+void normalize(std::vector<double> &values)
+{
+    auto normalization_factor = std::accumulate(values.begin(), values.end(), 0.0);
+    std::transform(values.begin(), values.end(), values.begin(), [normalization_factor](double value)
+                   { return value / normalization_factor; });
+}

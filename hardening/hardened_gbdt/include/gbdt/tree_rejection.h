@@ -99,7 +99,8 @@ namespace tree_rejection
          *
          * @param qs the target quantiles (must have same length as `weights`)
          * @param weights the corresponding weights of the target quantiles
-         * (must have same length as `qs`).
+         * (must have same length as `qs`). The weights may sum up to 1.0 or
+         * may be expressed as relative weights. They will be normalized anyway.
          */
         QuantileCombinationRejector(const std::vector<double> qs, const std::vector<double> weights);
         void print(std::ostream &os) const;

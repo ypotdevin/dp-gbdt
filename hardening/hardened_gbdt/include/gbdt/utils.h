@@ -18,6 +18,7 @@ double compute_stdev(std::vector<double> &vec, double mean);
 double compute_rmse(std::vector<double> differences);
 std::string get_time_string();
 std::vector<double> linspace(double low, double high, size_t num);
+void normalize(std::vector<double> &values);
 
 
 

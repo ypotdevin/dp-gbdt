@@ -8,6 +8,7 @@
 
 #include "tree_rejection.h"
 #include "loss.h"
+#include "utils.h"
 
 namespace tree_rejection
 {
@@ -114,6 +115,7 @@ namespace tree_rejection
     {
         this->qs = qs;
         this->weights = weights;
+        normalize(this->weights);
     }
 
     std::string dvec2listrepr(std::vector<double> vec)
