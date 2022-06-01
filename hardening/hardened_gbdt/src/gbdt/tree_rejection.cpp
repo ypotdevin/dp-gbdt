@@ -45,6 +45,21 @@ namespace tree_rejection
                 throw std::runtime_error("Argument q for quantile tree rejection is missing.");
             }
         }
+        else if (cp.hasOption("--quantile-combination-rejection"))
+        {
+            std::string qcr = "--quantile-combination-rejection";
+            std::vector<double> qs, ws;
+            for (size_t i = 0; i <= 4; ++i) // Support up to 5 different qs and ws
+            {
+                auto suffix = std::to_string(i);
+                if (cp.hasOption(qcr + "-q" + suffix) && cp.hasOption(qcr + "-w" + suffix))
+                {
+                    qs.push_back(cp.getDoubleOptionValue(qcr + "-q" + suffix));
+                    ws.push_back(cp.getDoubleOptionValue(qcr + "-w" + suffix));
+                }
+                tr = std::unique_ptr<QuantileCombinationRejector>(new QuantileCombinationRejector(qs, ws));
+            }
+        }
         else
         {
             throw std::runtime_error("Selected tree rejection mechanism is unknown.");
