@@ -57,7 +57,7 @@ make
 …
 | 1d    | --quantile-combination-rejection-q4 | float        | The *fifth* quantile to use                                            |
 | 1d    | --quantile-combination-rejection-w4 | float        | The relative weight of the *fifth* quantile                            |
-| 1e    | --dp-laplace-rmse                   | boolean flag | Perform approx.-DP-rMSE tree rejection (using Laplace distribution)    |
+| 1e    | --dp-laplace-rmse-rejection         | boolean flag | Perform approx.-DP-rMSE tree rejection (using Laplace distribution)    |
 | 1e    | --rejection-budget                  | float        | The per-loop DP budget for the tree rejection mechanism                |
 | 1e    | --rejection-failure-prob            | float        | The delta from the definition of approximate DP                        |
 | 1e    | --error-upper-bound                 | float        | An upper bound to the prediction errors, needed for sensitivity calculation (larger values will be clipped; large values will increase the sensitivity and require more noise, low values do not reflect the true prediction errors) |
