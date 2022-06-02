@@ -56,7 +56,10 @@ make
 | 1d    | --quantile-combination-rejection-w0 | float        | The relative weight of the *first* quantile (the weights will be normalized anyway, i.e. post processing will make them sum up to 1.0) |
 …
 | 1d    | --quantile-combination-rejection-q4 | float        | The *fifth* quantile to use                                            |
-| 1d    | --quantile-combination-rejection-w4 | float        | The relative weight of the *fifth* quantile    |
+| 1d    | --quantile-combination-rejection-w4 | float        | The relative weight of the *fifth* quantile                            |
+| 1e    | --dp-laplace-rmse                   | boolean flag | Perform approx.-DP-rMSE tree rejection (using Laplace distribution)    |
+| 1e    | --rejection-budget                  | float        | The per-loop DP budget for the tree rejection mechanism                |
+| 1e    | --rejection-failure-prob            | float        | The delta from the definition of approximate DP                        |
 | 2     | --nb-trees                | int          | The (maximal) number of trees an ensemble may contain (is affected by tree rejection) |
 …
 
