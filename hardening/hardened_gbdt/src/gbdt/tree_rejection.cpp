@@ -12,7 +12,7 @@
 
 namespace tree_rejection
 {
-    std::unique_ptr<TreeRejector> from_CommandLineParser(cli_parser::CommandLineParser &cp, const std::mt19937_64 &rng)
+    std::unique_ptr<TreeRejector> from_CommandLineParser(cli_parser::CommandLineParser &cp, std::mt19937 &rng)
     {
         std::unique_ptr<TreeRejector> tr;
         if (cp.hasOption("--no-tree-rejection"))
@@ -183,7 +183,7 @@ namespace tree_rejection
         }
     }
 
-    DPrMSERejector::DPrMSERejector(double epsilon, double U, double gamma, const std::mt19937_64 &rng)
+    DPrMSERejector::DPrMSERejector(double epsilon, double U, double gamma, const std::mt19937 &rng)
     {
         this->epsilon = epsilon;
         this->U = U;

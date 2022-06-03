@@ -29,7 +29,7 @@ private:
     DataSet *dataset;
     double init_score;
     std::vector<double> grid;
-    std::mt19937_64 rng;
+    std::mt19937 rng;
 
     // methods
     void update_gradients(std::vector<double> &gradients, int tree_index);

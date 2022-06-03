@@ -5,7 +5,7 @@
 namespace custom_cauchy
 {
 
-    NaiveCustomCauchy::NaiveCustomCauchy(const std::vector<double> standard_support, double gamma, const std::mt19937_64 &rng)
+    NaiveCustomCauchy::NaiveCustomCauchy(const std::vector<double> standard_support, double gamma, const std::mt19937 &rng)
     {
         this->gamma = gamma;
         this->standard_support = standard_support;
@@ -38,7 +38,7 @@ namespace custom_cauchy
         return zs;
     }
 
-    AdvancedCustomCauchy::AdvancedCustomCauchy(double gamma, const std::mt19937_64 &rng)
+    AdvancedCustomCauchy::AdvancedCustomCauchy(double gamma, const std::mt19937 &rng)
     {
         this->gamma = gamma;
         this->rng = rng;

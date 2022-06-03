@@ -12,7 +12,7 @@
 struct ModelParams
 {
     // primary model parameters
-    std::mt19937_64 rng;
+    std::mt19937 rng;
     int nb_trees = 50;
     double learning_rate = 0.1;
     double privacy_budget = 1.0;
