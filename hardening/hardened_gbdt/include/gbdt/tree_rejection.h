@@ -6,6 +6,7 @@
 #include <vector>
 #include "cli_parser.h"
 #include "custom_cauchy.h"
+#include "laplace.h"
 
 namespace tree_rejection
 {
@@ -123,6 +124,18 @@ namespace tree_rejection
 
     public:
         DPrMSERejector(double epsilon, double U, double gamma, const std::mt19937 &rng);
+        void print(std::ostream &os) const;
+        bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
+    };
+
+    class ApproxDPrMSERejector : public TreeRejector
+    {
+    private:
+        double epsilon, delta, U, previous_error;
+        std::unique_ptr<Laplace> laplace_distr;
+
+    public:
+        ApproxDPrMSERejector(double epsilon, double delta, double U, std::mt19937 &rng);
         void print(std::ostream &os) const;
         bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
     };
