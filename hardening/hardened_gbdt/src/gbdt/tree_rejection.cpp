@@ -23,14 +23,14 @@ namespace tree_rejection
         {
             if (cp.hasOption("--rejection-budget") && cp.hasOption("--error-upper-bound") && cp.hasOption("--dp-rmse-gamma"))
             {
-                auto budget = cp.getDoubleOptionValue("--rejection-budget");
+                auto epsilon = cp.getDoubleOptionValue("--rejection-budget");
                 auto U = cp.getDoubleOptionValue("--error-upper-bound");
                 auto gamma = cp.getDoubleOptionValue("--dp-rmse-gamma");
-                tr = std::unique_ptr<DPrMSERejector>(new DPrMSERejector(budget, U, gamma, rng));
+                tr = std::unique_ptr<DPrMSERejector>(new DPrMSERejector(epsilon, U, gamma, rng));
             }
             else
             {
-                throw std::runtime_error("Some arguments necessary for DP rMSE tree rejection are missing.");
+                throw std::runtime_error("Some arguments necessary for DP rMSE tree rejection (via Cauchy) are missing.");
             }
         }
         else if (cp.hasOption("--quantile-rejection"))
