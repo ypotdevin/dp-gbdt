@@ -40,12 +40,12 @@ namespace custom_cauchy
     private:
         double gamma;
         std::vector<double> standard_support;
-        std::mt19937_64 rng;
+        std::mt19937 rng;
         std::discrete_distribution<size_t> index_distribution;
 
     public:
         NaiveCustomCauchy() = default;
-        NaiveCustomCauchy(const std::vector<double> standard_support, double gamma, const std::mt19937_64 &rng);
+        NaiveCustomCauchy(const std::vector<double> standard_support, double gamma, const std::mt19937 &rng);
         void print(std::ostream &os) const;
         /**
          * @brief Draw a single sample from the standard support (which was provided
@@ -64,14 +64,14 @@ namespace custom_cauchy
     {
     private:
         double gamma;
-        std::mt19937_64 rng;
+        std::mt19937 rng;
         std::gamma_distribution<double> alpha_gamma;
         std::gamma_distribution<double> beta_gamma;
         std::bernoulli_distribution maybe_negate;
 
     public:
         AdvancedCustomCauchy() = default;
-        AdvancedCustomCauchy(double gamma, const std::mt19937_64 &rng);
+        AdvancedCustomCauchy(double gamma, const std::mt19937 &rng);
         void print(std::ostream &os) const;
 
         /**

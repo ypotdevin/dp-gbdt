@@ -6,6 +6,7 @@
 #include <vector>
 #include "cli_parser.h"
 #include "custom_cauchy.h"
+#include "laplace.h"
 
 namespace tree_rejection
 {
@@ -29,7 +30,7 @@ namespace tree_rejection
      * @param rng the random number generator used by this program, eventually
      * needed by the tree rejector.
      */
-    std::unique_ptr<TreeRejector> from_CommandLineParser(cli_parser::CommandLineParser &cp, const std::mt19937_64 &rng);
+    std::unique_ptr<TreeRejector> from_CommandLineParser(cli_parser::CommandLineParser &cp, std::mt19937 &rng);
 
     /**
      * @brief Either always keep the considered tree, or always reject the
@@ -122,7 +123,19 @@ namespace tree_rejection
         std::unique_ptr<custom_cauchy::CustomCauchy> cc;
 
     public:
-        DPrMSERejector(double epsilon, double U, double gamma, const std::mt19937_64 &rng);
+        DPrMSERejector(double epsilon, double U, double gamma, const std::mt19937 &rng);
+        void print(std::ostream &os) const;
+        bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
+    };
+
+    class ApproxDPrMSERejector : public TreeRejector
+    {
+    private:
+        double epsilon, delta, U, previous_error;
+        std::unique_ptr<Laplace> laplace_distr;
+
+    public:
+        ApproxDPrMSERejector(double epsilon, double delta, double U, std::mt19937 &rng);
         void print(std::ostream &os) const;
         bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
     };

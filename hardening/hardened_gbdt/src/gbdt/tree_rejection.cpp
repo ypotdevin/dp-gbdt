@@ -8,11 +8,13 @@
 
 #include "tree_rejection.h"
 #include "loss.h"
+#include "logging.h"
+#include "spdlog/spdlog.h"
 #include "utils.h"
 
 namespace tree_rejection
 {
-    std::unique_ptr<TreeRejector> from_CommandLineParser(cli_parser::CommandLineParser &cp, const std::mt19937_64 &rng)
+    std::unique_ptr<TreeRejector> from_CommandLineParser(cli_parser::CommandLineParser &cp, std::mt19937 &rng)
     {
         std::unique_ptr<TreeRejector> tr;
         if (cp.hasOption("--no-tree-rejection"))
@@ -23,14 +25,14 @@ namespace tree_rejection
         {
             if (cp.hasOption("--rejection-budget") && cp.hasOption("--error-upper-bound") && cp.hasOption("--dp-rmse-gamma"))
             {
-                auto budget = cp.getDoubleOptionValue("--rejection-budget");
+                auto epsilon = cp.getDoubleOptionValue("--rejection-budget");
                 auto U = cp.getDoubleOptionValue("--error-upper-bound");
                 auto gamma = cp.getDoubleOptionValue("--dp-rmse-gamma");
-                tr = std::unique_ptr<DPrMSERejector>(new DPrMSERejector(budget, U, gamma, rng));
+                tr = std::unique_ptr<DPrMSERejector>(new DPrMSERejector(epsilon, U, gamma, rng));
             }
             else
             {
-                throw std::runtime_error("Some arguments necessary for DP rMSE tree rejection are missing.");
+                throw std::runtime_error("Some arguments necessary for DP rMSE tree rejection (via Cauchy) are missing.");
             }
         }
         else if (cp.hasOption("--quantile-rejection"))
@@ -58,6 +60,20 @@ namespace tree_rejection
                     ws.push_back(cp.getDoubleOptionValue(qcr + "-w" + suffix));
                 }
                 tr = std::unique_ptr<QuantileCombinationRejector>(new QuantileCombinationRejector(qs, ws));
+            }
+        }
+        else if (cp.hasOption("--dp-laplace-rmse-rejection"))
+        {
+            if (cp.hasOption("--rejection-budget") && cp.hasOption("--rejection-failure-prob") && cp.hasOption("--error-upper-bound"))
+            {
+                auto epsilon = cp.getDoubleOptionValue("--rejection-budget");
+                auto delta = cp.getDoubleOptionValue("--rejection-failure-prob");
+                auto U = cp.getDoubleOptionValue("--error-upper-bound");
+                tr = std::unique_ptr<ApproxDPrMSERejector>(new ApproxDPrMSERejector(epsilon, delta, U, rng));
+            }
+            else
+            {
+                throw std::runtime_error("Some arguments necessary for approx. DP rMSE tree rejection (via Laplace) are missing.");
             }
         }
         else
@@ -183,7 +199,7 @@ namespace tree_rejection
         }
     }
 
-    DPrMSERejector::DPrMSERejector(double epsilon, double U, double gamma, const std::mt19937_64 &rng)
+    DPrMSERejector::DPrMSERejector(double epsilon, double U, double gamma, const std::mt19937 &rng)
     {
         this->epsilon = epsilon;
         this->U = U;
@@ -207,6 +223,49 @@ namespace tree_rejection
         std::transform(y.begin(), y.end(),
                        y_pred.begin(), y_pred.begin(), std::minus<double>());
         auto current_error = dp_rms_custom_cauchy(y_pred, this->epsilon, this->U, *this->cc);
+        if (current_error < this->previous_error)
+        {
+            this->previous_error = current_error;
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+
+    ApproxDPrMSERejector::ApproxDPrMSERejector(double epsilon, double delta, double U, std::mt19937 &rng)
+    {
+        this->epsilon = epsilon;
+        this->delta = delta;
+        this->U = U;
+        std::uniform_int_distribution<int> uni(0, std::numeric_limits<int>::max());
+        auto seed = uni(rng);
+        this->laplace_distr = std::unique_ptr<Laplace>(new Laplace(seed));
+    }
+
+    void ApproxDPrMSERejector::print(std::ostream &os) const
+    {
+        os << "\"ApproxDPrMSERejector(eps="
+           << this->epsilon
+           << ",delta="
+           << this->delta
+           << ",U="
+           << this->U
+           << ")\"";
+    }
+
+    bool ApproxDPrMSERejector::reject_tree(std::vector<double> &y, std::vector<double> &y_pred)
+    {
+        std::transform(y.begin(), y.end(),
+                       y_pred.begin(), y_pred.begin(), std::minus<double>());
+        std::sort(y_pred.begin(), y_pred.end());
+        auto beta = this->epsilon / (2.0 * log(2.0 / this->delta));
+        double sens, rmse;
+        std::tie(sens, rmse) = rMS_smooth_sensitivity(y_pred, beta, this->U);
+        LOG_DEBUG("#sensitivity_evolution# --- smooth_sens={1}", sens);
+        auto noise = this->laplace_distr->return_a_random_variable();
+        auto current_error = rmse + 2 * sens * noise / this->epsilon;
         if (current_error < this->previous_error)
         {
             this->previous_error = current_error;

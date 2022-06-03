@@ -9,7 +9,7 @@ void parse_model_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp)
 {
     if (cp.hasOption("--seed"))
     {
-        mp.rng = std::mt19937_64(cp.getIntOptionValue("--seed"));
+        mp.rng = std::mt19937(cp.getIntOptionValue("--seed"));
     }
     else
     {
