@@ -52,7 +52,7 @@ make
 | 1c    | --quantile-rejection                | boolean flag | Perform leaky tree rejection via quantiles                            |
 | 1c    | --quantile-rejection-q              | float        | The quantile to use (0 <= q <= 1)                                     |
 | 1d    | --quantile-combination-rejection    | boolean flag | Perform leaky tree rejection via a convex combination of quantiles    |
-| 1d    | --quantile-combination-rejection-q0 | float        | The *first* quantile to use (may be up to 4, depending on how many are provided) |
+| 1d    | --quantile-combination-rejection-q0 | float        | The *first* quantile to use (may be up to 5, depending on how many are provided) |
 | 1d    | --quantile-combination-rejection-w0 | float        | The relative weight of the *first* quantile (the weights will be normalized anyway, i.e. post processing will make them sum up to 1.0) |
 …
 | 1d    | --quantile-combination-rejection-q4 | float        | The *fifth* quantile to use                                            |
