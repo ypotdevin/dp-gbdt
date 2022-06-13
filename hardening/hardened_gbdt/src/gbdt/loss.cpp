@@ -104,7 +104,7 @@ double dp_rms_custom_cauchy(std::vector<double> errors, const double epsilon, co
     auto beta = epsilon / (2 * (gamma + 1.0));
     double sens, rmse;
     std::tie(sens, rmse) = rMS_smooth_sensitivity(errors, beta, U);
-    LOG_DEBUG("#sensitivity_evolution# --- smooth_sens={1}", sens);
+    LOG_INFO("### diagnosis value 04 ### - smooth_sens={1}", sens);
     auto noise = cc.draw();
     auto dp_rmse = rmse + 2 * (gamma + 1) * sens * noise / epsilon;
     return dp_rmse;
@@ -126,7 +126,7 @@ double dp_rms_cauchy(std::vector<double> errors, const double epsilon, const dou
     double beta = epsilon / (2 * (gamma + 1.0));
     double sens, rmse;
     std::tie(sens, rmse) = rMS_smooth_sensitivity(errors, beta, U);
-    LOG_DEBUG("#sensitivity_evolution# --- smooth_sens={1}", sens);
+    LOG_INFO("#sensitivity_evolution# --- smooth_sens={1}", sens);
     std::cauchy_distribution<double> distribution(0.0, 1.0);
     auto noise = distribution(rng);
     auto dp_rmse = rmse + 2 * (gamma + 1) * sens * noise / epsilon;
@@ -156,6 +156,9 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
 
     auto smooth_sens = -std::numeric_limits<double>::infinity();
     auto prefix_sum = sqe_sum, suffix_sum = sqe_sum;
+    // for diagnostics
+    double maximizer_local_sens;
+    size_t maximizer_k;
     for (size_t k = 1; k <= n; k++) // traversing the local sensitivities
     {
         auto largest = errors.at(n - k);
@@ -165,9 +168,17 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
         auto prefix_local_sens = local_sensitivity(largest, 0, prefix_sum, n);
         auto suffix_local_sens = local_sensitivity(smallest, U, suffix_sum, n);
         auto local_sens = std::max(prefix_local_sens, suffix_local_sens);
-        smooth_sens = std::max(smooth_sens, local_sens * std::exp(-beta * k));
+        auto smooth_sense_candidate = local_sens * std::exp(-beta * k);
+        if (smooth_sense_candidate > smooth_sens)
+        {
+            smooth_sens = smooth_sense_candidate;
+            maximizer_k = k;
+        }
+
         suffix_sum += U; // replace smallest by U, but only after calculation
     }
+    LOG_INFO("### diagnosis value 05 ### - maximizer_local_sens={1}", maximizer_local_sens);
+    LOG_INFO("### diagnosis value 06 ### - maximizer_k={1}", maximizer_k);
     return std::make_tuple(smooth_sens, rmse);
 }
 
