@@ -197,6 +197,10 @@ namespace tree_rejection
                        y_pred.begin(), y_pred.begin(), std::minus<double>());
         std::sort(y_pred.begin(), y_pred.end());
 
+        auto quants = dvec2listrepr(quantiles(y_pred, linspace(0.5, 1.0, 11))); // [0.50, 0.55, …, 0.95, 1.0]
+        LOG_INFO("### diagnosis value 01 ### - rmse={1}", compute_rmse(y_pred));
+        LOG_INFO("### diagnosis value 03 ### - quantiles={1}", quants);
+
         auto n = y_pred.size() - 1;
         double current_error = 0.0;
         for (size_t i = 0; i < this->qs.size(); ++i)
@@ -204,6 +208,7 @@ namespace tree_rejection
             std::size_t quantile_position = std::ceil(this->qs.at(i) * n);
             current_error += this->weights.at(i) * y_pred.at(quantile_position);
         }
+        LOG_INFO("### diagnosis value 02 ### - rmse_approx={1}", current_error);
         if (current_error < previous_error)
         {
             previous_error = current_error;
@@ -238,7 +243,9 @@ namespace tree_rejection
     {
         std::transform(y.begin(), y.end(),
                        y_pred.begin(), y_pred.begin(), std::minus<double>());
+        LOG_INFO("### diagnosis value 01 ### - rmse={1}", compute_rmse(y_pred));
         auto current_error = dp_rms_custom_cauchy(y_pred, this->epsilon, this->U, *this->cc);
+        LOG_INFO("### diagnosis value 02 ### - rmse-approx={1}", current_error);
         if (current_error < this->previous_error)
         {
             this->previous_error = current_error;
@@ -275,13 +282,16 @@ namespace tree_rejection
     {
         std::transform(y.begin(), y.end(),
                        y_pred.begin(), y_pred.begin(), std::minus<double>());
+        LOG_INFO("### diagnosis value 01 ### - rmse={1}", compute_rmse(y_pred));
+
         std::sort(y_pred.begin(), y_pred.end());
         auto beta = this->epsilon / (2.0 * log(2.0 / this->delta));
         double sens, rmse;
         std::tie(sens, rmse) = rMS_smooth_sensitivity(y_pred, beta, this->U);
-        LOG_DEBUG("#sensitivity_evolution# --- smooth_sens={1}", sens);
+        LOG_INFO("#sensitivity_evolution# --- smooth_sens={1}", sens);
         auto noise = this->laplace_distr->return_a_random_variable();
         auto current_error = rmse + 2 * sens * noise / this->epsilon;
+        LOG_INFO("### diagnosis value 02 ### - rmse-approx={1}", current_error);
         if (current_error < this->previous_error)
         {
             this->previous_error = current_error;
