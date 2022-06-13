@@ -104,7 +104,6 @@ double dp_rms_custom_cauchy(std::vector<double> errors, const double epsilon, co
     auto beta = epsilon / (2 * (gamma + 1.0));
     double sens, rmse;
     std::tie(sens, rmse) = rMS_smooth_sensitivity(errors, beta, U);
-    LOG_INFO("### diagnosis value 04 ### - smooth_sens={1}", sens);
     auto noise = cc.draw();
     auto dp_rmse = rmse + 2 * (gamma + 1) * sens * noise / epsilon;
     return dp_rmse;
@@ -126,7 +125,6 @@ double dp_rms_cauchy(std::vector<double> errors, const double epsilon, const dou
     double beta = epsilon / (2 * (gamma + 1.0));
     double sens, rmse;
     std::tie(sens, rmse) = rMS_smooth_sensitivity(errors, beta, U);
-    LOG_INFO("#sensitivity_evolution# --- smooth_sens={1}", sens);
     std::cauchy_distribution<double> distribution(0.0, 1.0);
     auto noise = distribution(rng);
     auto dp_rmse = rmse + 2 * (gamma + 1) * sens * noise / epsilon;
@@ -177,6 +175,7 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
 
         suffix_sum += U; // replace smallest by U, but only after calculation
     }
+    LOG_INFO("### diagnosis value 04 ### - smooth_sens={1}", smooth_sens);
     LOG_INFO("### diagnosis value 05 ### - maximizer_local_sens={1}", maximizer_local_sens);
     LOG_INFO("### diagnosis value 06 ### - maximizer_k={1}", maximizer_k);
     return std::make_tuple(smooth_sens, rmse);

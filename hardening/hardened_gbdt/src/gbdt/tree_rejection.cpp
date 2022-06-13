@@ -245,7 +245,7 @@ namespace tree_rejection
                        y_pred.begin(), y_pred.begin(), std::minus<double>());
         LOG_INFO("### diagnosis value 01 ### - rmse={1}", compute_rmse(y_pred));
         auto current_error = dp_rms_custom_cauchy(y_pred, this->epsilon, this->U, *this->cc);
-        LOG_INFO("### diagnosis value 02 ### - rmse-approx={1}", current_error);
+        LOG_INFO("### diagnosis value 02 ### - rmse_approx={1}", current_error);
         if (current_error < this->previous_error)
         {
             this->previous_error = current_error;
@@ -282,16 +282,16 @@ namespace tree_rejection
     {
         std::transform(y.begin(), y.end(),
                        y_pred.begin(), y_pred.begin(), std::minus<double>());
-        LOG_INFO("### diagnosis value 01 ### - rmse={1}", compute_rmse(y_pred));
+
 
         std::sort(y_pred.begin(), y_pred.end());
         auto beta = this->epsilon / (2.0 * log(2.0 / this->delta));
         double sens, rmse;
         std::tie(sens, rmse) = rMS_smooth_sensitivity(y_pred, beta, this->U);
-        LOG_INFO("#sensitivity_evolution# --- smooth_sens={1}", sens);
+        LOG_INFO("### diagnosis value 01 ### - rmse={1}", rmse);
         auto noise = this->laplace_distr->return_a_random_variable();
         auto current_error = rmse + 2 * sens * noise / this->epsilon;
-        LOG_INFO("### diagnosis value 02 ### - rmse-approx={1}", current_error);
+        LOG_INFO("### diagnosis value 02 ### - rmse_approx={1}", current_error);
         if (current_error < this->previous_error)
         {
             this->previous_error = current_error;
