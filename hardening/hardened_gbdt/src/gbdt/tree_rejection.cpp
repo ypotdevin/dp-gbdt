@@ -12,6 +12,55 @@
 #include "spdlog/spdlog.h"
 #include "utils.h"
 
+// Some "private" helpers
+namespace
+{
+    std::vector<double> quantiles(std::vector<double> samples, std::vector<double> qs)
+    {
+        std::vector<double> quants;
+        auto n = samples.size() - 1;
+        for (auto q : qs)
+        {
+            std::size_t quantile_position = std::ceil(q * n);
+            std::nth_element(samples.begin(), samples.begin() + quantile_position, samples.end());
+            quants.push_back(samples.at(quantile_position));
+        }
+
+        return quants;
+    }
+
+    /**
+     * @brief Compute the q-th quantile of the given sample. If q doesn't match
+     * exactly an index, ceil for the next-larger element.
+     *
+     * @param samples
+     * @param q
+     * @return double
+     */
+    double quantile(std::vector<double> samples, double q)
+    {
+        std::vector<double> quants = {q};
+        return quantiles(samples, quants)[0];
+    }
+
+    std::string dvec2listrepr(std::vector<double> vec)
+    {
+        if (vec.empty())
+        {
+            return "[]";
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "[";
+            std::copy(vec.begin(), vec.end() - 1, std::ostream_iterator<double>(oss, ", "));
+            oss << vec.back()
+                << "]";
+            return oss.str();
+        }
+    }
+}
+
 namespace tree_rejection
 {
     std::unique_ptr<TreeRejector> from_CommandLineParser(cli_parser::CommandLineParser &cp, std::mt19937 &rng)
@@ -98,22 +147,6 @@ namespace tree_rejection
         return decision;
     }
 
-    /**
-     * @brief Compute the q-th quantile of the given sample. If q doesn't match
-     * exactly an index, ceil for the next-larger element.
-     *
-     * @param samples
-     * @param q
-     * @return double
-     */
-    double quantile(std::vector<double> samples, double q)
-    {
-        auto n = samples.size() - 1;
-        std::size_t quantile_position = std::ceil(q * n);
-        std::nth_element(samples.begin(), samples.begin() + quantile_position, samples.end());
-        return samples.at(quantile_position);
-    }
-
     QuantileRejector::QuantileRejector(double q)
     {
         this->q = q;
@@ -147,23 +180,6 @@ namespace tree_rejection
         this->qs = qs;
         this->weights = weights;
         normalize(this->weights);
-    }
-
-    std::string dvec2listrepr(std::vector<double> vec)
-    {
-        if (vec.empty())
-        {
-            return "[]";
-        }
-        else
-        {
-            std::ostringstream oss;
-            oss << "[";
-            std::copy(vec.begin(), vec.end() - 1, std::ostream_iterator<double>(oss, ", "));
-            oss << vec.back()
-                << "]";
-            return oss.str();
-        }
     }
 
     void QuantileCombinationRejector::print(std::ostream &os) const
