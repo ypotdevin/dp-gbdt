@@ -61,6 +61,12 @@ make
 | 1e    | --rejection-budget                  | float        | The per-loop DP budget for the tree rejection mechanism                |
 | 1e    | --rejection-failure-prob            | float        | The delta from the definition of approximate DP                        |
 | 1e    | --error-upper-bound                 | float        | An upper bound to the prediction errors, needed for sensitivity calculation (larger values will be clipped; large values will increase the sensitivity and require more noise, low values do not reflect the true prediction errors) |
+| 1f    | --quantile-linear-combination-rejection    | boolean flag | Perform leaky tree rejection via a linear combination of quantiles    |
+| 1f    | --quantile-linear-combination-rejection-q0 | float        | The *first* quantile to use (may be up to 5, depending on how many are provided) |
+| 1f    | --quantile-linear-combination-rejection-c0 | float        | The coefficient of the *first* quantile |
+…
+| 1f    | --quantile-linear-combination-rejection-q4 | float        | The *fifth* quantile to use             |
+| 1f    | --quantile-linear-combination-rejection-c4 | float        | The coefficient of the *fifth* quantile |
 | 2     | --nb-trees                | int          | The (maximal) number of trees an ensemble may contain (is affected by tree rejection) |
 …
 
