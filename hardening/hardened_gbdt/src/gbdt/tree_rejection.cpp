@@ -33,7 +33,8 @@ namespace
      * @brief Compute the q-th quantile of the given sample. If q doesn't match
      * exactly an index, ceil for the next-larger element.
      *
-     * @param samples
+     * @param samples the samples to compute the quantile for. It is not
+     * necessary to sort the samples previously.
      * @param q
      * @return double
      */
@@ -282,7 +283,8 @@ namespace tree_rejection
     bool DPrMSERejector::reject_tree(std::vector<double> &y, std::vector<double> &y_pred)
     {
         std::transform(y.begin(), y.end(),
-                       y_pred.begin(), y_pred.begin(), std::minus<double>());
+                       y_pred.begin(), y_pred.begin(), [](double _y, double _y_pred)
+                       { return std::abs(_y - _y_pred); });
         LOG_INFO("### diagnosis value 01 ### - rmse={1}", compute_rmse(y_pred));
         auto current_error = dp_rms_custom_cauchy(y_pred, this->epsilon, this->U, *this->cc);
         LOG_INFO("### diagnosis value 02 ### - rmse_approx={1}", current_error);
@@ -321,8 +323,8 @@ namespace tree_rejection
     bool ApproxDPrMSERejector::reject_tree(std::vector<double> &y, std::vector<double> &y_pred)
     {
         std::transform(y.begin(), y.end(),
-                       y_pred.begin(), y_pred.begin(), std::minus<double>());
-
+                       y_pred.begin(), y_pred.begin(), [](double _y, double _y_pred)
+                       { return std::abs(_y - _y_pred); });
 
         std::sort(y_pred.begin(), y_pred.end());
         auto beta = this->epsilon / (2.0 * log(2.0 / this->delta));
