@@ -73,6 +73,23 @@ def basic_quantile_combination_space(num_qs, num_settings, seed) -> Settings:
     yield from ParameterSampler(grid, n_iter=num_settings, random_state=seed)
 
 
+def basic_dp_rmse_space_abalone(num_settings, seed) -> Settings:
+    grid = {
+        # generic
+        "--dp-rmse-gamma": [2.0],
+        "--nb-trees": [1, 2, 5, 10, 20, 50],
+        "--max-depth": [1, 2, 5, 10, 20],
+        "--learning-rate": loguniform(1e-2, 1e1),
+        "--l2-lambda": loguniform(1e-2, 1e1),
+        "--l2-threshold": loguniform(1e-1, 2.9 * 1e1),
+        # abalone specific
+        "--dataset": ["abalone"],
+        "--num-samples": [4177],
+        "--error-upper-bound": Uniform(lb=3.0, ub=40.0),
+    }
+    yield from ParameterSampler(grid, n_iter=num_settings, random_state=seed)
+
+
 def basic_approx_dp_rmse_laplace_space_abalone(delta, num_settings, seed) -> Settings:
     grid = {
         # generic
@@ -99,49 +116,6 @@ def basic_leaky_space(num_settings, seed) -> Settings:
         "--l2-threshold": loguniform(1e-1, 2.9 * 1e1),
     }
     yield from ParameterSampler(grid, n_iter=num_settings, random_state=seed)
-
-
-def csv_to_settings(
-    filename: str,
-    columns: Iterable[str] = None,
-    renaming: typing.Dict[str, str] = None,
-) -> Settings:
-    """
-    Parameters
-    ----------
-    filename: str
-        The path (including filename and extension) to the csv file
-        containing benchmark (or hyperparameter optimization) results.
-    columns: iterable of str
-        The columns to extract hyperparameters from (this may not be
-        enough to yield complete settings).
-    renaming: a mapping of str to str
-        A translation of column labels to setting hyperparameter (e.g.
-        `param_ensemble_privacy_budget` to `--ensemble-privacy-budget`).
-    """
-    if columns is None:
-        columns = [
-            "param_ensemble_privacy_budget",
-            "param_l2_lambda",
-            "param_l2_threshold",
-            "param_learning_rate",
-            "param_max_depth",
-            "param_nb_trees",
-        ]
-    if renaming is None:
-        renaming = dict(
-            param_ensemble_privacy_budget="--ensemble-privacy-budget",
-            param_l2_lambda="--l2-lambda",
-            param_l2_threshold="--l2-threshold",
-            param_learning_rate="--learning-rate",
-            param_max_depth="--max-depth",
-            param_nb_trees="--nb-trees",
-        )
-    df = pd.read_csv(filename)
-    df = df[columns]
-    df.rename(renaming, axis=1, inplace=True)
-    for (_, row) in df.iterrows():
-        yield row.to_dict()
 
 
 def round_floats(settings: Settings, digits=3) -> Setting:
@@ -345,7 +319,50 @@ def get_filenames(settings: Settings) -> typing.List[str]:
     return log_names
 
 
-def quantile_settings(num_cores, eval_dir, rng):
+def csv_to_settings(
+    filename: str,
+    columns: Iterable[str] = None,
+    renaming: typing.Dict[str, str] = None,
+) -> Settings:
+    """
+    Parameters
+    ----------
+    filename: str
+        The path (including filename and extension) to the csv file
+        containing benchmark (or hyperparameter optimization) results.
+    columns: iterable of str
+        The columns to extract hyperparameters from (this may not be
+        enough to yield complete settings).
+    renaming: a mapping of str to str
+        A translation of column labels to setting hyperparameter (e.g.
+        `param_ensemble_privacy_budget` to `--ensemble-privacy-budget`).
+    """
+    if columns is None:
+        columns = [
+            "param_ensemble_privacy_budget",
+            "param_l2_lambda",
+            "param_l2_threshold",
+            "param_learning_rate",
+            "param_max_depth",
+            "param_nb_trees",
+        ]
+    if renaming is None:
+        renaming = dict(
+            param_ensemble_privacy_budget="--ensemble-privacy-budget",
+            param_l2_lambda="--l2-lambda",
+            param_l2_threshold="--l2-threshold",
+            param_learning_rate="--learning-rate",
+            param_max_depth="--max-depth",
+            param_nb_trees="--nb-trees",
+        )
+    df = pd.read_csv(filename)
+    df = df[columns]
+    df.rename(renaming, axis=1, inplace=True)
+    for (_, row) in df.iterrows():
+        yield row.to_dict()
+
+
+def quantile_convex_combination_settings(num_cores, eval_dir, rng):
     settings = basic_quantile_combination_space(
         num_qs=3, num_settings=2 * num_cores, seed=rng.integers(2 ** 30 - 1)
     )
@@ -355,19 +372,6 @@ def quantile_settings(num_cores, eval_dir, rng):
     settings = round_floats(settings)
     settings = add_repetitions(settings, 2, rng)
     settings = add_filenames(settings, eval_dir + "leaky-quantile-combination-opt_{}")
-    return settings
-
-
-def approx_dp_rmse_laplace_settings(num_cores, eval_dir, rng):
-    settings = basic_approx_dp_rmse_laplace_space_abalone(
-        delta=1e-4, num_settings=2 * num_cores, seed=rng.integers(2 ** 30 - 1),
-    )
-    settings = _mult_by_flag("--dp-laplace-rmse-rejection", settings)
-    settings = add_ensemble_privacy_budgets([0.1, 0.5, 1.0, 2.0, 5.0, 10.0], settings)
-    settings = add_rejection_privacy_budgets([0.01, 0.05, 1.0, 5.0], settings)
-    settings = round_floats(settings)
-    settings = add_repetitions(settings, 2, rng)
-    settings = add_filenames(settings, eval_dir + "approx-laplace-dp-opt_{}")
     return settings
 
 
@@ -390,13 +394,39 @@ def quantile_linear_combination_settings(num_cores, eval_dir, rng):
     return settings
 
 
+def approx_dp_rmse_laplace_settings(num_cores, eval_dir, rng):
+    settings = basic_approx_dp_rmse_laplace_space_abalone(
+        delta=1e-4, num_settings=2 * num_cores, seed=rng.integers(2 ** 30 - 1),
+    )
+    settings = _mult_by_flag("--dp-laplace-rmse-rejection", settings)
+    settings = add_ensemble_privacy_budgets([0.1, 0.5, 1.0, 2.0, 5.0, 10.0], settings)
+    settings = add_rejection_privacy_budgets([0.01, 0.05, 1.0, 5.0], settings)
+    settings = round_floats(settings)
+    settings = add_repetitions(settings, 2, rng)
+    settings = add_filenames(settings, eval_dir + "approx-laplace-dp-opt_{}")
+    return settings
+
+
+def dp_rmse_settings(num_cores, eval_dir, rng):
+    settings = basic_dp_rmse_space_abalone(
+        num_settings=2 * num_cores, seed=rng.integers(2 ** 30 - 1),
+    )
+    settings = _mult_by_flag("--dp-rmse-tree-rejection", settings)
+    settings = add_ensemble_privacy_budgets([0.1, 0.5, 1.0, 2.0, 5.0, 10.0], settings)
+    settings = add_rejection_privacy_budgets([0.01, 0.05, 1.0, 5.0], settings)
+    settings = round_floats(settings)
+    settings = add_repetitions(settings, 2, rng)
+    settings = add_filenames(settings, eval_dir + "dp-rmse_{}")
+    return settings
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Perform random search over the hyperparameter space."
     )
     parser.add_argument(
         "--num-cores",
-        action="store_const",
+        type=int,
         default=4,
         help="The number of CPU cores to use for hyperparameter search "
         "(affects the number of tested hyperparameter combinations).",
@@ -404,13 +434,13 @@ def main():
     args = parser.parse_args()
 
     hostname = socket.gethostname()
-    eval_dir = f"evaluation/{hostname}/quantile-linear-comb-leaky/abalone/"
+    eval_dir = f"evaluation/{hostname}/dp-rmse/abalone/"
     if not os.path.exists(eval_dir):
         os.makedirs(eval_dir)
 
     rng = np.random.default_rng()
 
-    settings = quantile_linear_combination_settings(args.num_cores, eval_dir, rng)
+    settings = dp_rmse_settings(args.num_cores, eval_dir, rng)
 
     with multiprocessing.Pool(args.num_cores) as p:
         p.map(run_benchmark, settings, chunksize=1)
