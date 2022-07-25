@@ -5,6 +5,7 @@
 # uniformly configurations from that space (up to a certain number) and
 # then run the DP-GBDT-Programm via CLI with the sampled configuration.
 
+import argparse
 import multiprocessing
 import os
 import socket
@@ -390,17 +391,28 @@ def quantile_linear_combination_settings(num_cores, eval_dir, rng):
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Perform random search over the hyperparameter space."
+    )
+    parser.add_argument(
+        "--num-cores",
+        action="store_const",
+        default=4,
+        help="The number of CPU cores to use for hyperparameter search "
+        "(affects the number of tested hyperparameter combinations).",
+    )
+    args = parser.parse_args()
+
     hostname = socket.gethostname()
     eval_dir = f"evaluation/{hostname}/quantile-linear-comb-leaky/abalone/"
     if not os.path.exists(eval_dir):
         os.makedirs(eval_dir)
 
     rng = np.random.default_rng()
-    num_cores = 32
 
-    settings = quantile_linear_combination_settings(num_cores, eval_dir, rng)
+    settings = quantile_linear_combination_settings(args.num_cores, eval_dir, rng)
 
-    with multiprocessing.Pool(num_cores) as p:
+    with multiprocessing.Pool(args.num_cores) as p:
         p.map(run_benchmark, settings, chunksize=1)
 
 
