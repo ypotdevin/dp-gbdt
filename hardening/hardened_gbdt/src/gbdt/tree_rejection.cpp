@@ -111,6 +111,21 @@ namespace tree_rejection
                 tr = std::unique_ptr<QuantileCombinationRejector>(new QuantileCombinationRejector(qs, ws));
             }
         }
+        else if (cp.hasOption("--quantile-linear-combination-rejection"))
+        {
+            std::string qcr = "--quantile-linear-combination-rejection";
+            std::vector<double> qs, cs;
+            for (size_t i = 0; i <= 4; ++i) // Support up to 5 different qs and ws
+            {
+                auto suffix = std::to_string(i);
+                if (cp.hasOption(qcr + "-q" + suffix) && cp.hasOption(qcr + "-c" + suffix))
+                {
+                    qs.push_back(cp.getDoubleOptionValue(qcr + "-q" + suffix));
+                    cs.push_back(cp.getDoubleOptionValue(qcr + "-c" + suffix));
+                }
+                tr = std::unique_ptr<QuantileLinearCombinationRejector>(new QuantileLinearCombinationRejector(qs, cs));
+            }
+        }
         else if (cp.hasOption("--dp-laplace-rmse-rejection"))
         {
             if (cp.hasOption("--rejection-budget") && cp.hasOption("--rejection-failure-prob") && cp.hasOption("--error-upper-bound"))
@@ -180,6 +195,7 @@ namespace tree_rejection
         this->qs = qs;
         this->weights = weights;
         normalize(this->weights);
+        this->qlcr = std::unique_ptr<QuantileLinearCombinationRejector>(new QuantileLinearCombinationRejector(this->qs, this->weights));
     }
 
     void QuantileCombinationRejector::print(std::ostream &os) const
@@ -193,10 +209,34 @@ namespace tree_rejection
 
     bool QuantileCombinationRejector::reject_tree(std::vector<double> &y, std::vector<double> &y_pred)
     {
-        std::transform(y.begin(), y.end(),
-                       y_pred.begin(), y_pred.begin(), std::minus<double>());
-        std::sort(y_pred.begin(), y_pred.end());
+        return this->qlcr->reject_tree(y, y_pred);
+    }
 
+    QuantileLinearCombinationRejector::QuantileLinearCombinationRejector(const std::vector<double> qs, const std::vector<double> coefficients)
+    {
+        this->qs = qs;
+        this->coefficients = coefficients;
+    }
+
+    void QuantileLinearCombinationRejector::print(std::ostream &os) const
+    {
+        os << "\"QuantileLinearCombinationRejector(qs="
+           << dvec2listrepr(this->qs)
+           << ",coefficients="
+           << dvec2listrepr(this->coefficients)
+           << ")\"";
+    }
+
+    bool QuantileLinearCombinationRejector::reject_tree(std::vector<double> &y, std::vector<double> &y_pred)
+    {
+        /* Compute absolute errors, so the quantiles make sense. Although this
+         * is not necessary for rMSE calculation (since the errors will be
+         * squared anyway), this might be beneficial for the estimation via
+         * quantiles.
+         */
+        std::transform(y.begin(), y.end(),
+                       y_pred.begin(), y_pred.begin(), [](double _y, double _y_pred)
+                       { return std::abs(_y - _y_pred); });
         auto quants = dvec2listrepr(quantiles(y_pred, linspace(0.5, 1.0, 11))); // [0.50, 0.55, …, 0.95, 1.0]
         LOG_INFO("### diagnosis value 01 ### - rmse={1}", compute_rmse(y_pred));
         LOG_INFO("### diagnosis value 03 ### - quantiles={1}", quants);
@@ -206,7 +246,7 @@ namespace tree_rejection
         for (size_t i = 0; i < this->qs.size(); ++i)
         {
             std::size_t quantile_position = std::ceil(this->qs.at(i) * n);
-            current_error += this->weights.at(i) * y_pred.at(quantile_position);
+            current_error += this->coefficients.at(i) * y_pred.at(quantile_position);
         }
         LOG_INFO("### diagnosis value 02 ### - rmse_approx={1}", current_error);
         if (current_error < previous_error)

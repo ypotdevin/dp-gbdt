@@ -82,6 +82,34 @@ namespace tree_rejection
     };
 
     /**
+     * @brief Keep the considered tree, if the approximated (via a linear
+     * combination of quantiles) root mean squared error of the ensemble,
+     * including the tree, is strictly lower than the error of the ensemble
+     * without the considered tree. Otherwise, reject the considered tree.
+     *
+     * This rejector generalizes the QuantileCombinationRejector, as the
+     * coefficients don't need to be a probability vector.
+     *
+     */
+    class QuantileLinearCombinationRejector : public TreeRejector
+    {
+    private:
+        double previous_error;
+        std::vector<double> qs, coefficients;
+
+    public:
+        /**
+         * @param qs the target quantiles (must have same length as
+         * `coefficients`)
+         * @param coefficients the corresponding coefficients of the target
+         * quantiles (must have same length as `qs`).
+         */
+        QuantileLinearCombinationRejector(const std::vector<double> qs, const std::vector<double> coefficients);
+        void print(std::ostream &os) const;
+        bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
+    };
+
+    /**
      * @brief Keep the considered tree, if the approximated (via a convex
      * combination of quantiles) root mean squared error of the ensemble
      * including the tree is strictly lower than the error of the ensemble
@@ -93,15 +121,15 @@ namespace tree_rejection
     private:
         double previous_error;
         std::vector<double> qs, weights;
+        std::unique_ptr<QuantileLinearCombinationRejector> qlcr;
 
     public:
         /**
-         * @brief Construct a new Quantile Combination Rejector object
-         *
          * @param qs the target quantiles (must have same length as `weights`)
          * @param weights the corresponding weights of the target quantiles
          * (must have same length as `qs`). The weights may sum up to 1.0 or
-         * may be expressed as relative weights. They will be normalized anyway.
+         * may be expressed as non-negative, relative weights. They will be
+         * normalized anyway.
          */
         QuantileCombinationRejector(const std::vector<double> qs, const std::vector<double> weights);
         void print(std::ostream &os) const;
