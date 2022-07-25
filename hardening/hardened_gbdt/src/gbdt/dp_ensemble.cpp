@@ -225,8 +225,8 @@ void DPEnsemble::train(DataSet *dataset)
         {
             trees.pop_back();
         }
-        LOG_DEBUG(
-            "#tree_evolution# --- ensemble {1} decision tree {2}. Number of trees in ensemble: {3}. Instances left: {4}.",
+        LOG_INFO(
+            "### diagnosis value 07 ### - ensemble {1} decision tree {2}. Number of trees in ensemble: {3}. Instances left: {4}.",
             keep_new_tree ? "includes" : "excludes",
             tree_index,
             trees.size(),
