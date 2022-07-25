@@ -13,7 +13,6 @@
 #include "loss.h"
 #include "utils.h"
 
-
 /* ---------- Regression ---------- */
 
 double Regression::compute_init_score(std::vector<double> &y)
@@ -109,15 +108,6 @@ double dp_rms_custom_cauchy(std::vector<double> errors, const double epsilon, co
     return dp_rmse;
 }
 
-/**
- * @param errors The errors (differences) to apply the root mean squared error
- * function on.
- * @param epsilon The privacy budget.
- * @param U The upper bound on the error terms in errors.
- * @param rng The (pseudo) random number generator to use when drawing from the
- * Cauchy distribution.
- * @return double The epsilon-differentially private rMSE estimate of errors.
- */
 double dp_rms_cauchy(std::vector<double> errors, const double epsilon, const double U, std::mt19937 &rng)
 {
     std::sort(errors.begin(), errors.end());
@@ -131,16 +121,6 @@ double dp_rms_cauchy(std::vector<double> errors, const double epsilon, const dou
     return dp_rmse;
 }
 
-/**
- * @param errors The precomputed errors (to avoid having two arguments which
- * then have to be subtracted), sorted ascendingly.
- * @param beta The beta defining the beta-smooth sensitivity.
- * @param U The upper bound on the errors (not squared errors).
- * @return std::tuple<double, double> The beta-smooth sensitivity and the result
- * of the root mean squared error function, i.e. the function
- *
- *     e_1, ..., e_n |-> sqrt((e_1 ** 2 + ... + e_n ** 2) / n).
- */
 std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, const double beta, double U)
 {
     // If U is chosen well, i.e. a true upper bound on the errors, the clipping
@@ -181,17 +161,6 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
     return std::make_tuple(smooth_sens, rmse);
 }
 
-/**
- * @brief The local sensitivity of the rMSE function, already operating on the
- * vector of differences (not on two vectors which then will be subtracted).
- *
- * @param x the current squared error to replace.
- * @param substitute the replacement for x.
- * @param s the sum of the squared errors, but *without* x.
- * @param n the number of squared error (terms) in s, plus 1 for x.
- * @param U the upper bound of the squared errors terms in s, and x.
- * @return double The local sensitivity of the root mean squared error function.
- */
 double local_sensitivity(const double x, const double substitute, double s, const std::size_t n)
 {
     s = std::max(s, 1e-12); // to avoid division by zero
