@@ -6,17 +6,21 @@
 # then run the DP-GBDT-Programm via CLI with the sampled configuration.
 
 import multiprocessing
+import os
+import socket
 import subprocess
 import typing
 from itertools import chain, product
+from typing import Iterable
 
 import numpy as np
+import pandas as pd
 from scipy import stats
 from sklearn.model_selection import ParameterSampler
 from sklearn.utils.fixes import loguniform
 
 Setting = typing.Dict[str, typing.Any]
-Settings = typing.Iterable[Setting]
+Settings = Iterable[Setting]
 
 
 class Uniform:
@@ -30,7 +34,13 @@ class Uniform:
         )[0]
 
 
-def varying_settings_abalone(num_settings, seed) -> Settings:
+def basic_setting_space_abalone(num_settings, seed) -> Settings:
+    """A generous search space to look for well performing
+    hyperparameters (on the abalone dataset).
+
+    This space may be adapted for DP-rMSE tree rejection, leaky tree
+    rejection and also disabled tree rejection.
+    """
     grid = {
         # generic
         "--gamma": loguniform(1 + 1e-2, 1e2),
@@ -47,29 +57,193 @@ def varying_settings_abalone(num_settings, seed) -> Settings:
     yield from ParameterSampler(grid, n_iter=num_settings, random_state=seed)
 
 
+def basic_quantile_combination_space(num_qs, num_settings, seed) -> Settings:
+    grid = {
+        # generic
+        "--nb-trees": [1, 2, 5, 10, 20, 50],
+        "--max-depth": [1, 2, 5, 10, 20],
+        "--learning-rate": loguniform(1e-2, 1e1),
+        "--l2-lambda": loguniform(1e-2, 1e1),
+        "--l2-threshold": loguniform(1e-1, 2.9 * 1e1),
+    }
+    for i in range(num_qs):
+        grid[f"--quantile-combination-rejection-q{i}"] = Uniform(lb=0.5, ub=1.0)
+        grid[f"--quantile-combination-rejection-w{i}"] = Uniform(lb=0.0, ub=1.0)
+    yield from ParameterSampler(grid, n_iter=num_settings, random_state=seed)
+
+
+def basic_approx_dp_rmse_laplace_space_abalone(delta, num_settings, seed) -> Settings:
+    grid = {
+        # generic
+        "--nb-trees": [1, 2, 5, 10, 20, 50],
+        "--max-depth": [1, 2, 5, 10, 20],
+        "--learning-rate": loguniform(1e-2, 1e1),
+        "--l2-lambda": loguniform(1e-2, 1e1),
+        "--l2-threshold": loguniform(1e-1, 2.9 * 1e1),
+        "--rejection-failure-prob": [delta],
+        # abalone specific
+        "--dataset": ["abalone"],
+        "--num-samples": [4177],
+        "--error-upper-bound": Uniform(lb=3.0, ub=40.0),
+    }
+    yield from ParameterSampler(grid, n_iter=num_settings, random_state=seed)
+
+
+def basic_leaky_space(num_settings, seed) -> Settings:
+    grid = {
+        "--nb-trees": [1, 2, 5, 10, 20, 50],
+        "--max-depth": [1, 2, 5, 10, 20],
+        "--learning-rate": loguniform(1e-2, 1e1),
+        "--l2-lambda": loguniform(1e-2, 1e1),
+        "--l2-threshold": loguniform(1e-1, 2.9 * 1e1),
+    }
+    yield from ParameterSampler(grid, n_iter=num_settings, random_state=seed)
+
+
+def csv_to_settings(
+    filename: str,
+    columns: Iterable[str] = None,
+    renaming: typing.Dict[str, str] = None,
+) -> Settings:
+    """
+    Parameters
+    ----------
+    filename: str
+        The path (including filename and extension) to the csv file
+        containing benchmark (or hyperparameter optimization) results.
+    columns: iterable of str
+        The columns to extract hyperparameters from (this may not be
+        enough to yield complete settings).
+    renaming: a mapping of str to str
+        A translation of column labels to setting hyperparameter (e.g.
+        `param_ensemble_privacy_budget` to `--ensemble-privacy-budget`).
+    """
+    if columns is None:
+        columns = [
+            "param_ensemble_privacy_budget",
+            "param_l2_lambda",
+            "param_l2_threshold",
+            "param_learning_rate",
+            "param_max_depth",
+            "param_nb_trees",
+        ]
+    if renaming is None:
+        renaming = dict(
+            param_ensemble_privacy_budget="--ensemble-privacy-budget",
+            param_l2_lambda="--l2-lambda",
+            param_l2_threshold="--l2-threshold",
+            param_learning_rate="--learning-rate",
+            param_max_depth="--max-depth",
+            param_nb_trees="--nb-trees",
+        )
+    df = pd.read_csv(filename)
+    df = df[columns]
+    df.rename(renaming, axis=1, inplace=True)
+    for (_, row) in df.iterrows():
+        yield row.to_dict()
+
+
 def round_floats(settings: Settings, digits=3) -> Setting:
-    keys = [
-        "--gamma",
-        "--learning-rate",
-        "--l2-lambda",
-        "--l2-threshold",
-        "--error-upper-bound",
-    ]
+    keys = (
+        [
+            "--dp-rmse-gamma",
+            "--learning-rate",
+            "--l2-lambda",
+            "--l2-threshold",
+            "--error-upper-bound",
+            "--quantile-rejection-q",
+        ]
+        + [f"--quantile-combination-rejection-q{i}" for i in range(5)]
+        + [f"--quantile-combination-rejection-w{i}" for i in range(5)]
+        + [f"--quantile-linear-combination-rejection-q{i}" for i in range(5)]
+        + [f"--quantile-linear-combination-rejection-c{i}" for i in range(5)]
+    )
     for setting in settings:
         for key in keys:
-            setting[key] = round(setting[key], digits)
+            if key in setting:
+                setting[key] = round(setting[key], digits)
         yield setting
 
 
 def add_repetitions(settings: Settings, num_repetitions: int, rng) -> Settings:
     for setting in settings:
-        seeds = rng.integers(2**30 - 1, size=num_repetitions)
+        seeds = rng.integers(2 ** 30 - 1, size=num_repetitions)
         for seed in seeds:
             assert "--seed" not in setting.keys()
             yield {
                 "--seed": seed,
                 **setting,
             }
+
+
+def _mult_by_flag(flag: str, settings: Settings) -> Settings:
+    for setting in settings:
+        assert flag not in setting.keys()
+        yield {
+            flag: "",
+            **setting,
+        }
+
+
+def _mult_by_single_hyperparam(
+    label: str, values: Iterable[any], settings: Settings
+) -> Settings:
+    for setting in settings:
+        for value in values:
+            assert label not in setting.keys()
+            yield {
+                label: value,
+                **setting,
+            }
+
+
+def add_ensemble_privacy_budgets(
+    budgets: Iterable[float], settings: Settings, label: str = None
+) -> Settings:
+    if label is None:
+        label = "--ensemble-privacy-budget"
+    yield from _mult_by_single_hyperparam(label, budgets, settings)
+
+
+def add_rejection_privacy_budgets(
+    budgets: Iterable[float], settings: Settings, label: str = None
+) -> Settings:
+    if label is None:
+        label = "--rejection-budget"
+    yield from _mult_by_single_hyperparam(label, budgets, settings)
+
+
+def add_quantile_rejection(
+    qs: Iterable[float], settings: Settings, label: str = None
+) -> Settings:
+    if label is None:
+        label = "--quantile-rejection-q"
+    settings = _mult_by_flag("--quantile-rejection", settings)
+    settings = _mult_by_single_hyperparam(label, qs, settings)
+    return settings
+
+
+def add_quantile_linear_combination_rejection(
+    qss: Iterable[Iterable[float]],
+    coefficientss: Iterable[Iterable[float]],
+    settings: Settings,
+) -> Settings:
+    settings = _mult_by_flag("--quantile-linear-combination-rejection", settings)
+    for (qs, coefficients) in zip(qss, coefficientss):
+        for (i, (q, coefficient)) in enumerate(zip(qs, coefficients)):
+            settings = _mult_by_single_hyperparam(
+                f"--quantile-linear-combination-rejection-q{i}", [q], settings
+            )
+            settings = _mult_by_single_hyperparam(
+                f"--quantile-linear-combination-rejection-c{i}", [coefficient], settings
+            )
+        yield from settings
+
+
+def add_abalone(settings: Settings) -> Settings:
+    settings = _mult_by_single_hyperparam("--num-samples", [4177], settings)
+    settings = _mult_by_single_hyperparam("--dataset", ["abalone"], settings)
+    return settings
 
 
 def add_dp_opt_settings(settings: Settings) -> Settings:
@@ -127,8 +301,8 @@ def settings_loop(
 ) -> Settings:
     # using 2 ** 32 - 1 would apparently lead to std::out_of_range in
     # the C++ application
-    seed = rng.integers(2**30 - 1)
-    settings = varying_settings_abalone(num_settings, seed)
+    seed = rng.integers(2 ** 30 - 1)
+    settings = basic_setting_space_abalone(num_settings, seed)
     settings = round_floats(settings)
     settings = add_repetitions(settings, num_repetitions=num_repetitions, rng=rng)
     materialized_settings = list(settings)
@@ -147,9 +321,9 @@ def settings_loop(
     return chain(no_opt_settings, leaky_opt_settings, dp_opt_settings)
 
 
-def to_command_line(setting: Setting) -> typing.List[str]:
+def to_command_line(setting: Setting) -> str:
     args = " ".join(chain(*[[k, str(v)] for (k, v) in setting.items()]))
-    command_line = f"./run --log-level debug {args}"
+    command_line = f"./run --log-level info {args}"
     return command_line
 
 
@@ -170,18 +344,64 @@ def get_filenames(settings: Settings) -> typing.List[str]:
     return log_names
 
 
-def main():
-    rng = np.random.default_rng()
-    templates = dict(
-        no_opt_template="evaluation/abalone/no-opt_{}",
-        leaky_opt_template="evaluation/abalone/leaky-opt_{}",
-        dp_opt_template="evaluation/abalone/dp-opt_{}",
+def quantile_settings(num_cores, eval_dir, rng):
+    settings = basic_quantile_combination_space(
+        num_qs=3, num_settings=2 * num_cores, seed=rng.integers(2 ** 30 - 1)
     )
+    settings = _mult_by_flag("--quantile-combination-rejection", settings)
+    settings = add_ensemble_privacy_budgets([0.1, 0.5, 1.0, 2.0, 5.0, 10.0], settings)
+    settings = add_abalone(settings)
+    settings = round_floats(settings)
+    settings = add_repetitions(settings, 2, rng)
+    settings = add_filenames(settings, eval_dir + "leaky-quantile-combination-opt_{}")
+    return settings
 
-    num_cores = 56
-    settings = settings_loop(10 * num_cores, 2, templates, rng)
+
+def approx_dp_rmse_laplace_settings(num_cores, eval_dir, rng):
+    settings = basic_approx_dp_rmse_laplace_space_abalone(
+        delta=1e-4, num_settings=2 * num_cores, seed=rng.integers(2 ** 30 - 1),
+    )
+    settings = _mult_by_flag("--dp-laplace-rmse-rejection", settings)
+    settings = add_ensemble_privacy_budgets([0.1, 0.5, 1.0, 2.0, 5.0, 10.0], settings)
+    settings = add_rejection_privacy_budgets([0.01, 0.05, 1.0, 5.0], settings)
+    settings = round_floats(settings)
+    settings = add_repetitions(settings, 2, rng)
+    settings = add_filenames(settings, eval_dir + "approx-laplace-dp-opt_{}")
+    return settings
+
+
+def quantile_linear_combination_settings(num_cores, eval_dir, rng):
+    settings = basic_leaky_space(
+        num_settings=2 * num_cores, seed=rng.integers(2 ** 30 - 1),
+    )
+    settings = add_quantile_linear_combination_rejection(
+        qss=[[0.5, 0.85, 0.95],],
+        coefficientss=[[-0.30757628, 0.32697374, 0.41003781],],
+        settings=settings,
+    )
+    settings = round_floats(settings)
+    settings = add_ensemble_privacy_budgets([0.1, 0.5, 1.0, 2.0, 5.0, 10.0], settings)
+    settings = add_abalone(settings)
+    settings = add_repetitions(settings, 2, rng)
+    settings = add_filenames(
+        settings, eval_dir + "quantile-linear-combination-leaky-opt_{}"
+    )
+    return settings
+
+
+def main():
+    hostname = socket.gethostname()
+    eval_dir = f"evaluation/{hostname}/quantile-linear-comb-leaky/abalone/"
+    if not os.path.exists(eval_dir):
+        os.makedirs(eval_dir)
+
+    rng = np.random.default_rng()
+    num_cores = 32
+
+    settings = quantile_linear_combination_settings(num_cores, eval_dir, rng)
+
     with multiprocessing.Pool(num_cores) as p:
-        p.map(run_benchmark, settings)
+        p.map(run_benchmark, settings, chunksize=1)
 
 
 if __name__ == "__main__":
