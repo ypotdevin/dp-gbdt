@@ -394,6 +394,25 @@ def quantile_linear_combination_settings(num_cores, eval_dir, rng):
     return settings
 
 
+def quantile_linear_combination_settings2(num_cores, eval_dir, rng):
+    settings = basic_leaky_space(
+        num_settings=2 * num_cores, seed=rng.integers(2 ** 30 - 1),
+    )
+    settings = add_quantile_linear_combination_rejection(
+        qss=[[0.5, 0.95],],
+        coefficientss=[[0.53619529, 0.33035797],],
+        settings=settings,
+    )
+    settings = round_floats(settings)
+    settings = add_ensemble_privacy_budgets([0.1, 0.5, 1.0, 2.0, 5.0, 10.0], settings)
+    settings = add_abalone(settings)
+    settings = add_repetitions(settings, 2, rng)
+    settings = add_filenames(
+        settings, eval_dir + "quantile-linear-combination-leaky-opt_{}"
+    )
+    return settings
+
+
 def approx_dp_rmse_laplace_settings(num_cores, eval_dir, rng):
     settings = basic_approx_dp_rmse_laplace_space_abalone(
         delta=1e-4, num_settings=2 * num_cores, seed=rng.integers(2 ** 30 - 1),
@@ -434,13 +453,13 @@ def main():
     args = parser.parse_args()
 
     hostname = socket.gethostname()
-    eval_dir = f"evaluation/{hostname}/dp-rmse/abalone/"
+    eval_dir = f"evaluation/{hostname}/quantile-linear-comb-leaky2/abalone/"
     if not os.path.exists(eval_dir):
         os.makedirs(eval_dir)
 
     rng = np.random.default_rng()
 
-    settings = dp_rmse_settings(args.num_cores, eval_dir, rng)
+    settings = quantile_linear_combination_settings2(args.num_cores, eval_dir, rng)
 
     with multiprocessing.Pool(args.num_cores) as p:
         p.map(run_benchmark, settings, chunksize=1)
