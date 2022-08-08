@@ -238,17 +238,14 @@ namespace tree_rejection
         std::transform(y.begin(), y.end(),
                        y_pred.begin(), y_pred.begin(), [](double _y, double _y_pred)
                        { return std::abs(_y - _y_pred); });
-        auto quants = dvec2listrepr(quantiles(y_pred, linspace(0.5, 1.0, 11))); // [0.50, 0.55, …, 0.95, 1.0]
+        auto diagnosis_quants = dvec2listrepr(quantiles(y_pred, linspace(0.5, 1.0, 11))); // [0.50, 0.55, …, 0.95, 1.0]
         LOG_INFO("### diagnosis value 01 ### - rmse={1}", compute_rmse(y_pred));
-        LOG_INFO("### diagnosis value 03 ### - quantiles={1}", quants);
+        LOG_INFO("### diagnosis value 03 ### - quantiles={1}", diagnosis_quants);
 
-        auto n = y_pred.size() - 1;
         double current_error = 0.0;
-        for (size_t i = 0; i < this->qs.size(); ++i)
-        {
-            std::size_t quantile_position = std::ceil(this->qs.at(i) * n);
-            current_error += this->coefficients.at(i) * y_pred.at(quantile_position);
-        }
+        auto quants = quantiles(y_pred, this->qs);
+        current_error = std::inner_product(this->coefficients.begin(), this->coefficients.end(), quants.begin(), current_error);
+
         LOG_INFO("### diagnosis value 02 ### - rmse_approx={1}", current_error);
         if (current_error < previous_error)
         {
