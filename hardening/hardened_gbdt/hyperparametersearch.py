@@ -426,9 +426,9 @@ def approx_dp_rmse_laplace_settings(num_cores, eval_dir, rng):
     return settings
 
 
-def dp_rmse_settings(num_cores, eval_dir, rng):
+def dp_rmse_settings(num_cores, jobs_per_core, eval_dir, rng):
     settings = basic_dp_rmse_space_abalone(
-        num_settings=2 * num_cores, seed=rng.integers(2 ** 30 - 1),
+        num_settings=jobs_per_core * num_cores, seed=rng.integers(2 ** 30 - 1),
     )
     settings = _mult_by_flag("--dp-rmse-tree-rejection", settings)
     settings = add_ensemble_privacy_budgets([0.1, 0.5, 1.0, 2.0, 5.0, 10.0], settings)
@@ -450,16 +450,23 @@ def main():
         help="The number of CPU cores to use for hyperparameter search "
         "(affects the number of tested hyperparameter combinations).",
     )
+    parser.add_argument(
+        "--jobs-per-core",
+        type=int,
+        default=2,
+        help="How many basic settings per core to generate (mind that"
+        "basic settings might still be multiplied and repeated).",
+    )
     args = parser.parse_args()
 
     hostname = socket.gethostname()
-    eval_dir = f"evaluation/{hostname}/quantile-linear-comb-leaky2/abalone/"
+    eval_dir = f"evaluation/{hostname}/dp-rmse/abalone/"
     if not os.path.exists(eval_dir):
         os.makedirs(eval_dir)
 
     rng = np.random.default_rng()
 
-    settings = quantile_linear_combination_settings2(args.num_cores, eval_dir, rng)
+    settings = dp_rmse_settings(args.num_cores, args.jobs_per_core, eval_dir, rng)
 
     with multiprocessing.Pool(args.num_cores) as p:
         p.map(run_benchmark, settings, chunksize=1)
