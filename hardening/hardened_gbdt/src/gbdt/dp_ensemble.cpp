@@ -215,19 +215,19 @@ void DPEnsemble::train(DataSet *dataset)
          * that in mind when comparing plots of these settings.
          */
         auto raw_predictions = predict(dataset->X);
-        auto keep_new_tree = params->tree_rejector->reject_tree(dataset->y, raw_predictions);
+        auto reject_new_tree = params->tree_rejector->reject_tree(dataset->y, raw_predictions);
 
-        if (keep_new_tree)
-        {
-            *dataset = dataset->remove_rows(tree_indices);
-        }
-        else
+        if (reject_new_tree)
         {
             trees.pop_back();
         }
+        else
+        {
+            *dataset = dataset->remove_rows(tree_indices);
+        }
         LOG_INFO(
             "### diagnosis value 07 ### - ensemble {1} decision tree {2}. Number of trees in ensemble: {3}. Instances left: {4}.",
-            keep_new_tree ? "includes" : "excludes",
+            reject_new_tree ? "excludes" : "includes",
             tree_index,
             trees.size(),
             dataset->length);
