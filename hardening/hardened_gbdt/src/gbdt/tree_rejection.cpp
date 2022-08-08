@@ -183,11 +183,11 @@ namespace tree_rejection
         if (current_error < previous_error)
         {
             previous_error = current_error;
-            return false;
+            return false; // do not reject
         }
         else
         {
-            return true;
+            return true; // reject
         }
     }
 
@@ -250,11 +250,11 @@ namespace tree_rejection
         if (current_error < previous_error)
         {
             previous_error = current_error;
-            return false;
+            return false; // do not reject
         }
         else
         {
-            return true;
+            return true; // reject
         }
     }
 
@@ -288,11 +288,11 @@ namespace tree_rejection
         if (current_error < this->previous_error)
         {
             this->previous_error = current_error;
-            return false;
+            return false; // do not reject
         }
         else
         {
-            return true;
+            return true; // reject
         }
     }
 
@@ -334,11 +334,11 @@ namespace tree_rejection
         if (current_error < this->previous_error)
         {
             this->previous_error = current_error;
-            return false;
+            return false; // do not reject
         }
         else
         {
-            return true;
+            return true; // reject
         }
     }
 }
