@@ -119,7 +119,6 @@ namespace tree_rejection
     class QuantileCombinationRejector : public TreeRejector
     {
     private:
-        double previous_error;
         std::vector<double> qs, weights;
         std::unique_ptr<QuantileLinearCombinationRejector> qlcr;
 
