@@ -215,6 +215,7 @@ namespace tree_rejection
 
     QuantileLinearCombinationRejector::QuantileLinearCombinationRejector(const std::vector<double> qs, const std::vector<double> coefficients)
     {
+        this->previous_error = std::numeric_limits<double>::max();
         this->qs = qs;
         this->coefficients = coefficients;
     }
@@ -301,6 +302,7 @@ namespace tree_rejection
         this->epsilon = epsilon;
         this->delta = delta;
         this->U = U;
+        this->previous_error = std::numeric_limits<double>::max();
         std::uniform_int_distribution<int> uni(0, std::numeric_limits<int>::max());
         auto seed = uni(rng);
         this->laplace_distr = std::unique_ptr<Laplace>(new Laplace(seed));
