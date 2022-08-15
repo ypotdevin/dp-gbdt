@@ -62,9 +62,7 @@ int main(int argc, char **argv)
     spdlog::set_pattern("[%H:%M:%S] [%^%5l%$] %v");
 
     // Define model parameters
-    // reason to use a vector is because parser expects it
     ModelParams params;
-    parse_model_parameters(cp, params);
     DataSet *dataset = parse_dataset_parameters(cp, params);
 
     // create cross validation inputs
@@ -76,6 +74,7 @@ int main(int argc, char **argv)
     // do cross validation
     for (auto split : cv_inputs)
     {
+        parse_model_parameters(cp, params); // having this inside the loop resets the tree rejector
         DPEnsemble ensemble = DPEnsemble(&params);
         ensemble.train(&split->train);
 
