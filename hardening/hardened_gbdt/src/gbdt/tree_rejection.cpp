@@ -191,7 +191,7 @@ namespace tree_rejection
         }
     }
 
-    QuantileCombinationRejector::QuantileCombinationRejector(const std::vector<double> qs, const std::vector<double> weights)
+    QuantileCombinationRejector::QuantileCombinationRejector(std::vector<double> qs, std::vector<double> weights)
     {
         this->qs = qs;
         this->weights = weights;
@@ -213,7 +213,7 @@ namespace tree_rejection
         return this->qlcr->reject_tree(y, y_pred);
     }
 
-    QuantileLinearCombinationRejector::QuantileLinearCombinationRejector(const std::vector<double> qs, const std::vector<double> coefficients)
+    QuantileLinearCombinationRejector::QuantileLinearCombinationRejector(std::vector<double> qs, std::vector<double> coefficients)
     {
         this->previous_error = std::numeric_limits<double>::max();
         this->qs = qs;

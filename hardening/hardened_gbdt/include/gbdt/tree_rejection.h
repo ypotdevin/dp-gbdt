@@ -104,7 +104,7 @@ namespace tree_rejection
          * @param coefficients the corresponding coefficients of the target
          * quantiles (must have same length as `qs`).
          */
-        QuantileLinearCombinationRejector(const std::vector<double> qs, const std::vector<double> coefficients);
+        QuantileLinearCombinationRejector(std::vector<double> qs, std::vector<double> coefficients);
         void print(std::ostream &os) const;
         bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
     };
@@ -130,7 +130,7 @@ namespace tree_rejection
          * may be expressed as non-negative, relative weights. They will be
          * normalized anyway.
          */
-        QuantileCombinationRejector(const std::vector<double> qs, const std::vector<double> weights);
+        QuantileCombinationRejector(std::vector<double> qs, std::vector<double> weights);
         void print(std::ostream &os) const;
         bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
     };
