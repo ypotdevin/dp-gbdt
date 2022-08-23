@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include "estimator.h"
 
 namespace dpgbdt
@@ -68,6 +69,13 @@ namespace dpgbdt
 
     std::vector<double> Estimator::predict(std::vector<std::vector<double>> X)
     {
-        return this->ensemble->predict(X);
+        if (this->ensemble)
+        {
+            return this->ensemble->predict(X);
+        }
+        else
+        {
+            throw std::runtime_error("Estimator is not fitted.");
+        }
     }
 }
