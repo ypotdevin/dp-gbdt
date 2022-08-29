@@ -16,7 +16,7 @@ struct ModelParams
     int nb_trees = 50;
     double learning_rate = 0.1;
     double privacy_budget = 1.0;
-    std::unique_ptr<tree_rejection::TreeRejector> tree_rejector;
+    std::shared_ptr<tree_rejection::TreeRejector> tree_rejector;
     int max_depth = 6;
     int min_samples_split = 2;
     unsigned balance_partition = true;

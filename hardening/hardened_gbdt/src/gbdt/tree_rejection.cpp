@@ -64,12 +64,12 @@ namespace
 
 namespace tree_rejection
 {
-    std::unique_ptr<TreeRejector> from_CommandLineParser(cli_parser::CommandLineParser &cp, std::mt19937 &rng)
+    std::shared_ptr<TreeRejector> from_CommandLineParser(cli_parser::CommandLineParser &cp, std::mt19937 &rng)
     {
-        std::unique_ptr<TreeRejector> tr;
+        std::shared_ptr<TreeRejector> tr;
         if (cp.hasOption("--no-tree-rejection"))
         {
-            tr = std::unique_ptr<ConstantRejector>(new ConstantRejector(false));
+            tr = std::shared_ptr<ConstantRejector>(new ConstantRejector(false));
         }
         else if (cp.hasOption("--dp-rmse-tree-rejection"))
         {
@@ -78,7 +78,7 @@ namespace tree_rejection
                 auto epsilon = cp.getDoubleOptionValue("--rejection-budget");
                 auto U = cp.getDoubleOptionValue("--error-upper-bound");
                 auto gamma = cp.getDoubleOptionValue("--dp-rmse-gamma");
-                tr = std::unique_ptr<DPrMSERejector>(new DPrMSERejector(epsilon, U, gamma, rng));
+                tr = std::shared_ptr<DPrMSERejector>(new DPrMSERejector(epsilon, U, gamma, rng));
             }
             else
             {
@@ -90,7 +90,7 @@ namespace tree_rejection
             if (cp.hasOption("--quantile-rejection-q"))
             {
                 auto q = cp.getDoubleOptionValue("--quantile-rejection-q");
-                tr = std::unique_ptr<QuantileRejector>(new QuantileRejector(q));
+                tr = std::shared_ptr<QuantileRejector>(new QuantileRejector(q));
             }
             else
             {
@@ -109,7 +109,7 @@ namespace tree_rejection
                     qs.push_back(cp.getDoubleOptionValue(qcr + "-q" + suffix));
                     ws.push_back(cp.getDoubleOptionValue(qcr + "-w" + suffix));
                 }
-                tr = std::unique_ptr<QuantileCombinationRejector>(new QuantileCombinationRejector(qs, ws));
+                tr = std::shared_ptr<QuantileCombinationRejector>(new QuantileCombinationRejector(qs, ws));
             }
         }
         else if (cp.hasOption("--quantile-linear-combination-rejection"))
@@ -124,7 +124,7 @@ namespace tree_rejection
                     qs.push_back(cp.getDoubleOptionValue(qcr + "-q" + suffix));
                     cs.push_back(cp.getDoubleOptionValue(qcr + "-c" + suffix));
                 }
-                tr = std::unique_ptr<QuantileLinearCombinationRejector>(new QuantileLinearCombinationRejector(qs, cs));
+                tr = std::shared_ptr<QuantileLinearCombinationRejector>(new QuantileLinearCombinationRejector(qs, cs));
             }
         }
         else if (cp.hasOption("--dp-laplace-rmse-rejection"))
@@ -134,7 +134,7 @@ namespace tree_rejection
                 auto epsilon = cp.getDoubleOptionValue("--rejection-budget");
                 auto delta = cp.getDoubleOptionValue("--rejection-failure-prob");
                 auto U = cp.getDoubleOptionValue("--error-upper-bound");
-                tr = std::unique_ptr<ApproxDPrMSERejector>(new ApproxDPrMSERejector(epsilon, delta, U, rng));
+                tr = std::shared_ptr<ApproxDPrMSERejector>(new ApproxDPrMSERejector(epsilon, delta, U, rng));
             }
             else
             {
@@ -196,7 +196,7 @@ namespace tree_rejection
         this->qs = qs;
         this->weights = weights;
         normalize(this->weights);
-        this->qlcr = std::unique_ptr<QuantileLinearCombinationRejector>(new QuantileLinearCombinationRejector(this->qs, this->weights));
+        this->qlcr = std::shared_ptr<QuantileLinearCombinationRejector>(new QuantileLinearCombinationRejector(this->qs, this->weights));
     }
 
     void QuantileCombinationRejector::print(std::ostream &os) const

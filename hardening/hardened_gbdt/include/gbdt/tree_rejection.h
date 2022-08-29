@@ -30,7 +30,7 @@ namespace tree_rejection
      * @param rng the random number generator used by this program, eventually
      * needed by the tree rejector.
      */
-    std::unique_ptr<TreeRejector> from_CommandLineParser(cli_parser::CommandLineParser &cp, std::mt19937 &rng);
+    std::shared_ptr<TreeRejector> from_CommandLineParser(cli_parser::CommandLineParser &cp, std::mt19937 &rng);
 
     /**
      * @brief Either always keep the considered tree, or always reject the
@@ -120,7 +120,7 @@ namespace tree_rejection
     {
     private:
         std::vector<double> qs, weights;
-        std::unique_ptr<QuantileLinearCombinationRejector> qlcr;
+        std::shared_ptr<QuantileLinearCombinationRejector> qlcr;
 
     public:
         /**

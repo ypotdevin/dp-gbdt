@@ -8,7 +8,7 @@ namespace dpgbdt
         this->params = std::shared_ptr<ModelParams>(new ModelParams());
         this->params->rng = std::mt19937(std::random_device{}());
         this->params->privacy_budget = 1.0;
-        this->params->tree_rejector = std::unique_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(0.01, 100.0, 2.0, this->params->rng));
+        this->params->tree_rejector = std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(0.01, 100.0, 2.0, this->params->rng));
         this->params->learning_rate = 0.1;
         this->params->nb_trees = 50;
         this->params->max_depth = 6;
@@ -25,7 +25,7 @@ namespace dpgbdt
     Estimator::Estimator(
         std::mt19937 const &rng,
         double privacy_budget,
-        std::unique_ptr<tree_rejection::TreeRejector> tree_rejector,
+        std::shared_ptr<tree_rejection::TreeRejector> tree_rejector,
         double learning_rate,
         int nb_trees,
         int max_depth,

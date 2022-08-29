@@ -45,7 +45,7 @@ namespace dpgbdt
         Estimator(
             std::mt19937 const &rng,
             double privacy_budget,
-            std::unique_ptr<tree_rejection::TreeRejector> tree_rejector,
+            std::shared_ptr<tree_rejection::TreeRejector> tree_rejector,
             double learning_rate,
             int nb_trees,
             int max_depth,
