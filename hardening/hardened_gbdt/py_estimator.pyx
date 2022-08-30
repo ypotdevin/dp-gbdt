@@ -14,10 +14,15 @@ import numpy as np
 
 cdef class PyMT19937:
     cdef mt19937 c_rng
+    cdef int seed
 
     def __cinit__(self, int seed):
         self.c_rng = mt19937(seed)
+        self.seed = seed
 
+    # see https://stackoverflow.com/a/18611983 (to enable deepcopy for sklearn)
+    def __reduce__(self):
+        return (self.__class__, (self.seed,))
 
 cdef class PyTreeRejector:
     cdef shared_ptr[TreeRejector] sptr_tr
@@ -29,14 +34,30 @@ cdef class PyDPrMSERejector(PyTreeRejector):
 
 
 cdef class PyQuantileLinearCombinationRejector(PyTreeRejector):
+    cdef list qs, coefficients
+
     def __cinit__(self, list qs, list coefficients):
+        self.qs = qs
+        self.coefficients = coefficients
         cdef vector[double] qs_vec = qs
         cdef vector[double] coefficients_vec = coefficients
-        self.sptr_tr = shared_ptr[TreeRejector](new QuantileLinearCombinationRejector(qs, coefficients))
+        self.sptr_tr = shared_ptr[TreeRejector](
+            new QuantileLinearCombinationRejector(qs_vec, coefficients_vec)
+        )
+
+    def __reduce__(self):
+        return (self.__class__, (self.qs, self.coefficients))
+
+
 
 
 cdef class PyEstimator:
     cdef Estimator* estimator
+    cdef PyMT19937 rng
+    cdef double privacy_budget, learning_rate, l2_threshold, l2_lambda
+    cdef PyTreeRejector tree_rejector
+    cdef int nb_trees, max_depth, min_samples_split
+    cdef bool balance_partition, gradient_filtering, leaf_clipping, use_decay
 
     def __cinit__(
         self,
@@ -54,6 +75,19 @@ cdef class PyEstimator:
         bool leaf_clipping,
         bool use_decay
     ):
+        self.rng = rng
+        self.privacy_budget = privacy_budget
+        self.tree_rejector = tree_rejector
+        self.learning_rate = learning_rate
+        self.nb_trees = nb_trees
+        self.max_depth = max_depth
+        self. min_samples_split = min_samples_split
+        self.l2_threshold = l2_threshold
+        self.l2_lambda = l2_lambda
+        self.balance_partition = balance_partition
+        self.gradient_filtering = gradient_filtering
+        self.leaf_clipping = leaf_clipping
+        self.use_decay = use_decay
         self.estimator = new Estimator(
             rng=rng.c_rng,
             privacy_budget=privacy_budget,
@@ -73,6 +107,26 @@ cdef class PyEstimator:
 
     def __dealloc__(self):
         del self.estimator
+
+    def __reduce__(self):
+        return (
+            self.__class__,
+            (
+                self.rng,
+                self.privacy_budget,
+                self.tree_rejector,
+                self.learning_rate,
+                self.nb_trees,
+                self.max_depth,
+                self.min_samples_split,
+                self.l2_threshold,
+                self.l2_lambda,
+                self.balance_partition,
+                self.gradient_filtering,
+                self.leaf_clipping,
+                self.use_decay,
+            )
+        )
 
     def fit(
         self,
