@@ -3,8 +3,9 @@
 
 cimport cython
 cimport numpy as np
-from cpp_estimator cimport (Estimator, TreeRejector, DPrMSERejector,
-                            QuantileLinearCombinationRejector, mt19937)
+from cpp_estimator cimport (Estimator, TreeRejector, ConstantRejector,
+                            QuantileLinearCombinationRejector, DPrMSERejector,
+                            ApproxDPrMSERejector, mt19937)
 from libcpp cimport bool
 from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
@@ -28,10 +29,15 @@ cdef class PyTreeRejector:
     cdef shared_ptr[TreeRejector] sptr_tr
 
 
-cdef class PyDPrMSERejector(PyTreeRejector):
-    def __cinit__(self, double epsilon, double U, double gamma, PyMT19937 rng):
-        self.sptr_tr = shared_ptr[TreeRejector](new DPrMSERejector(epsilon, U, gamma, rng.c_rng))
+cdef class PyConstantRejector(PyTreeRejector):
+    cdef bool decision
 
+    def __cinit__(self, bool decision):
+        self.decision = decision
+        self.sptr_tr = shared_ptr[TreeRejector](new ConstantRejector(decision))
+
+    def __reduce__(self):
+        return (self.__class__, (self.decision,))
 
 cdef class PyQuantileLinearCombinationRejector(PyTreeRejector):
     cdef list qs, coefficients
@@ -49,6 +55,37 @@ cdef class PyQuantileLinearCombinationRejector(PyTreeRejector):
         return (self.__class__, (self.qs, self.coefficients))
 
 
+cdef class PyDPrMSERejector(PyTreeRejector):
+    cdef double rejection_budget, U, gamma
+    cdef PyMT19937 rng
+
+    def __cinit__(self, double rejection_budget, double U, double gamma, PyMT19937 rng):
+        self.rejection_budget = rejection_budget
+        self.U = U
+        self.gamma = gamma
+        self.rng = rng
+        self.sptr_tr = shared_ptr[TreeRejector](
+            new DPrMSERejector(rejection_budget, U, gamma, rng.c_rng)
+        )
+
+    def __reduce__(self):
+        return (self.__class__, (self.rejection_budget, self.U, self.gamma, self.rng))
+
+cdef class PyApproxDPrMSERejector(PyTreeRejector):
+    cdef double rejection_budget, delta, U
+    cdef PyMT19937 rng
+
+    def __cinit__(self, double rejection_budget, double delta, double U, PyMT19937 rng):
+        self.rejection_budget = rejection_budget
+        self.delta = delta
+        self.U = U
+        self.rng = rng
+        self.sptr_tr = shared_ptr[TreeRejector](
+            new ApproxDPrMSERejector(rejection_budget, delta, U, rng.c_rng)
+        )
+
+    def __reduce__(self):
+        return (self.__class__, (self.rejection_budget, self.delta, self.U, self.rng))
 
 
 cdef class PyEstimator:
