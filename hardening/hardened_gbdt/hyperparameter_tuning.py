@@ -80,7 +80,7 @@ if __name__ == "__main__":
         regressor,
         get_abalone,
         parameter_grid,
-        n_trials=1,
+        n_trials=1000,
         time_budget_s=60 * 60 * 36,  # 36 hours
     )
     df.to_csv(f"{socket.gethostname()}.csv")
