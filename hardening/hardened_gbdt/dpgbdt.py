@@ -1,8 +1,8 @@
-"""
+from typing import Optional
 This is a module to be used as a reference for building other modules
 """
+from numpy.random import default_rng
 from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 from sklearn.metrics import r2_score
 
 import pyestimator
@@ -11,7 +11,7 @@ import pyestimator
 class DPGBDTRegressor(RegressorMixin, BaseEstimator):
     def __init__(
         self,
-        rng=None,
+        seed: Optional[int] = None,
         privacy_budget: float = 1.0,
         tree_rejector=None,
         learning_rate: float = 5.0,
@@ -64,8 +64,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         X, y = check_X_y(X, y, order="C")
         X, y = _ensure_float(X, y)
 
-        if self.rng is None:
-            self.rng = make_rng(0)
+        self.rng_ = make_rng(self.seed)
         if self.tree_rejector is None:
             self.tree_rejector = make_tree_rejector("constant", decision=False)
         if cat_idx is None:
@@ -74,7 +73,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
             num_idx = list(range(len(X[0])))
 
         self.estimator_ = pyestimator.PyEstimator(
-            rng=self.rng,
+            rng=self.rng_,
             privacy_budget=self.privacy_budget,
             tree_rejector=self.tree_rejector,
             learning_rate=self.learning_rate,
@@ -104,7 +103,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         y : ndarray, shape (n_samples,)
             _description_
         """
-        check_is_fitted(self, ["estimator_"])
+        check_is_fitted(self, ["estimator_", "rng_"])
         X = check_array(X, order="C")
         X = _ensure_float(X)
 
@@ -125,7 +124,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         r_squared : float
             The R^2 score (coefficient of determination).
         """
-        check_is_fitted(self, ["estimator_"])
+        check_is_fitted(self, ["estimator_", "rng_"])
         X, y = check_X_y(X, y, order="C")
         X, y = _ensure_float(X, y)
 
@@ -156,7 +155,11 @@ def _ensure_float(X, y=None):
         return X
 
 
-def make_rng(seed: int):
+def make_rng(seed: Optional[int] = None) -> pyestimator.PyMT19937:
+    if seed is None:
+        rng = default_rng()
+        # Stay within the the bounds of mt19937's input seed (C++)
+        seed = rng.integers(2 ** 30 - 1)
     return pyestimator.PyMT19937(seed)
 
 
