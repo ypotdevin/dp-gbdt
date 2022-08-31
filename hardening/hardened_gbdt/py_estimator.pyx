@@ -25,6 +25,9 @@ cdef class PyMT19937:
     def __reduce__(self):
         return (self.__class__, (self.seed,))
 
+    def __repr__(self):
+        return f"PyMT19937(seed={self.seed})"
+
 cdef class PyTreeRejector:
     cdef shared_ptr[TreeRejector] sptr_tr
 
@@ -38,6 +41,9 @@ cdef class PyConstantRejector(PyTreeRejector):
 
     def __reduce__(self):
         return (self.__class__, (self.decision,))
+
+    def __repr__(self):
+        return f"PyConstantRejector(decision={self.decision})"
 
 cdef class PyQuantileLinearCombinationRejector(PyTreeRejector):
     cdef list qs, coefficients
@@ -54,6 +60,9 @@ cdef class PyQuantileLinearCombinationRejector(PyTreeRejector):
     def __reduce__(self):
         return (self.__class__, (self.qs, self.coefficients))
 
+    def __repr__(self):
+        return f"PyQuantileLinearCombinationRejector(qs={self.qs},"\
+               f"coefficients={self.coefficients})"
 
 cdef class PyDPrMSERejector(PyTreeRejector):
     cdef double rejection_budget, U, gamma
@@ -71,6 +80,12 @@ cdef class PyDPrMSERejector(PyTreeRejector):
     def __reduce__(self):
         return (self.__class__, (self.rejection_budget, self.U, self.gamma, self.rng))
 
+    def __repr__(self):
+        return f"PyDPrMSERejector(rejection_budget={self.rejection_budget},"\
+               f"U={self.U},"\
+               f"gamma={self.gamma},"\
+               f"rng={self.rng})"
+
 cdef class PyApproxDPrMSERejector(PyTreeRejector):
     cdef double rejection_budget, delta, U
     cdef PyMT19937 rng
@@ -87,6 +102,12 @@ cdef class PyApproxDPrMSERejector(PyTreeRejector):
     def __reduce__(self):
         return (self.__class__, (self.rejection_budget, self.delta, self.U, self.rng))
 
+    def __repr__(self):
+        return f"PyApproxDPrMSERejector(rejection_budget={self.rejection_budget},"\
+               f"delta={self.delta},"\
+               f"U={self.U},"\
+               f"gamma={self.gamma},"\
+               f"rng={self.rng})"
 
 cdef class PyEstimator:
     cdef Estimator* estimator
