@@ -1,11 +1,10 @@
 from typing import Optional
-This is a module to be used as a reference for building other modules
-"""
+
+import pyestimator
 from numpy.random import default_rng
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.metrics import r2_score
-
-import pyestimator
+from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 
 class DPGBDTRegressor(RegressorMixin, BaseEstimator):
