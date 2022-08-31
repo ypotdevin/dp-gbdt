@@ -12,7 +12,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         self,
         seed: Optional[int] = None,
         privacy_budget: float = 1.0,
-        tree_rejector=None,
+        tree_rejector: Optional[pyestimator.PyTreeRejector] = None,
         learning_rate: float = 5.0,
         nb_trees: int = 1,
         max_depth: int = 5,
@@ -24,7 +24,52 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         leaf_clipping: bool = True,
         use_decay: bool = False,
     ):
-        self.rng = rng
+        """Create a new regressor object.
+
+        As demanded by sci-kit learn, this plainly assigns internal
+        variables and does **not** perform validation and/or conversion.
+        Validation and conversion happens in the method ``fit``.
+
+        Args:
+            seed (int, optional): The random seed to initalize a random
+                number generator used for ensemble creation. If ``None``,
+                pick a random seed for initializing (each time when the
+                method ``fit`` is called). Defaults to None.
+            privacy_budget (float, optional): The privacy budget
+                allocated to the ensemble (not the tree rejector).
+                Defaults to 1.0.
+            tree_rejector (pyestimator.PyTreeRejector, optional): The
+                tree rejector used to optimize the ensemble. If ``None``,
+                use an always accepting (never rejecting) tree rejector.
+                Defaults to None.
+            learning_rate (float, optional): The learning rate. Defaults
+                to 5.0.
+            nb_trees (int, optional): How many trees (at most) the
+                ensemble may consist of - if no tree would be rejected.
+                Defaults to 1.
+            max_depth (int, optional): The depth for the trees. Defaults
+                to 5.
+            min_samples_split (int, optional): minimum number of samples
+                required to split an internal node. Defaults to 2.
+            l2_threshold (float, optional): Threshold for the the square
+                loss function. Defaults to 0.3.
+            l2_lambda (float, optional): Regularization parameter for
+                the square loss function. Defaults to 7.7.
+            balance_partition (bool, optional): Balance data repartition
+                for training the trees. The default is True, meaning all
+                trees within an ensemble will receive an equal amount of
+                training samples. If set to False, each tree will
+                receive <x> samples where <x> is given in line 8 of the
+                algorithm in the paper of Li et al.
+            gradient_filtering (bool, optional): Whether to perform
+                gradient based data filtering during training. Defaults
+                to True.
+            leaf_clipping (bool, optional): Whether to clip the leaves
+                after training. Defaults to True.
+            use_decay (bool, optional): Whether to assign each internal
+                node a decaying factor. Defaults to False.
+        """
+        self.seed = seed
         self.privacy_budget = privacy_budget
         self.tree_rejector = tree_rejector
         self.learning_rate = learning_rate
@@ -39,7 +84,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         self.use_decay = use_decay
 
     def fit(self, X, y, cat_idx=None, num_idx=None):
-        """_description_
+        """Build up the gradient boosted tree ensemble.
 
         Parameters
         ----------
@@ -109,9 +154,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         return self.estimator_.predict(X)
 
     def score(self, X, y, sample_weight=None):
-        """_summary_
-
-        Parameters
+        """Parameters
         ----------
         X : array-like, shape (n_samples, n_features)
             The input samples.
@@ -162,7 +205,7 @@ def make_rng(seed: Optional[int] = None) -> pyestimator.PyMT19937:
     return pyestimator.PyMT19937(seed)
 
 
-def make_tree_rejector(which: str, **kwargs):
+def make_tree_rejector(which: str, **kwargs) -> pyestimator.PyTreeRejector:
     selector = dict(
         constant=pyestimator.PyConstantRejector,
         quantile_linear_combination=pyestimator.PyQuantileLinearCombinationRejector,
