@@ -91,7 +91,7 @@ def parse_args():
     parser.add_argument(
         "--num-cores",
         type=int,
-        default=-1,
+        default=None,
         help="Number of CPU cores to use for hyperparameter search. Default: all cores.",
     )
     parser.add_argument(
@@ -115,10 +115,7 @@ def abalone_parameter_grid():
     return parameter_grid
 
 
-if __name__ == "__main__":
-    args = parse_args()
-    print(f"Received command line arguments: {args}")
-
+def baseline(args) -> pd.DataFrame:
     dfs = []
     for ensemble_budget in [0.1, 0.5, 1.0]:
         parameter_grid = abalone_parameter_grid()
@@ -137,6 +134,35 @@ if __name__ == "__main__":
             time_budget_s=args.time_budget_s,
         )
         dfs.append(df)
-
     df = pd.concat(dfs, axis=1)
+    return df
+
+
+def baseline(args) -> pd.DataFrame:
+    dfs = []
+    for ensemble_budget in [0.1, 0.5, 1.0]:
+        parameter_grid = abalone_parameter_grid()
+        parameter_grid["privacy_budget"] = [ensemble_budget]
+        parameter_grid["tree_rejector"] = [
+            dpgbdt.make_tree_rejector("constant", decision=False)
+        ]
+        df, _ = tune(
+            dpgbdt.DPGBDTRegressor(),
+            get_abalone,
+            parameter_grid,
+            label=args.label,
+            n_trials=args.n_trials,
+            local_dir=args.local_dir,
+            n_jobs=args.num_cores,
+            time_budget_s=args.time_budget_s,
+        )
+        dfs.append(df)
+    df = pd.concat(dfs, axis=1)
+    return df
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    print(f"Received command line arguments: {args}")
+    df = baseline(args)
     df.to_csv(args.csvfilename)
