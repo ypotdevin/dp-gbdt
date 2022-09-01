@@ -186,6 +186,21 @@ cdef class PyEstimator:
             )
         )
 
+    def __repr__(self):
+        return f"PyEstimator(rng={self.rejection_budget},"\
+               f"privacy_budget={self.privacy_budget},"\
+               f"tree_rejector={self.tree_rejector},"\
+               f"learning_rate={self.learning_rate},"\
+               f"nb_trees={self.nb_trees},"\
+               f"max_depth={self.max_depth},"\
+               f"min_samples_split={self.min_samples_split},"\
+               f"l2_threshold={self.l2_threshold},"\
+               f"l2_lambda={self.l2_lambda},"\
+               f"balance_partition={self.balance_partition},"\
+               f"gradient_filtering={self.gradient_filtering},"\
+               f"leaf_clipping={self.leaf_clipping},"\
+               f"use_decay={self.use_decay})"
+
     def fit(
         self,
         np.ndarray[double, ndim=2, mode="c"] X not None,
