@@ -1,4 +1,4 @@
-import socket
+import argparse
 from typing import Any, Callable, Optional, Tuple
 
 import numpy as np
@@ -12,7 +12,9 @@ def tune(
     regressor,
     data_provider: Callable[[], Tuple[np.ndarray, np.ndarray, list[int], list[int]]],
     parameter_grid: dict[str, Any],
+    label: str,
     n_trials: int,
+    local_dir: str,
     n_jobs: Optional[int] = None,
     time_budget_s: Optional[int] = None,
     search_optimization="bayesian",
@@ -21,8 +23,10 @@ def tune(
     tune_search = TuneSearchCV(
         regressor,
         parameter_grid,
+        name=label,
         search_optimization=search_optimization,
         n_trials=n_trials,
+        local_dir=local_dir,
         n_jobs=n_jobs,
         time_budget_s=time_budget_s,
         scoring="neg_root_mean_squared_error",
@@ -60,28 +64,79 @@ def get_abalone() -> Tuple[np.ndarray, np.ndarray, list[int], list[int]]:
     return X, y, cat_idx, num_idx
 
 
-if __name__ == "__main__":
-    tr_rng = dpgbdt.make_rng()
-    rejector_params = dict(rejection_budget=0.05, gamma=2.0, rng=tr_rng)
-    tree_rejectors = [
-        dpgbdt.make_tree_rejector("dp_rmse", **{"U": U, **rejector_params})
-        for U in [5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0]
-    ]
-    regressor = dpgbdt.DPGBDTRegressor()
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Perform Bayesian optimization over the hyperparameter space."
+    )
+    parser.add_argument(
+        "label", type=str, help="The label of the experiment.",
+    )
+    parser.add_argument(
+        "csvfilename",
+        type=str,
+        help="Name of the .csv file containing configurations and their performance.",
+    )
+    parser.add_argument(
+        "--n-trials",
+        type=int,
+        default=1000,
+        help="The number of configurations to test at most (if the time budget allows).",
+    )
+    parser.add_argument(
+        "--local-dir",
+        type=str,
+        default="./ray_results",
+        help="In which folder to save intermediate results, checkpoints and logs.",
+    )
+    parser.add_argument(
+        "--num-cores",
+        type=int,
+        default=-1,
+        help="Number of CPU cores to use for hyperparameter search. Default: all cores.",
+    )
+    parser.add_argument(
+        "--time-budget-s",
+        type=int,
+        default=3600 * 24,  # 24 hours
+        help="How much time (in seconds) to spend (roughly) at most.",
+    )
+    args = parser.parse_args()
+    return args
+
+
+def abalone_parameter_grid():
     parameter_grid = dict(
-        tree_rejector=tree_rejectors,
         learning_rate=(0.0, 10.0),
         nb_trees=(1, 50),
         max_depth=(1, 10),
         l2_threshold=(0.01, 10.0),
         l2_lambda=(0.1, 10.0),
     )
-    df, best_params = tune(
-        regressor,
-        get_abalone,
-        parameter_grid,
-        n_trials=1000,
-        time_budget_s=60 * 60 * 36,  # 36 hours
-    )
-    df.to_csv(f"{socket.gethostname()}.csv")
-    print(f"Best parameters: {best_params}")
+    return parameter_grid
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    print(f"Received command line arguments: {args}")
+
+    dfs = []
+    for ensemble_budget in [0.1, 0.5, 1.0]:
+        parameter_grid = abalone_parameter_grid()
+        parameter_grid["privacy_budget"] = [ensemble_budget]
+        parameter_grid["tree_rejector"] = [
+            dpgbdt.make_tree_rejector("constant", decision=False)
+        ]
+        df, _ = tune(
+            dpgbdt.DPGBDTRegressor(),
+            get_abalone,
+            parameter_grid,
+            label=args.label,
+            n_trials=args.n_trials,
+            local_dir=args.local_dir,
+            n_jobs=args.num_cores,
+            time_budget_s=args.time_budget_s,
+        )
+        dfs.append(df)
+
+    df = pd.concat(dfs, axis=1)
+    df.to_csv(args.csvfilename)
