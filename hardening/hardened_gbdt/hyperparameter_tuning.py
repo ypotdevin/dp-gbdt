@@ -17,7 +17,7 @@ def tune(
     local_dir: str,
     n_jobs: Optional[int] = None,
     time_budget_s: Optional[int] = None,
-    search_optimization="bayesian",
+    search_optimization="hyperopt",
 ) -> Tuple[pd.DataFrame, dict[str, Any]]:
     X_train, y_train, cat_idx, num_idx = data_provider()
     tune_search = TuneSearchCV(
@@ -157,12 +157,43 @@ def baseline(args) -> pd.DataFrame:
             time_budget_s=args.time_budget_s,
         )
         dfs.append(df)
-    df = pd.concat(dfs, axis=1)
+    df = pd.concat(dfs)
     return df
 
+
+def dp_rmse(args) -> pd.DataFrame:
+    dfs = []
+    for ensemble_budget in [0.1, 0.5, 1.0]:
+        for rejection_budget in [0.01, 0.05, 0.1]:
+            parameter_grid = abalone_parameter_grid()
+            parameter_grid["privacy_budget"] = [ensemble_budget]
+            tr_rng = dpgbdt.make_rng()
+            rejector_params = dict(
+                rejection_budget=rejection_budget,
+                gamma=2.0,
+                rng=tr_rng,
+            )
+            tree_rejectors = [
+                dpgbdt.make_tree_rejector("dp_rmse", **{"U": U, **rejector_params})
+                for U in [5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0]
+            ]
+            parameter_grid["tree_rejector"] = tree_rejectors
+            df, _ = tune(
+                dpgbdt.DPGBDTRegressor(),
+                get_abalone,
+                parameter_grid,
+                label=args.label,
+                n_trials=args.n_trials,
+                local_dir=args.local_dir,
+                n_jobs=args.num_cores,
+                time_budget_s=args.time_budget_s,
+            )
+            dfs.append(df)
+    df = pd.concat(dfs)
+    return df
 
 if __name__ == "__main__":
     args = parse_args()
     print(f"Received command line arguments: {args}")
-    df = baseline(args)
+    df = dp_rmse(args)
     df.to_csv(args.csvfilename)
