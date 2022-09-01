@@ -11,10 +11,16 @@ To keep the code clean there exist 2 different versions:
 
 
 ## Requirements
+### System
 tested on a fresh Ubuntu 20.04.2 VM
 ```bash
 sudo apt-get install libspdlog-dev
 sudo apt-get install icdiff
+```
+### Python (3.9)
+```bash
+conda install pandas numpy
+conda install -c conda-forge scikit-learn cython ray-tune tune-sklearn lark-parser
 ```
 
 
