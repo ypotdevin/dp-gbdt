@@ -161,6 +161,32 @@ def baseline(args) -> pd.DataFrame:
     return df
 
 
+def quantile_lin_comb(args) -> pd.DataFrame:
+    dfs = []
+    for ensemble_budget in [0.1, 0.5, 1.0]:
+        parameter_grid = abalone_parameter_grid()
+        parameter_grid["privacy_budget"] = [ensemble_budget]
+        tree_rejector = dpgbdt.make_tree_rejector(
+            "quantile_linear_combination",
+            qs=[0.50, 0.85, 0.95],
+            coefficients=[0.23837927, 0.29496094, 0.16520499],
+        )
+        parameter_grid["tree_rejector"] = [tree_rejector]
+        df, _ = tune(
+            dpgbdt.DPGBDTRegressor(),
+            get_abalone,
+            parameter_grid,
+            label=args.label,
+            n_trials=args.n_trials,
+            local_dir=args.local_dir,
+            n_jobs=args.num_cores,
+            time_budget_s=args.time_budget_s // len(ensemble_budget),
+        )
+        dfs.append(df)
+    df = pd.concat(dfs)
+    return df
+
+
 def dp_rmse(args) -> pd.DataFrame:
     dfs = []
     for ensemble_budget in [0.1, 0.5, 1.0]:
@@ -194,6 +220,5 @@ def dp_rmse(args) -> pd.DataFrame:
 
 if __name__ == "__main__":
     args = parse_args()
-    print(f"Received command line arguments: {args}")
-    df = dp_rmse(args)
+    df = quantile_lin_comb(args)
     df.to_csv(args.csvfilename)
