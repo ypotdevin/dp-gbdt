@@ -69,24 +69,37 @@ def parse_args():
         description="Perform Bayesian optimization over the hyperparameter space."
     )
     parser.add_argument(
-        "label", type=str, help="The label of the experiment.",
+        "experiment",
+        type=str,
+        help="Which experiment/benchmark to execute.",
     )
     parser.add_argument(
-        "csvfilename",
+        "--label",
         type=str,
-        help="Name of the .csv file containing configurations and their performance.",
+        default=None,
+        help="The label of the experiment. Should be usable as a filename."
+        " Defaults to <experiment>.",
+    )
+    parser.add_argument(
+        "--csvfilename",
+        type=str,
+        default=None,
+        help="Name of the .csv file containing configurations and their performance."
+        " Defaults to <local_dir>/<label>.csv",
     )
     parser.add_argument(
         "--n-trials",
         type=int,
         default=1000,
-        help="The number of configurations to test at most (if the time budget allows).",
+        help="The number of configurations to test at most per call to `TuneSearchCV.tune`"
+        " (if the time budget allows).",
     )
     parser.add_argument(
         "--local-dir",
         type=str,
-        default="./ray_results",
-        help="In which folder to save intermediate results, checkpoints and logs.",
+        default=None,
+        help="In which folder to save intermediate results, checkpoints and logs."
+        " Defaults to ~/share/dp-gbdt-evaluation/<label>",
     )
     parser.add_argument(
         "--num-cores",
@@ -98,7 +111,8 @@ def parse_args():
         "--time-budget-s",
         type=int,
         default=3600 * 24,  # 24 hours
-        help="How much time (in seconds) to spend (roughly) at most.",
+        help="How much time (in seconds) to spend (roughly) at most in total."
+        " Use `None` to deactivate limit.",
     )
     args = parser.parse_args()
     return args
@@ -134,36 +148,14 @@ def baseline(args) -> pd.DataFrame:
             time_budget_s=args.time_budget_s,
         )
         dfs.append(df)
-    df = pd.concat(dfs, axis=1)
-    return df
-
-
-def baseline(args) -> pd.DataFrame:
-    dfs = []
-    for ensemble_budget in [0.1, 0.5, 1.0]:
-        parameter_grid = abalone_parameter_grid()
-        parameter_grid["privacy_budget"] = [ensemble_budget]
-        parameter_grid["tree_rejector"] = [
-            dpgbdt.make_tree_rejector("constant", decision=False)
-        ]
-        df, _ = tune(
-            dpgbdt.DPGBDTRegressor(),
-            get_abalone,
-            parameter_grid,
-            label=args.label,
-            n_trials=args.n_trials,
-            local_dir=args.local_dir,
-            n_jobs=args.num_cores,
-            time_budget_s=args.time_budget_s,
-        )
-        dfs.append(df)
     df = pd.concat(dfs)
     return df
 
 
 def quantile_lin_comb(args) -> pd.DataFrame:
     dfs = []
-    for ensemble_budget in [0.1, 0.5, 1.0]:
+    ensemble_budgets = [0.1, 0.5, 1.0]
+    for ensemble_budget in ensemble_budgets:
         parameter_grid = abalone_parameter_grid()
         parameter_grid["privacy_budget"] = [ensemble_budget]
         tree_rejector = dpgbdt.make_tree_rejector(
@@ -180,7 +172,7 @@ def quantile_lin_comb(args) -> pd.DataFrame:
             n_trials=args.n_trials,
             local_dir=args.local_dir,
             n_jobs=args.num_cores,
-            time_budget_s=args.time_budget_s // len(ensemble_budget),
+            time_budget_s=args.time_budget_s // len(ensemble_budgets),
         )
         dfs.append(df)
     df = pd.concat(dfs)
@@ -195,9 +187,7 @@ def dp_rmse(args) -> pd.DataFrame:
             parameter_grid["privacy_budget"] = [ensemble_budget]
             tr_rng = dpgbdt.make_rng()
             rejector_params = dict(
-                rejection_budget=rejection_budget,
-                gamma=2.0,
-                rng=tr_rng,
+                rejection_budget=rejection_budget, gamma=2.0, rng=tr_rng,
             )
             tree_rejectors = [
                 dpgbdt.make_tree_rejector("dp_rmse", **{"U": U, **rejector_params})
@@ -218,7 +208,22 @@ def dp_rmse(args) -> pd.DataFrame:
     df = pd.concat(dfs)
     return df
 
+
+def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
+    return dict(
+        baseline=baseline,
+        quantile_lin_comb=quantile_lin_comb,
+        dp_rmse=dp_rmse,
+    )[which]
+
 if __name__ == "__main__":
     args = parse_args()
-    df = quantile_lin_comb(args)
+    if args.label is None:
+        args.label = args.experiment
+    if args.local_dir is None:
+        args.local_dir = f"~/share/dp-gbdt-evaluation/"
+    if args.csvfilename is None:
+        args.csvfilename = f"{args.local_dir}/{args.label}.csv"
+    experiment = select_experiment(args.experiment)
+    df = experiment(args)
     df.to_csv(args.csvfilename)
