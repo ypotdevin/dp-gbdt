@@ -163,6 +163,8 @@ namespace tree_rejection
         return decision;
     }
 
+    void ConstantRejector::set_total_privacy_budget(double budget){};
+
     QuantileRejector::QuantileRejector(double q)
     {
         this->q = q;
@@ -191,6 +193,8 @@ namespace tree_rejection
         }
     }
 
+    void QuantileRejector::set_total_privacy_budget(double budget){};
+
     QuantileCombinationRejector::QuantileCombinationRejector(std::vector<double> qs, std::vector<double> weights)
     {
         this->qs = qs;
@@ -212,6 +216,8 @@ namespace tree_rejection
     {
         return this->qlcr->reject_tree(y, y_pred);
     }
+
+    void QuantileCombinationRejector::set_total_privacy_budget(double budget){};
 
     QuantileLinearCombinationRejector::QuantileLinearCombinationRejector(std::vector<double> qs, std::vector<double> coefficients)
     {
@@ -259,18 +265,24 @@ namespace tree_rejection
         }
     }
 
-    DPrMSERejector::DPrMSERejector(double epsilon, double U, double gamma, const std::mt19937 &rng)
+    void QuantileLinearCombinationRejector::set_total_privacy_budget(double budget){};
+
+    DPrMSERejector::DPrMSERejector(int n_trees_to_accept, double U, double gamma, const std::mt19937 &rng)
     {
-        this->epsilon = epsilon;
+        this->epsilon = -1.0;
         this->U = U;
+        this->n_trees_to_accept = n_trees_to_accept;
+        this->n_accepted_trees = 0;
         this->cc = std::unique_ptr<custom_cauchy::AdvancedCustomCauchy>(new custom_cauchy::AdvancedCustomCauchy(gamma, rng));
         this->previous_error = std::numeric_limits<double>::max();
     }
 
     void DPrMSERejector::print(std::ostream &os) const
     {
-        os << "\"DPrMSERejector(eps="
+        os << "\"DPrMSERejector(per_call_eps="
            << this->epsilon
+           << ",n_trees_to_accept="
+           << this->n_trees_to_accept
            << ",U="
            << this->U
            << ",custom_cauchy="
@@ -280,6 +292,17 @@ namespace tree_rejection
 
     bool DPrMSERejector::reject_tree(std::vector<double> &y, std::vector<double> &y_pred)
     {
+        if (this->epsilon <= 0.0)
+        {
+            throw std::runtime_error(
+                "Insufficient privacy budget provided. Was set_total_privacy_budget(...) called before?");
+        }
+        if (this->n_accepted_trees >= this->n_trees_to_accept)
+        {
+            LOG_INFO(
+                "Likely unintended behavior detected: Calling reject_tree(...) again, even after accepted enough ({1}) trees.",
+                this->n_trees_to_accept);
+        }
         std::transform(y.begin(), y.end(),
                        y_pred.begin(), y_pred.begin(), [](double _y, double _y_pred)
                        { return std::abs(_y - _y_pred); });
@@ -289,6 +312,7 @@ namespace tree_rejection
         if (current_error < this->previous_error)
         {
             this->previous_error = current_error;
+            this->n_accepted_trees += 1;
             return false; // do not reject
         }
         else
@@ -297,11 +321,18 @@ namespace tree_rejection
         }
     }
 
-    ApproxDPrMSERejector::ApproxDPrMSERejector(double epsilon, double delta, double U, std::mt19937 &rng)
+    void DPrMSERejector::set_total_privacy_budget(double budget)
     {
-        this->epsilon = epsilon;
+        this->epsilon = budget / this->n_trees_to_accept;
+    }
+
+    ApproxDPrMSERejector::ApproxDPrMSERejector(int n_trees_to_accept, double delta, double U, std::mt19937 &rng)
+    {
+        this->epsilon = -1.0;
         this->delta = delta;
         this->U = U;
+        this->n_trees_to_accept = n_trees_to_accept;
+        this->n_accepted_trees = 0;
         this->previous_error = std::numeric_limits<double>::max();
         std::uniform_int_distribution<int> uni(0, std::numeric_limits<int>::max());
         auto seed = uni(rng);
@@ -310,8 +341,10 @@ namespace tree_rejection
 
     void ApproxDPrMSERejector::print(std::ostream &os) const
     {
-        os << "\"ApproxDPrMSERejector(eps="
+        os << "\"ApproxDPrMSERejector(per_call_eps="
            << this->epsilon
+           << ",n_trees_to_accept="
+           << this->n_trees_to_accept
            << ",delta="
            << this->delta
            << ",U="
@@ -321,6 +354,17 @@ namespace tree_rejection
 
     bool ApproxDPrMSERejector::reject_tree(std::vector<double> &y, std::vector<double> &y_pred)
     {
+        if (this->epsilon <= 0.0)
+        {
+            throw std::runtime_error(
+                "Insufficient privacy budget provided. Was set_total_privacy_budget(...) called before?");
+        }
+        if (this->n_accepted_trees >= this->n_trees_to_accept)
+        {
+            LOG_INFO(
+                "Likely unintended behavior detected: Calling reject_tree(...) again, even after accepted enough ({1}) trees.",
+                this->n_trees_to_accept);
+        }
         std::transform(y.begin(), y.end(),
                        y_pred.begin(), y_pred.begin(), [](double _y, double _y_pred)
                        { return std::abs(_y - _y_pred); });
@@ -342,5 +386,10 @@ namespace tree_rejection
         {
             return true; // reject
         }
+    }
+
+    void ApproxDPrMSERejector::set_total_privacy_budget(double budget)
+    {
+        this->epsilon = budget / this->n_trees_to_accept;
     }
 }

@@ -13,7 +13,29 @@ namespace tree_rejection
     class TreeRejector
     {
     public:
+        /**
+         * Note: Before calling this method for the first time, call
+         * `set_total_privacy_budget` at least once.
+         *
+         * @param y the target regression values.
+         * @param y_pred the ensemble's (including the most recent tree which is
+         * going to be judged upon) predicted regression values.
+         * @return true reject the most recent tree associated with the
+         * prediction `y_pred`.
+         * @return false accept the most recent tree associated with the
+         * prediction `y_pred`.
+         */
         virtual bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred) = 0;
+        /**
+         * @brief Set the privacy budget the tree rejector is allowed to spend
+         * over the whole training period, in total.
+         *
+         * It is intended that the ambient ensemble sets this value based on
+         * internal calculations.
+         *
+         * Note: Call this method before the first call to reject_tree`.
+         */
+        virtual void set_total_privacy_budget(double budget) = 0;
         virtual void print(std::ostream &os) const = 0;
         friend std::ostream &operator<<(std::ostream &os, const TreeRejector &tr)
         {
@@ -62,6 +84,8 @@ namespace tree_rejection
          * @return false if decision is false
          */
         bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
+
+        void set_total_privacy_budget(double budget);
     };
 
     /**
@@ -79,6 +103,7 @@ namespace tree_rejection
         QuantileRejector(double q);
         void print(std::ostream &os) const;
         bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
+        void set_total_privacy_budget(double budget);
     };
 
     /**
@@ -107,6 +132,7 @@ namespace tree_rejection
         QuantileLinearCombinationRejector(std::vector<double> qs, std::vector<double> coefficients);
         void print(std::ostream &os) const;
         bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
+        void set_total_privacy_budget(double budget);
     };
 
     /**
@@ -133,6 +159,7 @@ namespace tree_rejection
         QuantileCombinationRejector(std::vector<double> qs, std::vector<double> weights);
         void print(std::ostream &os) const;
         bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
+        void set_total_privacy_budget(double budget);
     };
 
     /**
@@ -141,30 +168,46 @@ namespace tree_rejection
      * ensemble including the tree is strictly lower than the error of the
      * ensemble without the considered tree. Otherwise, reject the considered
      * tree.
-     *
      */
     class DPrMSERejector : public TreeRejector
     {
     private:
         double epsilon, U, previous_error;
+        int n_trees_to_accept, n_accepted_trees;
         std::unique_ptr<custom_cauchy::CustomCauchy> cc;
 
     public:
-        DPrMSERejector(double epsilon, double U, double gamma, const std::mt19937 &rng);
+        /**
+         * @brief Construct a new DPrMSERejector object
+         *
+         * @param n_trees_to_accept how many trees to accept at most (upper
+         * bound).
+         * @param U the upper bound on absolute errors (of regression values and
+         * predicted regression values). Required for smooth sensitivity
+         * calculation.
+         * @param gamma the gamma to use for the custom Cauchy noise
+         * distribution.
+         * @param rng the random number generator used by the custom Cauchy
+         * distribution.
+         */
+        DPrMSERejector(int n_trees_to_accept, double U, double gamma, const std::mt19937 &rng);
         void print(std::ostream &os) const;
         bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
+        void set_total_privacy_budget(double budget);
     };
 
     class ApproxDPrMSERejector : public TreeRejector
     {
     private:
         double epsilon, delta, U, previous_error;
+        int n_trees_to_accept, n_accepted_trees;
         std::unique_ptr<Laplace> laplace_distr;
 
     public:
-        ApproxDPrMSERejector(double epsilon, double delta, double U, std::mt19937 &rng);
+        ApproxDPrMSERejector(int n_trees_to_accept, double delta, double U, std::mt19937 &rng);
         void print(std::ostream &os) const;
         bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
+        void set_total_privacy_budget(double budget);
     };
 }
 #endif /* TREE_REJECTION_H */

@@ -12,9 +12,11 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         self,
         seed: Optional[int] = None,
         privacy_budget: float = 1.0,
+        ensemble_rejector_budget_split: float = 0.9,
         tree_rejector: Optional[pyestimator.PyTreeRejector] = None,
         learning_rate: float = 5.0,
-        nb_trees: int = 1,
+        n_trials: int = 1,
+        n_trees_to_accept: int = 1,
         max_depth: int = 5,
         min_samples_split: int = 2,
         l2_threshold: float = 0.3,
@@ -38,15 +40,26 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
             privacy_budget (float, optional): The privacy budget
                 allocated to the ensemble (not the tree rejector).
                 Defaults to 1.0.
+            ensemble_rejector_budget_split (float, optional): the
+                trade-off parameter weighing the ensemble's privacy
+                budget against the tree rejector budget (ensemble budget
+                = `privacy_budget` * `ensemble_rejector_budget_split`,
+                tree rejector budget = `privacy_budget` * (1.0 -
+                `ensemble_rejector_budget_split`)).
             tree_rejector (pyestimator.PyTreeRejector, optional): The
                 tree rejector used to optimize the ensemble. If ``None``,
                 use an always accepting (never rejecting) tree rejector.
                 Defaults to None.
             learning_rate (float, optional): The learning rate. Defaults
                 to 5.0.
-            nb_trees (int, optional): How many trees (at most) the
-                ensemble may consist of - if no tree would be rejected.
-                Defaults to 1.
+            n_trials (int, optional): how often at most to generate
+                trees, which are then checked for acceptance or
+                rejection (should be at least as much as
+                `n_trees_to_accept`). Defaults to 1.
+            n_trees_to_accept (int, optional): how many (useful) trees
+                to accept at most as part of the ensemble (in other
+                words: maximal ensemble size; should be at most as much
+                as `n_trials`).
             max_depth (int, optional): The depth for the trees. Defaults
                 to 5.
             min_samples_split (int, optional): minimum number of samples
@@ -71,9 +84,11 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         """
         self.seed = seed
         self.privacy_budget = privacy_budget
+        self.ensemble_rejector_budget_split = ensemble_rejector_budget_split
         self.tree_rejector = tree_rejector
         self.learning_rate = learning_rate
-        self.nb_trees = nb_trees
+        self.n_trials = n_trials
+        self.n_trees_to_accept = n_trees_to_accept
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.l2_threshold = l2_threshold
@@ -119,9 +134,11 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         self.estimator_ = pyestimator.PyEstimator(
             rng=self.rng_,
             privacy_budget=self.privacy_budget,
+            ensemble_rejector_budget_split=self.ensemble_rejector_budget_split,
             tree_rejector=self.tree_rejector,
             learning_rate=self.learning_rate,
-            nb_trees=self.nb_trees,
+            n_trials=self.n_trials,
+            n_trees_to_accept=self.n_trees_to_accept,
             max_depth=self.max_depth,
             min_samples_split=self.min_samples_split,
             l2_threshold=self.l2_threshold,

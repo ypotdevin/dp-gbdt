@@ -8,9 +8,11 @@ namespace dpgbdt
         this->params = std::shared_ptr<ModelParams>(new ModelParams());
         this->params->rng = std::mt19937(std::random_device{}());
         this->params->privacy_budget = 1.0;
+        this->params->ensemble_rejector_budget_split = 0.9;
         this->params->tree_rejector = std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(0.01, 100.0, 2.0, this->params->rng));
         this->params->learning_rate = 0.1;
-        this->params->nb_trees = 50;
+        this->params->n_trials = 50;
+        this->params->n_trees_to_accept = 5;
         this->params->max_depth = 6;
         this->params->min_samples_split = 2;
         this->params->l2_threshold = 1.0;
@@ -25,9 +27,11 @@ namespace dpgbdt
     Estimator::Estimator(
         std::mt19937 const &rng,
         double privacy_budget,
+        double ensemble_rejector_budget_split,
         std::shared_ptr<tree_rejection::TreeRejector> tree_rejector,
         double learning_rate,
-        int nb_trees,
+        int n_trials,
+        int n_trees_to_accept,
         int max_depth,
         int min_samples_split,
         double l2_threshold,
@@ -40,9 +44,11 @@ namespace dpgbdt
         this->params = std::shared_ptr<ModelParams>(new ModelParams());
         this->params->rng = rng;
         this->params->privacy_budget = privacy_budget;
-        this->params->tree_rejector = std::move(tree_rejector);
+        this->params->ensemble_rejector_budget_split = ensemble_rejector_budget_split;
+        this->params->tree_rejector = tree_rejector;
         this->params->learning_rate = learning_rate;
-        this->params->nb_trees = nb_trees;
+        this->params->n_trials = n_trials;
+        this->params->n_trees_to_accept = n_trees_to_accept;
         this->params->max_depth = max_depth;
         this->params->min_samples_split = min_samples_split;
         this->params->l2_threshold = l2_threshold;

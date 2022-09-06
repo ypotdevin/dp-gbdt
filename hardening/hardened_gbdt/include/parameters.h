@@ -13,9 +13,11 @@ struct ModelParams
 {
     // primary model parameters
     std::mt19937 rng;
-    int nb_trees = 50;
+    int n_trials = 50;
+    int n_trees_to_accept = 5;
     double learning_rate = 0.1;
     double privacy_budget = 1.0;
+    double ensemble_rejector_budget_split = 0.9;
     std::shared_ptr<tree_rejection::TreeRejector> tree_rejector;
     int max_depth = 6;
     int min_samples_split = 2;

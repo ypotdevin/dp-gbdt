@@ -59,13 +59,22 @@ void DPEnsemble::train(DataSet *dataset)
 
     // each tree gets the full pb, as they train on distinct data
     TreeParams tree_params;
-    tree_params.tree_privacy_budget = params->privacy_budget;
+    double ensemble_budget = params->ensemble_rejector_budget_split * params->privacy_budget;
+    double rejector_budget = (1.0 - params->ensemble_rejector_budget_split) * params->privacy_budget;
+    tree_params.tree_privacy_budget = ensemble_budget;
+    this->params->tree_rejector->set_total_privacy_budget(rejector_budget);
 
+    int tree_index = 0;
     // train all trees
-    for (int tree_index = 0; tree_index < params->nb_trees; tree_index++)
+    for (int trial_index = 0; trial_index < params->n_trials; trial_index++)
     {
+        if (tree_index >= params->n_trees_to_accept)
+        {
+            // If there are already as many trees accepted as allowed, early stop
+            break;
+        }
         // update/init gradients
-        update_gradients(dataset->gradients, tree_index);
+        update_gradients(dataset->gradients, trial_index);
 
         // sensitivity for internal nodes
         tree_params.delta_g = 3 * pow(params->l2_threshold, 2);
@@ -79,22 +88,26 @@ void DPEnsemble::train(DataSet *dataset)
         else
         {
             tree_params.delta_v = std::min((double)(params->l2_threshold / (1 + params->l2_lambda)),
-                                           2 * params->l2_threshold * pow(1 - params->learning_rate, tree_index));
+                                           2 * params->l2_threshold * pow(1 - params->learning_rate, trial_index));
         }
 
         // determine number of rows
         int number_of_rows = 0;
         if (params->balance_partition)
         {
+            int num_remaining_trees = std::min(
+                params->n_trees_to_accept - tree_index,
+                params->n_trials - trial_index
+            );
             // num_unused_rows / num_remaining_trees
-            number_of_rows = dataset->length / (params->nb_trees - tree_index);
+            number_of_rows = dataset->length / num_remaining_trees;
         }
         else
         {
             // line 8 of Algorithm 2 from the paper
             number_of_rows = (original_length * params->learning_rate *
                               std::pow(1 - params->learning_rate, tree_index)) /
-                             (1 - std::pow(1 - params->learning_rate, params->nb_trees));
+                             (1 - std::pow(1 - params->learning_rate, params->n_trees_to_accept));
             if (number_of_rows == 0)
             {
                 throw std::runtime_error("Warning: tree is not getting any samples");
@@ -198,8 +211,8 @@ void DPEnsemble::train(DataSet *dataset)
 
         DataSet tree_dataset = dataset->get_subset(tree_indices);
 
-        LOG_DEBUG(YELLOW("Tree {1:2d}: receives pb {2:.2f} and will train on {3} instances"),
-                  tree_index, tree_params.tree_privacy_budget, tree_dataset.length);
+        LOG_DEBUG(YELLOW("Trial-Tree {1:2d}: receives pb {2:.2f} and will train on {3} instances"),
+                  trial_index, tree_params.tree_privacy_budget, tree_dataset.length);
 
         // build tree
         LOG_INFO("Building dp-tree-{1} using {2} samples...", tree_index, tree_dataset.length);
@@ -224,11 +237,12 @@ void DPEnsemble::train(DataSet *dataset)
         else
         {
             *dataset = dataset->remove_rows(tree_indices);
+            tree_index += 1;
         }
         LOG_INFO(
-            "### diagnosis value 07 ### - ensemble {1} decision tree {2}. Number of trees in ensemble: {3}. Instances left: {4}.",
+            "### diagnosis value 07 ### - ensemble {1} trial-tree {2}. Number of trees in ensemble: {3}. Instances left: {4}.",
             reject_new_tree ? "excludes" : "includes",
-            tree_index,
+            trial_index,
             trees.size(),
             dataset->length);
     }
@@ -255,9 +269,9 @@ vector<double> DPEnsemble::predict(VVD &X)
     return predictions;
 }
 
-void DPEnsemble::update_gradients(vector<double> &gradients, int tree_index)
+void DPEnsemble::update_gradients(vector<double> &gradients, int trial_index)
 {
-    if (tree_index == 0)
+    if (trial_index == 0)
     {
         // init gradients
         vector<double> init_scores(dataset->length, init_score);

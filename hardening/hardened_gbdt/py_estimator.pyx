@@ -65,45 +65,47 @@ cdef class PyQuantileLinearCombinationRejector(PyTreeRejector):
                f"coefficients={self.coefficients})"
 
 cdef class PyDPrMSERejector(PyTreeRejector):
-    cdef double rejection_budget, U, gamma
+    cdef int n_trees_to_accept
+    cdef double U, gamma
     cdef PyMT19937 rng
 
-    def __cinit__(self, double rejection_budget, double U, double gamma, PyMT19937 rng):
-        self.rejection_budget = rejection_budget
+    def __cinit__(self, int n_trees_to_accept, double U, double gamma, PyMT19937 rng):
+        self.n_trees_to_accept = n_trees_to_accept
         self.U = U
         self.gamma = gamma
         self.rng = rng
         self.sptr_tr = shared_ptr[TreeRejector](
-            new DPrMSERejector(rejection_budget, U, gamma, rng.c_rng)
+            new DPrMSERejector(n_trees_to_accept, U, gamma, rng.c_rng)
         )
 
     def __reduce__(self):
-        return (self.__class__, (self.rejection_budget, self.U, self.gamma, self.rng))
+        return (self.__class__, (self.n_trees_to_accept, self.U, self.gamma, self.rng))
 
     def __repr__(self):
-        return f"PyDPrMSERejector(rejection_budget={self.rejection_budget},"\
+        return f"PyDPrMSERejector(n_trees_to_accept={self.n_trees_to_accept},"\
                f"U={self.U},"\
                f"gamma={self.gamma},"\
                f"rng={self.rng})"
 
 cdef class PyApproxDPrMSERejector(PyTreeRejector):
-    cdef double rejection_budget, delta, U
+    cdef int n_trees_to_accept
+    cdef double delta, U
     cdef PyMT19937 rng
 
-    def __cinit__(self, double rejection_budget, double delta, double U, PyMT19937 rng):
-        self.rejection_budget = rejection_budget
+    def __cinit__(self, int n_trees_to_accept, double delta, double U, PyMT19937 rng):
+        self.n_trees_to_accept = n_trees_to_accept
         self.delta = delta
         self.U = U
         self.rng = rng
         self.sptr_tr = shared_ptr[TreeRejector](
-            new ApproxDPrMSERejector(rejection_budget, delta, U, rng.c_rng)
+            new ApproxDPrMSERejector(n_trees_to_accept, delta, U, rng.c_rng)
         )
 
     def __reduce__(self):
-        return (self.__class__, (self.rejection_budget, self.delta, self.U, self.rng))
+        return (self.__class__, (self.n_trees_to_accept, self.delta, self.U, self.rng))
 
     def __repr__(self):
-        return f"PyApproxDPrMSERejector(rejection_budget={self.rejection_budget},"\
+        return f"PyApproxDPrMSERejector(n_trees_to_accept={self.n_trees_to_accept},"\
                f"delta={self.delta},"\
                f"U={self.U},"\
                f"gamma={self.gamma},"\
@@ -112,18 +114,20 @@ cdef class PyApproxDPrMSERejector(PyTreeRejector):
 cdef class PyEstimator:
     cdef Estimator* estimator
     cdef PyMT19937 rng
-    cdef double privacy_budget, learning_rate, l2_threshold, l2_lambda
+    cdef double privacy_budget, ensemble_rejector_budget_split, learning_rate, l2_threshold, l2_lambda
     cdef PyTreeRejector tree_rejector
-    cdef int nb_trees, max_depth, min_samples_split
+    cdef int n_trials, n_trees_to_accept, max_depth, min_samples_split
     cdef bool balance_partition, gradient_filtering, leaf_clipping, use_decay
 
     def __cinit__(
         self,
         PyMT19937 rng,
         double privacy_budget,
+        double ensemble_rejector_budget_split,
         PyTreeRejector tree_rejector,
         double learning_rate,
-        int nb_trees,
+        int n_trials,
+        int n_trees_to_accept,
         int max_depth,
         int min_samples_split,
         double l2_threshold,
@@ -135,11 +139,13 @@ cdef class PyEstimator:
     ):
         self.rng = rng
         self.privacy_budget = privacy_budget
+        self.ensemble_rejector_budget_split = ensemble_rejector_budget_split
         self.tree_rejector = tree_rejector
         self.learning_rate = learning_rate
-        self.nb_trees = nb_trees
+        self.n_trials = n_trials
+        self.n_trees_to_accept = n_trees_to_accept
         self.max_depth = max_depth
-        self. min_samples_split = min_samples_split
+        self.min_samples_split = min_samples_split
         self.l2_threshold = l2_threshold
         self.l2_lambda = l2_lambda
         self.balance_partition = balance_partition
@@ -149,9 +155,11 @@ cdef class PyEstimator:
         self.estimator = new Estimator(
             rng=rng.c_rng,
             privacy_budget=privacy_budget,
+            ensemble_rejector_budget_split=ensemble_rejector_budget_split,
             tree_rejector=tree_rejector.sptr_tr,
             learning_rate=learning_rate,
-            nb_trees=nb_trees,
+            n_trials=n_trials,
+            n_trees_to_accept=n_trees_to_accept,
             max_depth=max_depth,
             min_samples_split=min_samples_split,
             l2_threshold=l2_threshold,
@@ -172,9 +180,11 @@ cdef class PyEstimator:
             (
                 self.rng,
                 self.privacy_budget,
+                self.ensemble_rejector_budget_split,
                 self.tree_rejector,
                 self.learning_rate,
-                self.nb_trees,
+                self.n_trials,
+                self.n_trees_to_accept,
                 self.max_depth,
                 self.min_samples_split,
                 self.l2_threshold,
@@ -189,9 +199,11 @@ cdef class PyEstimator:
     def __repr__(self):
         return f"PyEstimator(rng={self.rejection_budget},"\
                f"privacy_budget={self.privacy_budget},"\
+               f"ensemble_rejector_budget_split={self.ensemble_rejector_budget_split},"\
                f"tree_rejector={self.tree_rejector},"\
                f"learning_rate={self.learning_rate},"\
-               f"nb_trees={self.nb_trees},"\
+               f"n_trials={self.n_trials},"\
+               f"n_trees_to_accept={self.n_trees_to_accept},"\
                f"max_depth={self.max_depth},"\
                f"min_samples_split={self.min_samples_split},"\
                f"l2_threshold={self.l2_threshold},"\
