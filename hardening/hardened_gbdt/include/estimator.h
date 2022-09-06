@@ -27,11 +27,20 @@ namespace dpgbdt
          * Estimator::fit.
          *
          * @param rng the random number generator to use for ensemble generation
-         * @param privacy_budget the privacy budget for the ensemble
+         * @param privacy_budget the overall privacy budget
+         * @param ensemble_rejector_budget_split the trade-off parameter
+         * weighing the ensemble's privacy budget against the tree rejector
+         * budget (ensemble budget = `privacy_budget` *
+         * `ensemble_rejector_budget_split`, tree rejector budget =
+         * `privacy_budget` * (1.0 - `ensemble_rejector_budget_split`))
          * @param tree_rejector the tree rejection mechanism to use
          * @param learning_rate the learning rate to use
-         * @param nb_trees the maximal size of the ensemble (if all trees will
-         * be accepted)
+         * @param n_trials how often at most to generate trees, which are
+         * then checked for acceptance or rejection (should be at least as much
+         * as `n_trees_to_accept`)
+         * @param n_trees_to_accept how many (useful) trees to accept at most
+         * as part of the ensemble (maximal ensemble size; should be at most as
+         * much as `n_trials`).
          * @param max_depth the maximal depth per each individual tree
          * @param min_samples_split minimal amount of samples required to split
          * a tree node
@@ -45,9 +54,11 @@ namespace dpgbdt
         Estimator(
             std::mt19937 const &rng,
             double privacy_budget,
+            double ensemble_rejector_budget_split,
             std::shared_ptr<tree_rejection::TreeRejector> tree_rejector,
             double learning_rate,
-            int nb_trees,
+            int n_trials,
+            int n_trees_to_accept,
             int max_depth,
             int min_samples_split,
             double l2_threshold,

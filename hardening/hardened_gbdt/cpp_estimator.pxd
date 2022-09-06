@@ -11,9 +11,11 @@ cdef extern from "estimator.h" namespace "dpgbdt":
         Estimator(
             mt19937 rng,
             double privacy_budget,
+            double ensemble_rejector_budget_split,
             shared_ptr[TreeRejector] tree_rejector,
             double learning_rate,
-            int nb_trees,
+            int n_trials,
+            int n_trees_to_accept,
             int max_depth,
             int min_samples_split,
             double l2_threshold,
@@ -35,7 +37,7 @@ cdef extern from "tree_rejection.h" namespace "tree_rejection":
 
     cdef cppclass DPrMSERejector(TreeRejector):
         DPrMSERejector(
-            double rejection_budget, double U, double gamma, mt19937 rng
+            int n_trees_to_accept, double U, double gamma, mt19937 rng
         ) except +
 
     cdef cppclass QuantileLinearCombinationRejector(TreeRejector):
@@ -45,7 +47,7 @@ cdef extern from "tree_rejection.h" namespace "tree_rejection":
 
     cdef cppclass ApproxDPrMSERejector(TreeRejector):
         ApproxDPrMSERejector(
-            double rejection_budget, double delta, double U, mt19937 rng
+            int n_trees_to_accept, double delta, double U, mt19937 rng
         ) except +
 
 # see https://stackoverflow.com/a/40992452

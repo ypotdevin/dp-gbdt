@@ -24,7 +24,7 @@ void parse_model_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp)
     }
     if (cp.hasOption("--nb-trees"))
     {
-        mp.nb_trees = cp.getIntOptionValue("--nb-trees");
+        mp.n_trials = cp.getIntOptionValue("--nb-trees");
     }
     if (cp.hasOption("--max-depth"))
     {
@@ -63,9 +63,11 @@ void parse_model_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp)
 std::ostream &operator<<(std::ostream &os, const ModelParams &mp)
 {
     return os << "ModelParams: " << std::endl
-              << "    nb_trees: " << mp.nb_trees << std::endl
+              << "    n_trials: " << mp.n_trials << std::endl
+              << "    n_trees_to_accept: " << mp.n_trees_to_accept << std::endl
               << "    learning_rate: " << mp.learning_rate << std::endl
               << "    privacy_budget: " << mp.privacy_budget << std::endl
+              << "    ensemble_rejector_budget_split: " << mp.ensemble_rejector_budget_split << std::endl
               << "    tree_rejector: " << *mp.tree_rejector << std::endl
               << "    max_depth: " << mp.max_depth << std::endl
               << "    l2_lambda: " << mp.l2_lambda << std::endl

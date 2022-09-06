@@ -32,7 +32,7 @@ private:
     std::mt19937 rng;
 
     // methods
-    void update_gradients(std::vector<double> &gradients, int tree_index);
+    void update_gradients(std::vector<double> &gradients, int trial_index);
 };
 
 #endif // DPENSEMBLE_H
