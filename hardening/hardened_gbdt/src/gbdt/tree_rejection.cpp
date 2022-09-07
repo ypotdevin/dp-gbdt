@@ -64,90 +64,6 @@ namespace
 
 namespace tree_rejection
 {
-    std::shared_ptr<TreeRejector> from_CommandLineParser(cli_parser::CommandLineParser &cp, std::mt19937 &rng)
-    {
-        std::shared_ptr<TreeRejector> tr;
-        if (cp.hasOption("--no-tree-rejection"))
-        {
-            tr = std::shared_ptr<ConstantRejector>(new ConstantRejector(false));
-        }
-        else if (cp.hasOption("--dp-rmse-tree-rejection"))
-        {
-            if (cp.hasOption("--rejection-budget") && cp.hasOption("--error-upper-bound") && cp.hasOption("--dp-rmse-gamma"))
-            {
-                auto epsilon = cp.getDoubleOptionValue("--rejection-budget");
-                auto U = cp.getDoubleOptionValue("--error-upper-bound");
-                auto gamma = cp.getDoubleOptionValue("--dp-rmse-gamma");
-                tr = std::shared_ptr<DPrMSERejector>(new DPrMSERejector(epsilon, U, gamma, rng));
-            }
-            else
-            {
-                throw std::runtime_error("Some arguments necessary for DP rMSE tree rejection (via Cauchy) are missing.");
-            }
-        }
-        else if (cp.hasOption("--quantile-rejection"))
-        {
-            if (cp.hasOption("--quantile-rejection-q"))
-            {
-                auto q = cp.getDoubleOptionValue("--quantile-rejection-q");
-                tr = std::shared_ptr<QuantileRejector>(new QuantileRejector(q));
-            }
-            else
-            {
-                throw std::runtime_error("Argument q for quantile tree rejection is missing.");
-            }
-        }
-        else if (cp.hasOption("--quantile-combination-rejection"))
-        {
-            std::string qcr = "--quantile-combination-rejection";
-            std::vector<double> qs, ws;
-            for (size_t i = 0; i <= 4; ++i) // Support up to 5 different qs and ws
-            {
-                auto suffix = std::to_string(i);
-                if (cp.hasOption(qcr + "-q" + suffix) && cp.hasOption(qcr + "-w" + suffix))
-                {
-                    qs.push_back(cp.getDoubleOptionValue(qcr + "-q" + suffix));
-                    ws.push_back(cp.getDoubleOptionValue(qcr + "-w" + suffix));
-                }
-                tr = std::shared_ptr<QuantileCombinationRejector>(new QuantileCombinationRejector(qs, ws));
-            }
-        }
-        else if (cp.hasOption("--quantile-linear-combination-rejection"))
-        {
-            std::string qcr = "--quantile-linear-combination-rejection";
-            std::vector<double> qs, cs;
-            for (size_t i = 0; i <= 4; ++i) // Support up to 5 different qs and ws
-            {
-                auto suffix = std::to_string(i);
-                if (cp.hasOption(qcr + "-q" + suffix) && cp.hasOption(qcr + "-c" + suffix))
-                {
-                    qs.push_back(cp.getDoubleOptionValue(qcr + "-q" + suffix));
-                    cs.push_back(cp.getDoubleOptionValue(qcr + "-c" + suffix));
-                }
-                tr = std::shared_ptr<QuantileLinearCombinationRejector>(new QuantileLinearCombinationRejector(qs, cs));
-            }
-        }
-        else if (cp.hasOption("--dp-laplace-rmse-rejection"))
-        {
-            if (cp.hasOption("--rejection-budget") && cp.hasOption("--rejection-failure-prob") && cp.hasOption("--error-upper-bound"))
-            {
-                auto epsilon = cp.getDoubleOptionValue("--rejection-budget");
-                auto delta = cp.getDoubleOptionValue("--rejection-failure-prob");
-                auto U = cp.getDoubleOptionValue("--error-upper-bound");
-                tr = std::shared_ptr<ApproxDPrMSERejector>(new ApproxDPrMSERejector(epsilon, delta, U, rng));
-            }
-            else
-            {
-                throw std::runtime_error("Some arguments necessary for approx. DP rMSE tree rejection (via Laplace) are missing.");
-            }
-        }
-        else
-        {
-            throw std::runtime_error("Selected tree rejection mechanism is unknown.");
-        }
-        return tr;
-    }
-
     ConstantRejector::ConstantRejector(bool decision)
     {
         this->decision = decision;
@@ -300,7 +216,8 @@ namespace tree_rejection
         if (this->n_accepted_trees >= this->n_trees_to_accept)
         {
             LOG_INFO(
-                "Likely unintended behavior detected: Calling reject_tree(...) again, even after accepted enough ({1}) trees.",
+                "Likely unintended behavior detected: Calling reject_tree(...) again, even after accepting {1} of {2} trees.",
+                this->n_accepted_trees,
                 this->n_trees_to_accept);
         }
         std::transform(y.begin(), y.end(),
@@ -362,7 +279,8 @@ namespace tree_rejection
         if (this->n_accepted_trees >= this->n_trees_to_accept)
         {
             LOG_INFO(
-                "Likely unintended behavior detected: Calling reject_tree(...) again, even after accepted enough ({1}) trees.",
+                "Likely unintended behavior detected: Calling reject_tree(...) again, even after accepting {1} of {2} trees.",
+                this->n_accepted_trees,
                 this->n_trees_to_accept);
         }
         std::transform(y.begin(), y.end(),

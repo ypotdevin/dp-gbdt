@@ -4,7 +4,6 @@
 #include <memory>
 #include <random>
 #include <vector>
-#include "cli_parser.h"
 #include "loss.h"
 #include "utils.h"
 #include "tree_rejection.h"
@@ -44,31 +43,6 @@ struct ModelParams
     std::vector<int> num_idx;
 };
 
-/**
- * @brief Update given model parameters by what is passed via command line.
- *
- * Currently accepted model parameters:
- *   --ensemble-privacy-budget (double)
- *   --no-tree-rejection (selection flag)
- *   --quantile-rejection (selection flag)
- *   --quantile-rejection-q (double)
- *   --dp-rmse-tree-rejection (selection flag)
- *   --rejection-budget (double)
- *   --error-upper-bound (double)
- *   --dp-rmse-gamma (double)
- *   --nb-trees (int)
- *   --max-depth (int)
- *   --learning-rate (double)
- *   --l2-lambda (double)
- *   --l2-threshold (double)
- *   --seed (int)
- *   --no-gradient-filtering (boolean flag, default: active gradient filtering)
- *   --no-leaf-clipping (boolean flag, default: active leaf clipping)
- *
- * @param cp the parser holding the command line arguments.
- * @param mp the model parameters to update.
- */
-void parse_model_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp);
 
 std::ostream &operator<<(std::ostream &os, const ModelParams &mp);
 

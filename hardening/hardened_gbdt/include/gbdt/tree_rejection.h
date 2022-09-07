@@ -4,7 +4,6 @@
 #include <memory>
 #include <random>
 #include <vector>
-#include "cli_parser.h"
 #include "custom_cauchy.h"
 #include "laplace.h"
 
@@ -43,16 +42,6 @@ namespace tree_rejection
             return os;
         }
     };
-
-    /**
-     * @brief Depending on the passed command line arguments, create the
-     * demanded tree rejector and initialize it with the given parameters.
-     *
-     * @param cp the parser containing the command line arguments.
-     * @param rng the random number generator used by this program, eventually
-     * needed by the tree rejector.
-     */
-    std::shared_ptr<TreeRejector> from_CommandLineParser(cli_parser::CommandLineParser &cp, std::mt19937 &rng);
 
     /**
      * @brief Either always keep the considered tree, or always reject the
