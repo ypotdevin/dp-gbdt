@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # gtheo@ethz.ch
-# modified by: Moritz Kirschte
+# modified by: Moritz Kirschte, Yannik Potdevin
 """Example test file."""
 
 from typing import Any, Optional
