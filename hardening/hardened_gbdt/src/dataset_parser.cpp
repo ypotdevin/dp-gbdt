@@ -264,29 +264,6 @@ DataSet *Parser::parse_file(std::string dataset_file, std::string dataset_name, 
     return dataset;
 }
 
-DataSet *parse_dataset_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp)
-{
-    std::string dataset;
-    if (cp.hasOption("--dataset"))
-    {
-        dataset = cp.getOptionValue("--dataset");
-    }
-    else
-    {
-        std::runtime_error("Expecting argument `--dataset`.");
-    }
-    size_t num_samples;
-    if (cp.hasOption("--num-samples"))
-    {
-        num_samples = cp.getIntOptionValue("--num-samples");
-    }
-    else
-    {
-        throw std::runtime_error("Expecting argument `--num-samples`.");
-    }
-    return select_dataset(dataset, num_samples, mp);
-}
-
 /**
  * @brief Based on a label, parse one of the predefined datasets.
  *

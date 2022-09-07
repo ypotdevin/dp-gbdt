@@ -9,7 +9,7 @@ namespace dpgbdt
         this->params->rng = std::mt19937(std::random_device{}());
         this->params->privacy_budget = 1.0;
         this->params->ensemble_rejector_budget_split = 0.9;
-        this->params->tree_rejector = std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(0.01, 100.0, 2.0, this->params->rng));
+        this->params->tree_rejector = std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(5, 100.0, 2.0, this->params->rng));
         this->params->learning_rate = 0.1;
         this->params->n_trials = 50;
         this->params->n_trees_to_accept = 5;

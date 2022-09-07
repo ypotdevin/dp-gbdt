@@ -14,3 +14,7 @@
 *~
 *.o
 *.so
+
+# generated output
+**/evaluation/*
+**/include/spdlog

@@ -4,7 +4,6 @@
 #include "utils.h"
 #include "parameters.h"
 #include "data.h"
-#include "cli_parser.h"
 
 class Parser
 {
@@ -25,19 +24,6 @@ public:
     static DataSet *get_wine(ModelParams &parameters, size_t num_samples);
 };
 
-/**
- * @brief Read from CLI which dataset to use and update model parameters accordingly.
- *
- * Currently parsed parameters:
- *   --dataset (string, like "abalone", "adult", …)
- *   --num-samples (int)
- *
- * @param cp the parser holding the command line arguments.
- * @param mp the model parameters to update.
- * @return DataSet* the dataset identified by argument "--dataset", reading the
- * first "--num-samples" lines.
- */
-DataSet *parse_dataset_parameters(cli_parser::CommandLineParser &cp, ModelParams &mp);
 DataSet *select_dataset(const std::string &dataset, const size_t num_samples, ModelParams &mp);
 
 #endif // PARSER_H
