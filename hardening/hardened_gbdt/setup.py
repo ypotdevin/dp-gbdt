@@ -14,7 +14,6 @@ extensions = [
             "./src/estimator.cpp",
             "./src/parameters.cpp",
             "./src/constant_time.cpp",
-            "./src/cli_parser.cpp",
             "./src/gbdt/tree_rejection.cpp",
             "./src/gbdt/loss.cpp",
             "./src/gbdt/utils.cpp",
