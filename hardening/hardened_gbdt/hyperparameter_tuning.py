@@ -134,9 +134,11 @@ def abalone_parameter_grid():
 
 def baseline(args) -> pd.DataFrame:
     dfs = []
-    for ensemble_budget in [0.1, 0.5, 1.0]:
+    ensemble_budgets = [0.1, 0.5, 1.0, 2.0]
+    for ensemble_budget in ensemble_budgets:
         parameter_grid = abalone_parameter_grid()
         parameter_grid["privacy_budget"] = [ensemble_budget]
+        parameter_grid["ensemble_rejector_budget_split"] = [1.0]
         parameter_grid["tree_rejector"] = [
             dpgbdt.make_tree_rejector("constant", decision=False)
         ]
@@ -148,7 +150,7 @@ def baseline(args) -> pd.DataFrame:
             n_trials=args.n_trials,
             local_dir=args.local_dir,
             n_jobs=args.num_cores,
-            time_budget_s=args.time_budget_s,
+            time_budget_s=args.time_budget_s // len(ensemble_budgets),
         )
         dfs.append(df)
     df = pd.concat(dfs)
@@ -188,10 +190,10 @@ def dp_rmse(args) -> pd.DataFrame:
     for ensemble_budget in ensemble_budgets:
         parameter_grid = abalone_parameter_grid()
         parameter_grid["privacy_budget"] = [ensemble_budget]
+        parameter_grid["ensemble_rejector_budget_split"] = (1e-2, 1 - 1e-2)
         parameter_grid["tree_rejector"] = ["dp_rmse"]
         parameter_grid["tr_U"] = (0.1, 100.0)
         parameter_grid["tr_gamma"] = (1 + 1e-2, 10.0)
-        parameter_grid["ensemble_rejector_budget_split"] = (1e-2, 1 - 1e-2)
 
         df, _ = tune(
             dpgbdt.DPGBDTRegressor(),
