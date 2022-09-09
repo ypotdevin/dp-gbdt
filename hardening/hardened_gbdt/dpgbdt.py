@@ -25,6 +25,11 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         gradient_filtering: bool = True,
         leaf_clipping: bool = True,
         use_decay: bool = False,
+        tr_qs = None,
+        tr_coefficients = None,
+        tr_U = None,
+        tr_gamma = None,
+        tr_delta = None,
     ):
         """Create a new regressor object.
 
@@ -46,10 +51,14 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
                 = `privacy_budget` * `ensemble_rejector_budget_split`,
                 tree rejector budget = `privacy_budget` * (1.0 -
                 `ensemble_rejector_budget_split`)).
-            tree_rejector (pyestimator.PyTreeRejector, optional): The
-                tree rejector used to optimize the ensemble. If ``None``,
-                use an always accepting (never rejecting) tree rejector.
-                Defaults to None.
+                Defaults to 0.9.
+            tree_rejector (pyestimator.PyTreeRejector | str, optional):
+                The tree rejector used to optimize the ensemble. May
+                also be the name of a rejector, which is then created at
+                runtime. Use the string if your rejector depends on
+                runtime (hyper)parameters. If ``None``, use an always
+                accepting (never rejecting) tree rejector. Defaults to
+                None.
             learning_rate (float, optional): The learning rate. Defaults
                 to 5.0.
             n_trials (int, optional): how often at most to generate
@@ -97,6 +106,11 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         self.gradient_filtering = gradient_filtering
         self.leaf_clipping = leaf_clipping
         self.use_decay = use_decay
+        self.tr_qs = tr_qs
+        self.tr_coefficients = tr_coefficients
+        self.tr_U = tr_U
+        self.tr_gamma = tr_gamma
+        self.tr_delta = tr_delta
 
     def fit(self, X, y, cat_idx=None, num_idx=None):
         """Build up the gradient boosted tree ensemble.
@@ -124,8 +138,13 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         X, y = _ensure_float(X, y)
 
         self.rng_ = make_rng(self.seed)
+        # handle the tree_rejector attribute after all other attributes
+        # (as `_make_tree_rejector_from_self` might depend on previous
+        # attributes)
         if self.tree_rejector is None:
             self.tree_rejector = make_tree_rejector("constant", decision=False)
+        elif type(self.tree_rejector) is str:
+            self.tree_rejector = _make_tree_rejector_from_self(self)
         if cat_idx is None:
             cat_idx = []
         if num_idx is None:
@@ -230,3 +249,35 @@ def make_tree_rejector(which: str, **kwargs) -> pyestimator.PyTreeRejector:
         approximate_dp_rmse=pyestimator.PyApproxDPrMSERejector,
     )
     return selector[which](**kwargs)
+
+
+def _make_tree_rejector_from_self(self) -> pyestimator.PyTreeRejector:
+    if self.tree_rejector == "constant":
+        return make_tree_rejector("constant", decision=self.decision)
+    elif self.tree_rejector == "quantile_linear_combination":
+        return make_tree_rejector(
+            "quantile_linear_combination",
+            qs=self.tr_qs,
+            coefficients=self.tr_coefficients,
+        )
+    elif self.tree_rejector == "dp_rmse":
+        return make_tree_rejector(
+            "dp_rmse",
+            n_trees_to_accept=self.n_trees_to_accept,
+            U=self.tr_U,
+            gamma=self.tr_gamma,
+            rng=self.rng_,
+        )
+    elif self.tree_rejector == "approximate_dp_rmse":
+        return make_tree_rejector(
+            "dp_rmse",
+            n_trees_to_accept=self.n_trees_to_accept,
+            delta=self.tr_delta,
+            U=self.tr_U,
+            rng=self.rng_,
+        )
+    else:
+        raise NotImplementedError(
+            f"Tree rejector {self.tree_rejector} not implemented!"
+        )
+
