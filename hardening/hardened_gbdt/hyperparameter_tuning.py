@@ -4,6 +4,7 @@ from typing import Any, Callable, Optional, Tuple
 import numpy as np
 import pandas as pd
 from ray.tune.sklearn import TuneSearchCV
+from sklearn.model_selection import RepeatedKFold
 
 import dpgbdt
 
@@ -18,7 +19,10 @@ def tune(
     n_jobs: Optional[int] = None,
     time_budget_s: Optional[int] = None,
     search_optimization="hyperopt",
+    cv=None,
 ) -> Tuple[pd.DataFrame, dict[str, Any]]:
+    if cv is None:
+        cv = RepeatedKFold(n_splits=5, n_repeats=2)
     X_train, y_train, cat_idx, num_idx = data_provider()
     tune_search = TuneSearchCV(
         regressor,
@@ -30,6 +34,7 @@ def tune(
         n_jobs=n_jobs,
         time_budget_s=time_budget_s,
         scoring="neg_root_mean_squared_error",
+        cv=cv,
     )
     tune_search.fit(X_train, y_train, cat_idx=cat_idx, num_idx=num_idx)
     df = pd.DataFrame(tune_search.cv_results_)
@@ -69,9 +74,7 @@ def parse_args():
         description="Perform Bayesian optimization over the hyperparameter space."
     )
     parser.add_argument(
-        "experiment",
-        type=str,
-        help="Which experiment/benchmark to execute.",
+        "experiment", type=str, help="Which experiment/benchmark to execute.",
     )
     parser.add_argument(
         "--label",
@@ -212,10 +215,9 @@ def dp_rmse(args) -> pd.DataFrame:
 
 def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
     return dict(
-        baseline=baseline,
-        quantile_lin_comb=quantile_lin_comb,
-        dp_rmse=dp_rmse,
+        baseline=baseline, quantile_lin_comb=quantile_lin_comb, dp_rmse=dp_rmse,
     )[which]
+
 
 if __name__ == "__main__":
     args = parse_args()
