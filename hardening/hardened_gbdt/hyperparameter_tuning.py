@@ -129,8 +129,8 @@ def abalone_parameter_grid():
         # lower than `n_trials`
         n_trees_to_accept=(1, 50),
         max_depth=(1, 10),
-        l2_threshold=(0.01, 10.0),
-        l2_lambda=(0.1, 10.0),
+        l2_threshold=(0.01, 100.0),
+        l2_lambda=(0.01, 100.0),
     )
     return parameter_grid
 
