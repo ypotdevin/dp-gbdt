@@ -209,9 +209,9 @@ cdef class PyEstimator:
                 self.privacy_budget,
                 self.ensemble_rejector_budget_split,
                 self.tree_rejector,
-                self.tree_scorer,
                 self.dp_argmax_privacy_budget,
                 self.dp_argmax_stopping_prob,
+                self.tree_scorer,
                 self.learning_rate,
                 self.n_trees_to_accept,
                 self.max_depth,
@@ -230,9 +230,9 @@ cdef class PyEstimator:
                f"privacy_budget={self.privacy_budget},"\
                f"ensemble_rejector_budget_split={self.ensemble_rejector_budget_split},"\
                f"tree_rejector={self.tree_rejector},"\
-               f"tree_scorer={self.tree_scorer},"\
                f"dp_argmax_privacy_budget={self.dp_argmax_privacy_budget},"\
                f"dp_argmax_stopping_prob={self.dp_argmax_stopping_prob},"\
+               f"tree_scorer={self.tree_scorer},"\
                f"learning_rate={self.learning_rate},"\
                f"n_trees_to_accept={self.n_trees_to_accept},"\
                f"max_depth={self.max_depth},"\

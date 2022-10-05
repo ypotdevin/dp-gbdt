@@ -124,7 +124,6 @@ def parse_args():
 def abalone_parameter_grid():
     parameter_grid = dict(
         learning_rate=(0.0, 10.0),
-        n_trials=(1, 50),
         # Hopefully the hyperparameter optimizer "learns" to keep this
         # lower than `n_trials`
         n_trees_to_accept=(1, 50),
@@ -213,9 +212,40 @@ def dp_rmse(args) -> pd.DataFrame:
     return df
 
 
+def dp_rmse_ts(args) -> pd.DataFrame:
+    dfs = []
+    ensemble_budgets = [0.1, 0.5, 1.0, 2.0]
+    for ensemble_budget in ensemble_budgets:
+        parameter_grid = abalone_parameter_grid()
+        parameter_grid["privacy_budget"] = [ensemble_budget]
+        parameter_grid["ensemble_rejector_budget_split"] = (1e-2, 1 - 1e-2)
+        parameter_grid["tree_scorer"] = ["dm_rmse"]
+        parameter_grid["dp_argmax_privacy_budget"] = (1e-2, 1 - 1e-2)
+        parameter_grid["dp_argmax_stopping_prob"] = (1e-2, 1 - 1e-2)
+        parameter_grid["ts_upper_bound"] = (0.1, 100.0)
+        parameter_grid["ts_gamma"] = (1 + 1e-2, 10.0)
+
+        df, _ = tune(
+            dpgbdt.DPGBDTRegressor(),
+            get_abalone,
+            parameter_grid,
+            label=args.label,
+            n_trials=args.n_trials,
+            local_dir=args.local_dir,
+            n_jobs=args.num_cores,
+            time_budget_s=args.time_budget_s // len(ensemble_budgets),
+        )
+        dfs.append(df)
+    df = pd.concat(dfs)
+    return df
+
+
 def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
     return dict(
-        baseline=baseline, quantile_lin_comb=quantile_lin_comb, dp_rmse=dp_rmse,
+        baseline=baseline,
+        quantile_lin_comb=quantile_lin_comb,
+        dp_rmse=dp_rmse,
+        dp_rmse_ts=dp_rmse_ts,
     )[which]
 
 
