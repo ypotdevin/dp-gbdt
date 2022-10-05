@@ -5,9 +5,6 @@
 #include "utils.h"
 #include "constant_time.h"
 
-/** Global Variables */
-
-size_t cv_fold_index;
 
 /** Methods */
 

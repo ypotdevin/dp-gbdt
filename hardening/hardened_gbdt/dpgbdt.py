@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import pyestimator
 from numpy.random import default_rng
@@ -13,9 +13,11 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         seed: Optional[int] = None,
         privacy_budget: float = 1.0,
         ensemble_rejector_budget_split: float = 0.9,
-        tree_rejector: Optional[pyestimator.PyTreeRejector] = None,
+        tree_rejector: Optional[Union[str, pyestimator.PyTreeRejector]] = None,
+        tree_scorer: Optional[Union[str, pyestimator.PyTreeScorer]] = None,
+        dp_argmax_privacy_budget: float = 0.1,
+        dp_argmax_stopping_prob: float = 0.05,
         learning_rate: float = 5.0,
-        n_trials: int = 1,
         n_trees_to_accept: int = 1,
         max_depth: int = 5,
         min_samples_split: int = 2,
@@ -25,11 +27,13 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         gradient_filtering: bool = True,
         leaf_clipping: bool = True,
         use_decay: bool = False,
-        tr_qs = None,
-        tr_coefficients = None,
-        tr_U = None,
-        tr_gamma = None,
-        tr_delta = None,
+        tr_qs=None,
+        tr_coefficients=None,
+        tr_U: float = None,
+        tr_gamma: float = None,
+        tr_delta: float = None,
+        ts_upper_bound: float = None,
+        ts_gamma: float = None,
     ):
         """Create a new regressor object.
 
@@ -59,12 +63,19 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
                 runtime (hyper)parameters. If ``None``, use an always
                 accepting (never rejecting) tree rejector. Defaults to
                 None.
+            tree_scorer (pyestimator.PyTreeScorer | str, optional):
+                The tree scoring mechanism to use. May also be the name
+                of a scorer, which is then created at runtime. Use the
+                string if your scorer depends on runtime
+                (hyper)parameters. If ``None``, use dp_rmse scorer.
+                Defaults to None.
+            dp_argmax_privacy_budget (float, optional): The privacy
+                budget required by the generalized DP argmax algorithm
+                (Liu & Talwar 2018).
+            dp_argmax_stopping_prob (float, optional): The stopping
+                probability of the generalized DP argmax algorithm.
             learning_rate (float, optional): The learning rate. Defaults
                 to 5.0.
-            n_trials (int, optional): how often at most to generate
-                trees, which are then checked for acceptance or
-                rejection (should be at least as much as
-                `n_trees_to_accept`). Defaults to 1.
             n_trees_to_accept (int, optional): how many (useful) trees
                 to accept at most as part of the ensemble (in other
                 words: maximal ensemble size; should be at most as much
@@ -95,8 +106,10 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         self.privacy_budget = privacy_budget
         self.ensemble_rejector_budget_split = ensemble_rejector_budget_split
         self.tree_rejector = tree_rejector
+        self.tree_scorer = tree_scorer
+        self.dp_argmax_privacy_budget = dp_argmax_privacy_budget
+        self.dp_argmax_stopping_prob = dp_argmax_stopping_prob
         self.learning_rate = learning_rate
-        self.n_trials = n_trials
         self.n_trees_to_accept = n_trees_to_accept
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
@@ -111,6 +124,8 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         self.tr_U = tr_U
         self.tr_gamma = tr_gamma
         self.tr_delta = tr_delta
+        self.ts_upper_bound = ts_upper_bound
+        self.ts_gamma = ts_gamma
 
     def fit(self, X, y, cat_idx=None, num_idx=None):
         """Build up the gradient boosted tree ensemble.
@@ -145,6 +160,19 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
             self.tree_rejector = make_tree_rejector("constant", decision=False)
         elif type(self.tree_rejector) is str:
             self.tree_rejector = _make_tree_rejector_from_self(self)
+        else:
+            raise ValueError(f"Illegal value for tree_rejector: {self.tree_rejector}")
+        if self.tree_scorer is None:
+            self.tree_scorer = make_tree_scorer(
+                "dp_rmse",
+                upper_bound=self.ts_upper_bound,
+                gamma=self.ts_gamma,
+                rng=self.rng_,
+            )
+        elif type(self.tree_scorer) is str:
+            self.tree_scorer = _make_tree_scorer_from_self(self)
+        else:
+            raise ValueError(f"Illegal value for tree_scorer: {self.tree_scorer}")
         if cat_idx is None:
             cat_idx = []
         if num_idx is None:
@@ -155,8 +183,10 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
             privacy_budget=self.privacy_budget,
             ensemble_rejector_budget_split=self.ensemble_rejector_budget_split,
             tree_rejector=self.tree_rejector,
+            dp_argmax_privacy_budget=self.dp_argmax_privacy_budget,
+            dp_argmax_stopping_prob=self.dp_argmax_stopping_prob,
+            tree_scorer=self.tree_scorer,
             learning_rate=self.learning_rate,
-            n_trials=self.n_trials,
             n_trees_to_accept=self.n_trees_to_accept,
             max_depth=self.max_depth,
             min_samples_split=self.min_samples_split,
@@ -239,6 +269,23 @@ def make_rng(seed: Optional[int] = None) -> pyestimator.PyMT19937:
         # Stay within the the bounds of mt19937's input seed (C++)
         seed = rng.integers(2 ** 30 - 1)
     return pyestimator.PyMT19937(seed)
+
+
+def make_tree_scorer(which: str, **kwargs) -> pyestimator.PyTreeScorer:
+    selector = dict(dp_rmse=pyestimator.PyDPrMSEScorer,)
+    return selector[which](**kwargs)
+
+
+def _make_tree_scorer_from_self(self) -> pyestimator.PyTreeScorer:
+    if self.tree_scorer == "dm_rmse":
+        return make_tree_scorer(
+            "dp_rmse",
+            upper_bound=self.ts_upper_bound,
+            gamma=self.ts_gamma,
+            rng=self.rng_,
+        )
+    else:
+        raise NotImplementedError(f"Tree scorer {self.tree_scorer} not implemented!")
 
 
 def make_tree_rejector(which: str, **kwargs) -> pyestimator.PyTreeRejector:

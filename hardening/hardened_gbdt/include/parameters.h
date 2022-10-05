@@ -18,6 +18,9 @@ struct ModelParams
     double privacy_budget = 1.0;
     double ensemble_rejector_budget_split = 0.9;
     std::shared_ptr<tree_rejection::TreeRejector> tree_rejector;
+    std::shared_ptr<tree_rejection::TreeScorer> tree_scorer;
+    double dp_argmax_privacy_budget = 0.1;
+    double stopping_prob = 0.05;
     int max_depth = 6;
     int min_samples_split = 2;
     unsigned balance_partition = true;
