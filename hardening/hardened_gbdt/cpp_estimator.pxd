@@ -13,8 +13,10 @@ cdef extern from "estimator.h" namespace "dpgbdt":
             double privacy_budget,
             double ensemble_rejector_budget_split,
             shared_ptr[TreeRejector] tree_rejector,
+            shared_ptr[TreeScorer] tree_scorer,
+            double dp_argmax_privacy_budget,
+            double dp_argmax_stopping_prob,
             double learning_rate,
-            int n_trials,
             int n_trees_to_accept,
             int max_depth,
             int min_samples_split,
@@ -29,6 +31,12 @@ cdef extern from "estimator.h" namespace "dpgbdt":
         vector[double] predict(vector[vector[double]] X)
 
 cdef extern from "tree_rejection.h" namespace "tree_rejection":
+    cdef cppclass TreeScorer:
+        pass
+
+    cdef cppclass DPrMSEScorer(TreeScorer):
+        DPrMSEScorer(double upper_bound, double gamma, mt19937 rng) except +
+
     cdef cppclass TreeRejector:
         pass
 

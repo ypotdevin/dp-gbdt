@@ -63,9 +63,17 @@ if __name__ == "__main__":
         rng=rng,
     )
 
+    ts = dpgbdt.make_tree_scorer(
+        which="dp_rmse",
+        upper_bound=100.0,
+        gamma=2.0,
+        rng=rng,
+    )
+
     # Train the model using a depth-first approach
     estimator = dpgbdt.DPGBDTRegressor(
         tree_rejector=tr,
+        tree_scorer=ts,
     )
     #check_estimator(estimator)
     estimator.fit(X_train, y_train, cat_idx, num_idx)

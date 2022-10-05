@@ -34,13 +34,14 @@ namespace dpgbdt
          * `ensemble_rejector_budget_split`, tree rejector budget =
          * `privacy_budget` * (1.0 - `ensemble_rejector_budget_split`))
          * @param tree_rejector the tree rejection mechanism to use
+         * @param tree_scorer the tree scoring mechanism to use
+         * @param dp_argmax_privacy_budget the privacy budget required by the
+         * generalized DP argmax algorithm (Liu & Talwar 2018)
+         * @param dp_argmax_stopping_prob the stopping probability of the
+         * generalized DP argmax algorithm
          * @param learning_rate the learning rate to use
-         * @param n_trials how often at most to generate trees, which are
-         * then checked for acceptance or rejection (should be at least as much
-         * as `n_trees_to_accept`)
          * @param n_trees_to_accept how many (useful) trees to accept at most
-         * as part of the ensemble (maximal ensemble size; should be at most as
-         * much as `n_trials`).
+         * as part of the ensemble (maximal ensemble size).
          * @param max_depth the maximal depth per each individual tree
          * @param min_samples_split minimal amount of samples required to split
          * a tree node
@@ -56,8 +57,10 @@ namespace dpgbdt
             double privacy_budget,
             double ensemble_rejector_budget_split,
             std::shared_ptr<tree_rejection::TreeRejector> tree_rejector,
+            std::shared_ptr<tree_rejection::TreeScorer> tree_scorer,
+            double dp_argmax_privacy_budget,
+            double dp_argmax_stopping_prob,
             double learning_rate,
-            int n_trials,
             int n_trees_to_accept,
             int max_depth,
             int min_samples_split,

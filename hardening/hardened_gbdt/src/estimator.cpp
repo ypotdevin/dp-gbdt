@@ -10,8 +10,10 @@ namespace dpgbdt
         this->params->privacy_budget = 1.0;
         this->params->ensemble_rejector_budget_split = 0.9;
         this->params->tree_rejector = std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(5, 100.0, 2.0, this->params->rng));
+        this->params->tree_scorer = std::shared_ptr<tree_rejection::DPrMSEScorer>(new tree_rejection::DPrMSEScorer(100.0, 2.0, this->params->rng));
+        this->params->dp_argmax_privacy_budget = 0.1;
+        this->params->stopping_prob = 0.05;
         this->params->learning_rate = 0.1;
-        this->params->n_trials = 50;
         this->params->n_trees_to_accept = 5;
         this->params->max_depth = 6;
         this->params->min_samples_split = 2;
@@ -29,8 +31,10 @@ namespace dpgbdt
         double privacy_budget,
         double ensemble_rejector_budget_split,
         std::shared_ptr<tree_rejection::TreeRejector> tree_rejector,
+        std::shared_ptr<tree_rejection::TreeScorer> tree_scorer,
+        double dp_argmax_privacy_budget,
+        double dp_argmax_stopping_prob,
         double learning_rate,
-        int n_trials,
         int n_trees_to_accept,
         int max_depth,
         int min_samples_split,
@@ -46,8 +50,10 @@ namespace dpgbdt
         this->params->privacy_budget = privacy_budget;
         this->params->ensemble_rejector_budget_split = ensemble_rejector_budget_split;
         this->params->tree_rejector = tree_rejector;
+        this->params->tree_scorer = tree_scorer;
+        this->params->dp_argmax_privacy_budget = dp_argmax_privacy_budget;
+        this->params->stopping_prob = dp_argmax_stopping_prob;
         this->params->learning_rate = learning_rate;
-        this->params->n_trials = n_trials;
         this->params->n_trees_to_accept = n_trees_to_accept;
         this->params->max_depth = max_depth;
         this->params->min_samples_split = min_samples_split;

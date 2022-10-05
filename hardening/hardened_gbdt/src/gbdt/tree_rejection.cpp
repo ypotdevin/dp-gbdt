@@ -64,6 +64,23 @@ namespace
 
 namespace tree_rejection
 {
+    DPrMSEScorer::DPrMSEScorer(double upper_bound, double gamma, const std::mt19937 &rng)
+    {
+        this->upper_bound = upper_bound;
+        this->cc = std::unique_ptr<custom_cauchy::AdvancedCustomCauchy>(new custom_cauchy::AdvancedCustomCauchy(gamma, rng));
+    }
+
+    double DPrMSEScorer::score_tree(double privacy_budget, const std::vector<double> &y, const std::vector<double> &y_pred)
+    {
+        std::vector<double> abs_errors(y.size());
+        std::transform(y.begin(), y.end(),
+                       y_pred.begin(), abs_errors.begin(), [](double _y, double _y_pred)
+                       { return std::abs(_y - _y_pred); });
+        auto score = dp_rms_custom_cauchy(abs_errors, privacy_budget, this->upper_bound, *this->cc);
+        LOG_INFO("### diagnosis value 02 ### - rmse_approx={1}", score);
+        return score;
+    }
+
     ConstantRejector::ConstantRejector(bool decision)
     {
         this->decision = decision;

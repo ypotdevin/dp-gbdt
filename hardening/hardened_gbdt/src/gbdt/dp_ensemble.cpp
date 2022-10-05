@@ -12,6 +12,7 @@
 
 namespace
 {
+    const double e = 2.71828182845904523536;
     TreeParams setup_tree_params(const ModelParams &mp, double tree_budget, int tree_index)
     {
         TreeParams tree_params;
@@ -152,7 +153,8 @@ void DPEnsemble::train(DataSet *dataset)
     this->dataset = dataset;
     this->init_score = params->task->compute_init_score(dataset->y);
     LOG_DEBUG("Training initialized with score: {1}", init_score);
-    this->vanilla_training_loop();
+    //this->vanilla_training_loop();
+    this->tree_rejection_training_loop();
 }
 
 // Predict values from the ensemble of gradient boosted trees
@@ -218,7 +220,58 @@ void DPEnsemble::vanilla_training_loop()
     }
 }
 
-void DPEnsemble::tree_rejection_training_loop(ModelParams &mp, const DataSet &ds)
+void DPEnsemble::tree_rejection_training_loop()
 {
-    //…
+    auto mp = *this->params;
+    auto dataset = *this->dataset;
+    dataset.shuffle_dataset(mp.rng);
+
+    auto score = this->init_score;
+    auto n_steps = mp.n_trees_to_accept;
+    auto step_budget = (mp.privacy_budget - mp.dp_argmax_privacy_budget) / 2.0; // parallel composition
+    auto tree_budget = step_budget * mp.ensemble_rejector_budget_split;
+    auto score_budget = step_budget - tree_budget;
+    std::bernoulli_distribution biased_coin{mp.stopping_prob};
+
+    int T = std::max((1.0 / mp.stopping_prob) * std::log(2.0 / mp.dp_argmax_privacy_budget), 1.0 + 1.0 / (e * mp.stopping_prob));
+    LOG_INFO("### diagnosis value 08 ### - T={1}", T);
+    for (int tree_index = 0; tree_index < n_steps; ++tree_index)
+    {
+        this->update_gradients(dataset.gradients, tree_index);
+
+        auto tree_params = setup_tree_params(mp, step_budget, tree_index);
+
+        auto p = setup_tree_data(dataset, mp, n_steps, this->dataset->length, tree_index);
+        auto tree_dataset = p.first;
+        auto remaining_dataset = p.second;
+
+        /* the actual generalized DP argmax algorithm from Liu and Talwar 2018 */
+        for (int trial = 0; trial < T; ++trial)
+        {
+            /* actual tree construction */
+            DPTree tree = DPTree(&mp, &tree_params, &tree_dataset, tree_index, this->grid);
+            tree.fit();
+            this->trees.push_back(tree);
+
+            auto raw_predictions = predict(dataset.X);
+            auto current_score = mp.tree_scorer->score_tree(score_budget, dataset.y, raw_predictions);
+            LOG_INFO("### diagnosis value 02 ### - rmse_approx={1}", score);
+            if (current_score < score)
+            {
+                LOG_INFO("generalized_dp_argmax: successful exit");
+                break; // successful exit, keep tree
+            }
+            if (biased_coin(mp.rng))
+            {
+                this->trees.pop_back();
+                LOG_INFO("generalized_dp_argmax: early unsuccessful exit");
+                break; // early unsuccessful exit, reject tree
+            }
+            this->trees.pop_back(); // late unsuccessful exit, reject tree
+                LOG_INFO("generalized_dp_argmax: late unsuccessful exit");
+
+        }
+
+        dataset = remaining_dataset;
+    }
 }

@@ -9,6 +9,23 @@
 
 namespace tree_rejection
 {
+    class TreeScorer
+    {
+    public:
+        virtual double score_tree(double privacy_budget, const std::vector<double> &y, const std::vector<double> &y_pred) = 0;
+    };
+
+    class DPrMSEScorer : public TreeScorer
+    {
+    private:
+        double upper_bound;
+        std::unique_ptr<custom_cauchy::CustomCauchy> cc;
+
+    public:
+        DPrMSEScorer(double upper_bound, double gamma, const std::mt19937 &rng);
+        double score_tree(double privacy_budget, const std::vector<double> &y, const std::vector<double> &y_pred);
+    };
+
     class TreeRejector
     {
     public:
