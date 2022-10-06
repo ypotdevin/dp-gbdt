@@ -223,7 +223,7 @@ def dp_rmse_ts(args) -> pd.DataFrame:
         parameter_grid["dp_argmax_privacy_budget"] = (1e-2, 1 - 1e-2)
         parameter_grid["dp_argmax_stopping_prob"] = (1e-2, 1 - 1e-2)
         parameter_grid["ts_upper_bound"] = (0.1, 100.0)
-        parameter_grid["ts_gamma"] = (1 + 1e-2, 10.0)
+        parameter_grid["ts_gamma"] = (1e-2, 1 - 1e-2)
 
         df, _ = tune(
             dpgbdt.DPGBDTRegressor(),
