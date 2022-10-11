@@ -296,9 +296,7 @@ def dp_rmse_ts_grid(args) -> pd.DataFrame:
         parameter_grid["tree_scorer"] = ["dp_rmse"]
         parameter_grid["dp_argmax_privacy_budget"] = [0.001, 0.01]
         parameter_grid["dp_argmax_stopping_prob"] = [0.01, 0.1, 0.2, 0.5]
-        # The below coupling of hyperparameters is happening dirtily in
-        # the DPGBDTRegressor.fit() method. TODO
-        # parameter_grid["ts_upper_bound"] = parameter_grid["l2_threshold"]
+        parameter_grid["ts_upper_bound"] = parameter_grid["l2_threshold"]
         parameter_grid["ts_gamma"] = [2, 5]
 
         df, _ = tune_grid(

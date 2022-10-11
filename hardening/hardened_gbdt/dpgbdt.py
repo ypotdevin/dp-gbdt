@@ -165,8 +165,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         if self.tree_scorer is None:
             self.tree_scorer = make_tree_scorer(
                 "dp_rmse",
-                upper_bound=self.l2_threshold,
-                # upper_bound=self.ts_upper_bound, TODO
+                upper_bound=self.ts_upper_bound,
                 gamma=self.ts_gamma,
                 rng=self.rng_,
             )
@@ -278,7 +277,7 @@ def make_tree_scorer(which: str, **kwargs) -> pyestimator.PyTreeScorer:
 
 
 def _make_tree_scorer_from_self(self) -> pyestimator.PyTreeScorer:
-    if self.tree_scorer == "dm_rmse":
+    if self.tree_scorer == "dp_rmse":
         return make_tree_scorer(
             "dp_rmse",
             upper_bound=self.ts_upper_bound,
