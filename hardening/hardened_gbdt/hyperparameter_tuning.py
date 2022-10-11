@@ -313,19 +313,19 @@ def dp_rmse_ts_grid(args) -> pd.DataFrame:
     return df
 
 
-def dp_quantile_ts(args) -> pd.DataFrame:
+def dp_quantile_ts_grid(args) -> pd.DataFrame:
     dfs = []
     total_budgets = args.privacy_budgets
     for total_budget in total_budgets:
         parameter_grid = abalone_parameter_grid()
         parameter_grid["privacy_budget"] = [total_budget]
-        parameter_grid["ensemble_rejector_budget_split"] = (1e-2, 1 - 1e-2)
+        parameter_grid["ensemble_rejector_budget_split"] = [0.6, 0.7, 0.8, 0.9]
         parameter_grid["tree_scorer"] = ["dp_quantile"]
-        parameter_grid["dp_argmax_privacy_budget"] = (1e-2, 1 - 1e-2)
-        parameter_grid["dp_argmax_stopping_prob"] = (1e-2, 1 - 1e-2)
+        parameter_grid["dp_argmax_privacy_budget"] = [0.001, 0.01]
+        parameter_grid["dp_argmax_stopping_prob"] = [0.01, 0.1, 0.2, 0.5]
         parameter_grid["ts_shift"] = [0.0]
         parameter_grid["ts_scale"] = [0.79]
-        parameter_grid["ts_upper_bound"] = (0.1, 100.0)
+        parameter_grid["ts_upper_bound"] = parameter_grid["l2_threshold"]
 
         df, _ = tune(
             dpgbdt.DPGBDTRegressor(ts_qs=[0.5, 0.90, 0.95]),
@@ -349,7 +349,7 @@ def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
         dp_rmse=dp_rmse,
         dp_rmse_ts=dp_rmse_ts,
         dp_rmse_ts_grid=dp_rmse_ts_grid,
-        dp_quantile_ts=dp_quantile_ts,
+        dp_quantile_ts=dp_quantile_ts_grid,
     )[which]
 
 
