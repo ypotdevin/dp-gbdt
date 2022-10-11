@@ -26,6 +26,18 @@ namespace tree_rejection
         double score_tree(double privacy_budget, const std::vector<double> &y, const std::vector<double> &y_pred);
     };
 
+    class DPQuantileScorer : public TreeScorer
+    {
+    private:
+        double shift, scale, upper_bound;
+        std::vector<double> qs;
+        std::mt19937 rng;
+
+    public:
+        DPQuantileScorer(double shift, double scale, const std::vector<double> &qs, double upper_bound, std::mt19937 &rng);
+        double score_tree(double privacy_budget, const std::vector<double> &y, const std::vector<double> &y_pred);
+    };
+
     class TreeRejector
     {
     public:

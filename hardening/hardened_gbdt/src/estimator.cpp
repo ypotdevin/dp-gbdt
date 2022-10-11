@@ -10,7 +10,8 @@ namespace dpgbdt
         this->params->privacy_budget = 1.0;
         this->params->ensemble_rejector_budget_split = 0.9;
         this->params->tree_rejector = std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(5, 100.0, 2.0, this->params->rng));
-        this->params->tree_scorer = std::shared_ptr<tree_rejection::DPrMSEScorer>(new tree_rejection::DPrMSEScorer(100.0, 2.0, this->params->rng));
+        //this->params->tree_scorer = std::shared_ptr<tree_rejection::DPrMSEScorer>(new tree_rejection::DPrMSEScorer(100.0, 2.0, this->params->rng));
+        this->params->tree_scorer = std::shared_ptr<tree_rejection::DPQuantileScorer>(new tree_rejection::DPQuantileScorer(0.0, 1.0, {0.5, 0.90, 0.95}, 100.0, this->params->rng));
         this->params->dp_argmax_privacy_budget = 0.1;
         this->params->stopping_prob = 0.05;
         this->params->learning_rate = 0.1;

@@ -2,12 +2,9 @@
 #define UTILS_H
 
 #include <vector>
+#include <random>
 #include <string>
 typedef std::vector<std::vector<double>> VVD;
-//#include "parameters.h"
-//#include "data.h"
-
-
 
 // method declarations
 double clamp(double n, double lower, double upper);
@@ -20,6 +17,9 @@ std::string get_time_string();
 std::vector<double> linspace(double low, double high, size_t num);
 void normalize(std::vector<double> &values);
 
-
+namespace numpy
+{
+    std::size_t choice(const std::vector<double> &probabilities, std::mt19937 &rng);
+}
 
 #endif // UTILS_H

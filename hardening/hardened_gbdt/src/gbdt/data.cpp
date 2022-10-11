@@ -446,20 +446,14 @@ DataSet DataSet::clipped_gradients(double bound)
 
 DataSet join(const DataSet &ds1, const DataSet &ds2)
 {
-    DataSet dataset;
-    dataset = ds1;
+    DataSet dataset = ds1;
 
     dataset.length = ds1.length + ds2.length;
     dataset.num_x_cols = std::max(ds1.num_x_cols, ds2.num_x_cols);
     dataset.empty = ds1.empty || ds2.empty;
-    // dataset.name = ds1.name;
-    // dataset.scaler = ds1.scaler;
 
-    // dataset.X.insert(dataset.X.begin(), ds1.X.begin(), ds1.X.end());
     dataset.X.insert(dataset.X.end(), ds2.X.begin(), ds2.X.end());
-    // dataset.y.insert(dataset.y.begin(), ds1.y.begin(), ds1.y.end());
     dataset.y.insert(dataset.y.end(), ds2.y.begin(), ds2.y.end());
-    // dataset.gradients.insert(dataset.gradients.begin(), ds1.gradients.begin(), ds1.gradients.end());
     dataset.gradients.insert(dataset.gradients.end(), ds2.gradients.begin(), ds2.gradients.end());
 
     return dataset;

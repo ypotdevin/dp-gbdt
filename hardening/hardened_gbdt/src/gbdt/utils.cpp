@@ -2,6 +2,7 @@
 #include <cmath>
 #include <numeric>
 #include <mutex>
+#include <random>
 #include "utils.h"
 #include "constant_time.h"
 
@@ -92,4 +93,13 @@ void normalize(std::vector<double> &values)
     auto normalization_factor = std::accumulate(values.begin(), values.end(), 0.0);
     std::transform(values.begin(), values.end(), values.begin(), [normalization_factor](double value)
                    { return value / normalization_factor; });
+}
+
+namespace numpy
+{
+    std::size_t choice(const std::vector<double> &probabilities, std::mt19937 &rng)
+    {
+        std::discrete_distribution<std::size_t> index_distribution(probabilities.begin(), probabilities.end());
+        return index_distribution(rng);
+    }
 }

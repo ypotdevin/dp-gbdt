@@ -34,6 +34,9 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         tr_delta: float = None,
         ts_upper_bound: float = None,
         ts_gamma: float = None,
+        ts_shift: float = None,
+        ts_scale: float = None,
+        ts_qs: list[float] = None,
     ):
         """Create a new regressor object.
 
@@ -126,6 +129,9 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         self.tr_delta = tr_delta
         self.ts_upper_bound = ts_upper_bound
         self.ts_gamma = ts_gamma
+        self.ts_shift = ts_shift
+        self.ts_scale = ts_scale
+        self.ts_qs = ts_qs
 
     def fit(self, X, y, cat_idx=None, num_idx=None):
         """Build up the gradient boosted tree ensemble.
@@ -272,16 +278,28 @@ def make_rng(seed: Optional[int] = None) -> pyestimator.PyMT19937:
 
 
 def make_tree_scorer(which: str, **kwargs) -> pyestimator.PyTreeScorer:
-    selector = dict(dp_rmse=pyestimator.PyDPrMSEScorer,)
+    selector = dict(
+        dp_rmse=pyestimator.PyDPrMSEScorer,
+        dp_quantile=pyestimator.PyDPQuantileScorer,
+    )
     return selector[which](**kwargs)
 
 
 def _make_tree_scorer_from_self(self) -> pyestimator.PyTreeScorer:
-    if self.tree_scorer == "dm_rmse":
+    if self.tree_scorer == "dp_rmse":
         return make_tree_scorer(
             "dp_rmse",
             upper_bound=self.ts_upper_bound,
             gamma=self.ts_gamma,
+            rng=self.rng_,
+        )
+    elif self.tree_scorer == "dp_quantile":
+        return make_tree_scorer(
+            "dp_quantile",
+            shift=self.ts_shift,
+            scale=self.ts_scale,
+            qs=self.ts_qs,
+            upper_bound=self.ts_upper_bound,
             rng=self.rng_,
         )
     else:

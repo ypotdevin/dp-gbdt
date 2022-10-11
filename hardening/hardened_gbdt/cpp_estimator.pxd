@@ -37,6 +37,15 @@ cdef extern from "tree_rejection.h" namespace "tree_rejection":
     cdef cppclass DPrMSEScorer(TreeScorer):
         DPrMSEScorer(double upper_bound, double gamma, mt19937 rng) except +
 
+    cdef cppclass DPQuantileScorer(TreeScorer):
+        DPQuantileScorer(
+            double shift,
+            double scale,
+            vector[double]qs,
+            double upper_bound,
+            mt19937 rng
+        ) except +
+
     cdef cppclass TreeRejector:
         pass
 
