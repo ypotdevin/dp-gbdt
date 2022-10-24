@@ -10,9 +10,18 @@ typedef std::vector<std::vector<double>> VVD;
 double clamp(double n, double lower, double upper);
 double log_sum_exp(std::vector<double> arr);
 void string_pad(std::string &str, const size_t num, const char paddingChar = ' ');
+/**
+ * @brief
+ *
+ * @param source
+ * @param target
+ * @return std::vector<double>
+ */
+std::vector<double> absolute_differences(const std::vector<double> &source, const std::vector<double> &target);
 double compute_mean(std::vector<double> &vec);
 double compute_stdev(std::vector<double> &vec, double mean);
 double compute_rmse(std::vector<double> differences);
+double compute_rmse(const std::vector<double> &source, const std::vector<double> &target);
 std::string get_time_string();
 std::vector<double> linspace(double low, double high, size_t num);
 void normalize(std::vector<double> &values);

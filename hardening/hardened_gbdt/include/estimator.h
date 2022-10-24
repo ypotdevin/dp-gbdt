@@ -33,6 +33,7 @@ namespace dpgbdt
          * budget (ensemble budget = `privacy_budget` *
          * `ensemble_rejector_budget_split`, tree rejector budget =
          * `privacy_budget` * (1.0 - `ensemble_rejector_budget_split`))
+         * @param training_variant
          * @param tree_rejector the tree rejection mechanism to use
          * @param tree_scorer the tree scoring mechanism to use
          * @param dp_argmax_privacy_budget the privacy budget required by the
@@ -56,6 +57,7 @@ namespace dpgbdt
             std::mt19937 const &rng,
             double privacy_budget,
             double ensemble_rejector_budget_split,
+            std::string training_variant,
             std::shared_ptr<tree_rejection::TreeRejector> tree_rejector,
             std::shared_ptr<tree_rejection::TreeScorer> tree_scorer,
             double dp_argmax_privacy_budget,

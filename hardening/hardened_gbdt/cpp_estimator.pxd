@@ -2,6 +2,7 @@
 
 from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
+from libcpp.string cimport string
 from libcpp cimport bool
 
 
@@ -12,6 +13,7 @@ cdef extern from "estimator.h" namespace "dpgbdt":
             mt19937 rng,
             double privacy_budget,
             double ensemble_rejector_budget_split,
+            string training_variant,
             shared_ptr[TreeRejector] tree_rejector,
             shared_ptr[TreeScorer] tree_scorer,
             double dp_argmax_privacy_budget,

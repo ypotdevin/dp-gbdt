@@ -323,7 +323,7 @@ void DataSet::shuffle_dataset(std::mt19937 rng)
     std::vector<int> indices(length);
     std::iota(std::begin(indices), std::end(indices), 0);
     std::shuffle(indices.begin(), indices.end(), rng);
-    DataSet copy = *this;
+    DataSet copy = *this; // TODO: Ist das eine deepcopy?
     for (size_t i = 0; i < indices.size(); i++)
     {
         X[i] = copy.X[indices[i]];
@@ -438,7 +438,7 @@ std::pair<DataSet, DataSet> DataSet::partition_by_gradients(std::function<bool(d
 DataSet DataSet::clipped_gradients(double bound)
 {
     DataSet clipped;
-    clipped = *this;
+    clipped = *this; // TODO: Ist das eine deepcopy?
     transform(clipped.gradients.begin(), clipped.gradients.end(), clipped.gradients.begin(), [bound](double gradient)
               { return clamp(gradient, -bound, bound); });
     return clipped;
@@ -446,7 +446,7 @@ DataSet DataSet::clipped_gradients(double bound)
 
 DataSet join(const DataSet &ds1, const DataSet &ds2)
 {
-    DataSet dataset = ds1;
+    DataSet dataset = ds1; // TODO: Ist das eine deepcopy?
 
     dataset.length = ds1.length + ds2.length;
     dataset.num_x_cols = std::max(ds1.num_x_cols, ds2.num_x_cols);

@@ -151,10 +151,23 @@ DPEnsemble::~DPEnsemble()
 void DPEnsemble::train(DataSet *dataset)
 {
     this->dataset = dataset;
-    this->init_score = params->task->compute_init_score(dataset->y);
+    this->init_score = this->params->task->compute_init_score(dataset->y);
     LOG_DEBUG("Training initialized with score: {1}", init_score);
-    //this->vanilla_training_loop();
-    this->tree_rejection_training_loop();
+    auto flavor = this->params->training_variant;
+    if (flavor == "vanilla")
+    {
+        LOG_INFO("Running vanilla training (no optimization).");
+        this->vanilla_training_loop();
+    }
+    else if (flavor == "dp_argmax_scoring")
+    {
+        LOG_INFO("Running optimized training.");
+        this->dp_argmax_scoring_training_loop();
+    }
+    else
+    {
+        throw std::runtime_error("Training mode not recognized.");
+    }
 }
 
 // Predict values from the ensemble of gradient boosted trees
@@ -220,7 +233,7 @@ void DPEnsemble::vanilla_training_loop()
     }
 }
 
-void DPEnsemble::tree_rejection_training_loop()
+void DPEnsemble::dp_argmax_scoring_training_loop()
 {
     auto mp = *this->params;
     auto dataset = *this->dataset;
@@ -230,7 +243,7 @@ void DPEnsemble::tree_rejection_training_loop()
     auto n_steps = mp.n_trees_to_accept;
     auto step_budget = (mp.privacy_budget - mp.dp_argmax_privacy_budget) / 2.0; // parallel composition
     auto tree_budget = step_budget * mp.ensemble_rejector_budget_split;
-    auto score_budget = step_budget - tree_budget;
+    auto score_budget = (step_budget - tree_budget) / static_cast<double>(mp.n_trees_to_accept); // division due to repetitive usage of dataset.X for tree scoring
     std::bernoulli_distribution biased_coin{mp.stopping_prob};
 
     int T = std::max((1.0 / mp.stopping_prob) * std::log(2.0 / mp.dp_argmax_privacy_budget), 1.0 + 1.0 / (e * mp.stopping_prob));
@@ -268,8 +281,7 @@ void DPEnsemble::tree_rejection_training_loop()
                 break; // early unsuccessful exit, reject tree
             }
             this->trees.pop_back(); // late unsuccessful exit, reject tree
-                LOG_INFO("generalized_dp_argmax: late unsuccessful exit");
-
+            LOG_INFO("generalized_dp_argmax: late unsuccessful exit");
         }
 
         dataset = remaining_dataset;

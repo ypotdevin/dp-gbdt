@@ -16,6 +16,7 @@ struct ModelParams
     int n_trees_to_accept = 5;
     double learning_rate = 0.1;
     double privacy_budget = 1.0;
+    std::string training_variant = "dp_argmax_scoring";
     double ensemble_rejector_budget_split = 0.9;
     std::shared_ptr<tree_rejection::TreeRejector> tree_rejector;
     std::shared_ptr<tree_rejection::TreeScorer> tree_scorer;
@@ -45,7 +46,6 @@ struct ModelParams
     std::vector<int> cat_idx;
     std::vector<int> num_idx;
 };
-
 
 std::ostream &operator<<(std::ostream &os, const ModelParams &mp);
 

@@ -6,7 +6,6 @@
 #include "utils.h"
 #include "constant_time.h"
 
-
 /** Methods */
 
 // put a value between two bounds, not in std::algorithm in c++11
@@ -40,6 +39,15 @@ double log_sum_exp(std::vector<double> vec)
     }
 }
 
+std::vector<double> absolute_differences(const std::vector<double> &source, const std::vector<double> &target)
+{
+    std::vector<double> abs_errors(source.size());
+    std::transform(source.begin(), source.end(),
+                   target.begin(), abs_errors.begin(), [](double s, double t)
+                   { return std::abs(s - t); });
+    return abs_errors;
+}
+
 double compute_mean(std::vector<double> &vec)
 {
     double sum = std::accumulate(vec.begin(), vec.end(), 0.0);
@@ -59,6 +67,12 @@ double compute_rmse(std::vector<double> differences)
     auto mean = compute_mean(differences);
     auto rmse = std::sqrt(mean);
     return rmse;
+}
+
+double compute_rmse(const std::vector<double> &source, const std::vector<double> &target)
+{
+    auto abs_errors = absolute_differences(source, target);
+    return compute_rmse(abs_errors);
 }
 
 std::string get_time_string()

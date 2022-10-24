@@ -146,8 +146,8 @@ namespace tree_rejection
         }
 
         auto qs_ = this->qs;
-        qs.insert(qs.begin(), 0.0);
-        qs.push_back(1.0);
+        qs_.insert(qs_.begin(), 0.0);
+        qs_.push_back(1.0);
         quantiles.push_back(quantiles.back());
         double sum = 0.0;
         for (std::size_t i = 1; i < qs_.size(); ++i)

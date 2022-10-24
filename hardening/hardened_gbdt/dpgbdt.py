@@ -13,6 +13,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         seed: Optional[int] = None,
         privacy_budget: float = 1.0,
         ensemble_rejector_budget_split: float = 0.9,
+        training_variant: str = "dp_argmax_scoring",
         tree_rejector: Optional[Union[str, pyestimator.PyTreeRejector]] = None,
         tree_scorer: Optional[Union[str, pyestimator.PyTreeScorer]] = None,
         dp_argmax_privacy_budget: float = 0.1,
@@ -27,15 +28,16 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         gradient_filtering: bool = True,
         leaf_clipping: bool = True,
         use_decay: bool = False,
+        # prototype arguments
         tr_qs=None,
         tr_coefficients=None,
         tr_U: float = None,
         tr_gamma: float = None,
         tr_delta: float = None,
-        ts_upper_bound: float = None,
-        ts_gamma: float = None,
-        ts_shift: float = None,
-        ts_scale: float = None,
+        ts_upper_bound: float = 100,
+        ts_gamma: float = 2.0,
+        ts_shift: float = 0.0,
+        ts_scale: float = 1.0,
         ts_qs: list[float] = None,
     ):
         """Create a new regressor object.
@@ -59,6 +61,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
                 tree rejector budget = `privacy_budget` * (1.0 -
                 `ensemble_rejector_budget_split`)).
                 Defaults to 0.9.
+            training_variant (str, optional):
             tree_rejector (pyestimator.PyTreeRejector | str, optional):
                 The tree rejector used to optimize the ensemble. May
                 also be the name of a rejector, which is then created at
@@ -108,14 +111,15 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         self.seed = seed
         self.privacy_budget = privacy_budget
         self.ensemble_rejector_budget_split = ensemble_rejector_budget_split
+        self.training_variant = training_variant
         self.tree_rejector = tree_rejector
         self.tree_scorer = tree_scorer
         self.dp_argmax_privacy_budget = dp_argmax_privacy_budget
         self.dp_argmax_stopping_prob = dp_argmax_stopping_prob
         self.learning_rate = learning_rate
-        self.n_trees_to_accept = n_trees_to_accept
-        self.max_depth = max_depth
-        self.min_samples_split = min_samples_split
+        self.n_trees_to_accept = int(n_trees_to_accept)
+        self.max_depth = int(max_depth)
+        self.min_samples_split = int(min_samples_split)
         self.l2_threshold = l2_threshold
         self.l2_lambda = l2_lambda
         self.balance_partition = balance_partition
@@ -188,6 +192,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
             rng=self.rng_,
             privacy_budget=self.privacy_budget,
             ensemble_rejector_budget_split=self.ensemble_rejector_budget_split,
+            training_variant=self.training_variant,
             tree_rejector=self.tree_rejector,
             dp_argmax_privacy_budget=self.dp_argmax_privacy_budget,
             dp_argmax_stopping_prob=self.dp_argmax_stopping_prob,
@@ -273,7 +278,7 @@ def make_rng(seed: Optional[int] = None) -> pyestimator.PyMT19937:
     if seed is None:
         rng = default_rng()
         # Stay within the the bounds of mt19937's input seed (C++)
-        seed = rng.integers(2 ** 30 - 1)
+        seed = rng.integers(2**30 - 1)
     return pyestimator.PyMT19937(seed)
 
 
@@ -345,4 +350,3 @@ def _make_tree_rejector_from_self(self) -> pyestimator.PyTreeRejector:
         raise NotImplementedError(
             f"Tree rejector {self.tree_rejector} not implemented!"
         )
-

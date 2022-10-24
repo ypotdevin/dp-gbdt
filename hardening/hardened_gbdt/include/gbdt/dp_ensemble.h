@@ -41,7 +41,7 @@ private:
      * @return vector<DPTree> a readily trained ensemble of DP trees
      */
     void vanilla_training_loop();
-    //vector<DPTree> leaky_opt_training_loop(ModelParams &mp, DataSet &ds);
+    // vector<DPTree> leaky_opt_training_loop(ModelParams &mp, DataSet &ds);
 
     /**
      * @brief Training mostly as Li et al. described it originally, but performing
@@ -50,6 +50,6 @@ private:
      *
      * @return vector<DPTree> a readily trained ensemble of DP trees
      */
-    void tree_rejection_training_loop();
+    void dp_argmax_scoring_training_loop();
 };
 #endif // DPENSEMBLE_H

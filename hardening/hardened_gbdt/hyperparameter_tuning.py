@@ -38,7 +38,7 @@ def tune(
     )
     tune_search.fit(X_train, y_train, cat_idx=cat_idx, num_idx=num_idx)
     df = pd.DataFrame(tune_search.cv_results_)
-    return (df, tune_search.best_params_)
+    return df
 
 
 def tune_grid(
@@ -66,7 +66,7 @@ def tune_grid(
     )
     tune_search.fit(X_train, y_train, cat_idx=cat_idx, num_idx=num_idx)
     df = pd.DataFrame(tune_search.cv_results_)
-    return (df, tune_search.best_params_)
+    return df
 
 
 def get_abalone() -> Tuple[np.ndarray, np.ndarray, list[int], list[int]]:
@@ -190,7 +190,7 @@ def baseline(args) -> pd.DataFrame:
         parameter_grid["tree_rejector"] = [
             dpgbdt.make_tree_rejector("constant", decision=False)
         ]
-        df, _ = tune(
+        df = tune(
             dpgbdt.DPGBDTRegressor(),
             get_abalone,
             parameter_grid,
@@ -217,7 +217,7 @@ def quantile_lin_comb(args) -> pd.DataFrame:
             coefficients=[0.23837927, 0.29496094, 0.16520499],
         )
         parameter_grid["tree_rejector"] = [tree_rejector]
-        df, _ = tune(
+        df = tune(
             dpgbdt.DPGBDTRegressor(),
             get_abalone,
             parameter_grid,
@@ -243,7 +243,7 @@ def dp_rmse(args) -> pd.DataFrame:
         parameter_grid["tr_U"] = (0.1, 100.0)
         parameter_grid["tr_gamma"] = (1 + 1e-2, 10.0)
 
-        df, _ = tune(
+        df = tune(
             dpgbdt.DPGBDTRegressor(),
             get_abalone,
             parameter_grid,
@@ -271,7 +271,7 @@ def dp_rmse_ts(args) -> pd.DataFrame:
         parameter_grid["ts_upper_bound"] = (0.1, 100.0)
         parameter_grid["ts_gamma"] = (1e-2, 1 - 1e-2)
 
-        df, _ = tune(
+        df = tune(
             dpgbdt.DPGBDTRegressor(),
             get_abalone,
             parameter_grid,
@@ -299,7 +299,7 @@ def dp_rmse_ts_grid(args) -> pd.DataFrame:
         parameter_grid["ts_upper_bound"] = parameter_grid["l2_threshold"]
         parameter_grid["ts_gamma"] = [2, 5]
 
-        df, _ = tune_grid(
+        df = tune_grid(
             dpgbdt.DPGBDTRegressor(),
             get_abalone,
             parameter_grid,
@@ -327,12 +327,11 @@ def dp_quantile_ts_grid(args) -> pd.DataFrame:
         parameter_grid["ts_scale"] = [0.79]
         parameter_grid["ts_upper_bound"] = parameter_grid["l2_threshold"]
 
-        df, _ = tune(
+        df = tune_grid(
             dpgbdt.DPGBDTRegressor(ts_qs=[0.5, 0.90, 0.95]),
             get_abalone,
             parameter_grid,
             label=args.label,
-            n_trials=args.n_trials,
             local_dir=args.local_dir,
             n_jobs=args.num_cores,
             time_budget_s=args.time_budget_s // len(total_budgets),
@@ -349,7 +348,7 @@ def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
         dp_rmse=dp_rmse,
         dp_rmse_ts=dp_rmse_ts,
         dp_rmse_ts_grid=dp_rmse_ts_grid,
-        dp_quantile_ts=dp_quantile_ts_grid,
+        dp_quantile_ts_grid=dp_quantile_ts_grid,
     )[which]
 
 
