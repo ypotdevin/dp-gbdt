@@ -2,12 +2,15 @@
 
 #include "estimator.h"
 #include "spdlog/spdlog.h"
+#include "utils.h"
 
-int main(int argc, char **argv)
+// only for diagnosis
+#include "dataset_parser.h"
+#include "parameters.h"
+
+void basic_run()
 {
     spdlog::set_level(spdlog::level::info);
-
-    dpgbdt::Estimator regressor;
 
     std::vector<std::vector<double>> X{
         {0.0, -2.3, 0.11},
@@ -19,10 +22,29 @@ int main(int argc, char **argv)
     std::vector<int> cat_idx{0};
     std::vector<int> num_idx{1, 2, 3};
 
+    dpgbdt::Estimator regressor;
     regressor.fit(X, y, cat_idx, num_idx);
     auto y_pred = regressor.predict(X);
-    std::transform(y_pred.begin(), y_pred.end(),
-                   y.begin(), y_pred.begin(), std::minus<double>());
-    auto rmse = compute_rmse(y_pred);
+    auto rmse = compute_rmse(y, y_pred);
     std::cout << rmse << std::endl;
+}
+
+void diagnosis_run()
+{
+    spdlog::set_level(spdlog::level::debug);
+
+    ModelParams parameters;
+    DataSet *dataset = Parser::get_abalone(parameters, 50);
+
+    dpgbdt::Estimator regressor;
+    regressor.fit(dataset->X, dataset->y, parameters.cat_idx, parameters.num_idx);
+    auto y_pred = regressor.predict(dataset->X);
+    auto rmse = compute_rmse(dataset->y, y_pred);
+    std::cout << rmse << std::endl;
+    delete dataset;
+}
+
+int main(int argc, char **argv)
+{
+    diagnosis_run();
 }
