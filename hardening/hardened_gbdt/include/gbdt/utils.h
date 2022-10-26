@@ -8,6 +8,7 @@ typedef std::vector<std::vector<double>> VVD;
 
 // method declarations
 double clamp(double n, double lower, double upper);
+void clamp(std::vector<double> &to_clamp, double lower, double upper);
 double log_sum_exp(std::vector<double> arr);
 void string_pad(std::string &str, const size_t num, const char paddingChar = ' ');
 /**

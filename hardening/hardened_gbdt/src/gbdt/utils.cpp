@@ -16,6 +16,12 @@ double clamp(double n, double lower, double upper)
     return n;
 }
 
+void clamp(std::vector<double> &to_clamp, double lower, double upper)
+{
+    std::transform(to_clamp.begin(), to_clamp.end(), to_clamp.begin(), [lower, upper](double e)
+                   { return clamp(e, lower, upper); });
+}
+
 double log_sum_exp(std::vector<double> vec)
 {
     size_t count = vec.size();
