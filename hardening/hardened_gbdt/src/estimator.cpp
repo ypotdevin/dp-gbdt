@@ -78,7 +78,7 @@ namespace dpgbdt
         this->params->cat_idx = cat_idx;
         this->params->num_idx = num_idx;
         DataSet dataset = DataSet(X, y);
-        this->ensemble->train(&dataset);
+        this->ensemble->train(dataset);
         return *this;
     }
 
