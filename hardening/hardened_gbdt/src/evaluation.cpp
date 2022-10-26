@@ -27,7 +27,6 @@ namespace evaluation
                 "param_l2_threshold",
                 "param_learning_rate",
                 "param_max_depth",
-                "param_n_trials",
                 "param_n_trees_to_accept",
                 "param_ensemble_privacy_budget",
                 "param_ensemble_rejector_budget_split",
@@ -54,7 +53,6 @@ namespace evaluation
                 << parameters.l2_threshold
                 << parameters.learning_rate
                 << parameters.max_depth
-                << parameters.n_trials
                 << parameters.n_trees_to_accept
                 << parameters.privacy_budget
                 << parameters.ensemble_rejector_budget_split

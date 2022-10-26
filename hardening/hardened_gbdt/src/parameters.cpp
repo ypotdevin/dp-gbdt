@@ -4,11 +4,9 @@
 #include "spdlog/spdlog.h"
 #include "tree_rejection.h"
 
-
 std::ostream &operator<<(std::ostream &os, const ModelParams &mp)
 {
     return os << "ModelParams: " << std::endl
-              << "    n_trials: " << mp.n_trials << std::endl
               << "    n_trees_to_accept: " << mp.n_trees_to_accept << std::endl
               << "    learning_rate: " << mp.learning_rate << std::endl
               << "    privacy_budget: " << mp.privacy_budget << std::endl
@@ -19,4 +17,12 @@ std::ostream &operator<<(std::ostream &os, const ModelParams &mp)
               << "    l2_threshold: " << mp.l2_threshold << std::endl
               << "    gradient_filtering: " << mp.gradient_filtering << std::endl
               << "    leaf_clipping: " << mp.leaf_clipping << std::endl;
+}
+
+std::ostream &operator<<(std::ostream &os, const TreeParams &tp)
+{
+    return os << "TreeParams: " << std::endl
+              << "    delta_g: " << tp.delta_g << std::endl
+              << "    delta_v: " << tp.delta_v << std::endl
+              << "    tree_privacy_budget: " << tp.tree_privacy_budget << std::endl;
 }

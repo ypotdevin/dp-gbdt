@@ -12,7 +12,6 @@ struct ModelParams
 {
     // primary model parameters
     std::mt19937 rng;
-    int n_trials = 50;
     int n_trees_to_accept = 5;
     double learning_rate = 0.1;
     double privacy_budget = 1.0;
@@ -56,5 +55,7 @@ struct TreeParams
     double delta_v;
     double tree_privacy_budget;
 };
+
+std::ostream &operator<<(std::ostream &os, const TreeParams &tp);
 
 #endif /* PARAMETERS_H */
