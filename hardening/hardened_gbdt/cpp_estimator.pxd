@@ -2,6 +2,7 @@
 
 from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
+from libcpp.string cimport string
 from libcpp cimport bool
 
 
@@ -12,6 +13,7 @@ cdef extern from "estimator.h" namespace "dpgbdt":
             mt19937 rng,
             double privacy_budget,
             double ensemble_rejector_budget_split,
+            string training_variant,
             shared_ptr[TreeRejector] tree_rejector,
             shared_ptr[TreeScorer] tree_scorer,
             double dp_argmax_privacy_budget,
@@ -36,6 +38,15 @@ cdef extern from "tree_rejection.h" namespace "tree_rejection":
 
     cdef cppclass DPrMSEScorer(TreeScorer):
         DPrMSEScorer(double upper_bound, double gamma, mt19937 rng) except +
+
+    cdef cppclass DPQuantileScorer(TreeScorer):
+        DPQuantileScorer(
+            double shift,
+            double scale,
+            vector[double]qs,
+            double upper_bound,
+            mt19937 rng
+        ) except +
 
     cdef cppclass TreeRejector:
         pass

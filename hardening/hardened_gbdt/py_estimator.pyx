@@ -3,12 +3,14 @@
 
 cimport cython
 cimport numpy as np
-from cpp_estimator cimport (Estimator, TreeScorer, DPrMSEScorer, TreeRejector,
-                            ConstantRejector, QuantileLinearCombinationRejector,
+from cpp_estimator cimport (Estimator, TreeScorer, DPrMSEScorer, DPQuantileScorer,
+                            TreeRejector, ConstantRejector,
+                            QuantileLinearCombinationRejector,
                             DPrMSERejector, ApproxDPrMSERejector, mt19937)
 from libcpp cimport bool
 from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
+from libcpp.string cimport string
 
 import numpy as np
 
@@ -47,6 +49,42 @@ cdef class PyDPrMSEScorer(PyTreeScorer):
     def __repr__(self):
         return f"PyDPrMSEScorer(upper_bound={self.upper_bound},"\
                f"gamma={self.gamma},rng={self.rng})"
+
+cdef class PyDPQuantileScorer(PyTreeScorer):
+    cdef double shift, scale, upper_bound
+    cdef list qs
+    cdef PyMT19937 rng
+
+    def __cinit__(
+        self,
+        double shift,
+        double scale,
+        list qs,
+        double upper_bound,
+        PyMT19937 rng
+    ):
+        self.shift = shift
+        self.scale = scale
+        self.qs = qs
+        self.upper_bound = upper_bound
+        self.rng = rng
+        cdef vector[double] qs_vec = qs
+        self.sptr_ts = shared_ptr[TreeScorer](
+            new DPQuantileScorer(shift, scale, qs_vec, upper_bound, rng.c_rng)
+        )
+
+    def __reduce__(self):
+        return (
+            self.__class__,
+            (self.shift, self.scale, self.qs, self.upper_bound, self.rng)
+        )
+
+    def __repr__(self):
+        return f"PyDPQuantileScorer(shift={self.shift},"\
+               f"scale={self.scale},"\
+               f"qs={self.qs},"\
+               f"upper_bound={self.upper_bound},"\
+               f"rng={self.rng})"
 
 cdef class PyTreeRejector:
     cdef shared_ptr[TreeRejector] sptr_tr
@@ -135,6 +173,7 @@ cdef class PyEstimator:
     cdef Estimator* estimator
     cdef PyMT19937 rng
     cdef double privacy_budget, ensemble_rejector_budget_split, dp_argmax_privacy_budget, dp_argmax_stopping_prob, learning_rate, l2_threshold, l2_lambda
+    cdef string training_variant
     cdef PyTreeRejector tree_rejector
     cdef PyTreeScorer tree_scorer
     cdef int n_trees_to_accept, max_depth, min_samples_split
@@ -145,6 +184,7 @@ cdef class PyEstimator:
         PyMT19937 rng,
         double privacy_budget,
         double ensemble_rejector_budget_split,
+        str training_variant,
         PyTreeRejector tree_rejector,
         double dp_argmax_privacy_budget,
         double dp_argmax_stopping_prob,
@@ -163,6 +203,7 @@ cdef class PyEstimator:
         self.rng = rng
         self.privacy_budget = privacy_budget
         self.ensemble_rejector_budget_split = ensemble_rejector_budget_split
+        self.training_variant = training_variant.encode('UTF-8') # converting to bytes
         self.tree_rejector = tree_rejector
         self.tree_scorer = tree_scorer
         self.dp_argmax_privacy_budget = dp_argmax_privacy_budget
@@ -181,6 +222,7 @@ cdef class PyEstimator:
             rng=rng.c_rng,
             privacy_budget=privacy_budget,
             ensemble_rejector_budget_split=ensemble_rejector_budget_split,
+            training_variant=training_variant.encode('UTF-8'), # converting to bytes
             tree_rejector=tree_rejector.sptr_tr,
             tree_scorer=tree_scorer.sptr_ts,
             dp_argmax_privacy_budget=dp_argmax_privacy_budget,
@@ -208,6 +250,7 @@ cdef class PyEstimator:
                 self.rng,
                 self.privacy_budget,
                 self.ensemble_rejector_budget_split,
+                self.training_variant,
                 self.tree_rejector,
                 self.dp_argmax_privacy_budget,
                 self.dp_argmax_stopping_prob,
@@ -229,6 +272,7 @@ cdef class PyEstimator:
         return f"PyEstimator(rng={self.rejection_budget},"\
                f"privacy_budget={self.privacy_budget},"\
                f"ensemble_rejector_budget_split={self.ensemble_rejector_budget_split},"\
+               f"training_variant={self.training_variant},"\
                f"tree_rejector={self.tree_rejector},"\
                f"dp_argmax_privacy_budget={self.dp_argmax_privacy_budget},"\
                f"dp_argmax_stopping_prob={self.dp_argmax_stopping_prob},"\

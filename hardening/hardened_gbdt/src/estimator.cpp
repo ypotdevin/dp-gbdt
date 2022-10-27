@@ -7,6 +7,7 @@ namespace dpgbdt
     {
         this->params = std::shared_ptr<ModelParams>(new ModelParams());
         this->params->rng = std::mt19937(std::random_device{}());
+        this->params->training_variant = "dp_argmax_scoring";
         this->params->privacy_budget = 1.0;
         this->params->ensemble_rejector_budget_split = 0.9;
         this->params->tree_rejector = std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(5, 100.0, 2.0, this->params->rng));
@@ -30,6 +31,7 @@ namespace dpgbdt
         std::mt19937 const &rng,
         double privacy_budget,
         double ensemble_rejector_budget_split,
+        std::string training_variant,
         std::shared_ptr<tree_rejection::TreeRejector> tree_rejector,
         std::shared_ptr<tree_rejection::TreeScorer> tree_scorer,
         double dp_argmax_privacy_budget,
@@ -49,6 +51,7 @@ namespace dpgbdt
         this->params->rng = rng;
         this->params->privacy_budget = privacy_budget;
         this->params->ensemble_rejector_budget_split = ensemble_rejector_budget_split;
+        this->params->training_variant = training_variant;
         this->params->tree_rejector = tree_rejector;
         this->params->tree_scorer = tree_scorer;
         this->params->dp_argmax_privacy_budget = dp_argmax_privacy_budget;
@@ -75,7 +78,7 @@ namespace dpgbdt
         this->params->cat_idx = cat_idx;
         this->params->num_idx = num_idx;
         DataSet dataset = DataSet(X, y);
-        this->ensemble->train(&dataset);
+        this->ensemble->train(dataset);
         return *this;
     }
 

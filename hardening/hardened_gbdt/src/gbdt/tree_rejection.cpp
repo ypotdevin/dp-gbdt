@@ -4,6 +4,7 @@
 #include <iterator>
 #include <limits>
 #include <ostream>
+#include <random>
 #include <sstream>
 
 #include "tree_rejection.h"
@@ -60,6 +61,43 @@ namespace
             return oss.str();
         }
     }
+
+    /**
+     * @param q
+     * @param lower_bound
+     * @param values assumed to be sorted!
+     * @param upper_bound
+     * @param privacy_budget
+     * @param rng
+     * @return double a DP approximate of the q-quantile of values
+     */
+    double exp_q(double q, double lower_bound, const std::vector<double> &values, double upper_bound, double privacy_budget, std::mt19937 &rng)
+    {
+        auto samples = values;
+        samples.insert(samples.begin(), lower_bound);
+        samples.push_back(upper_bound);
+        std::size_t n = samples.size() - 1;
+        std::size_t m = std::floor((n + 1) * q); // this prefers the lower quantile
+        std::vector<double> probs(n);
+        for (std::size_t i = 0; i < m; ++i)
+        {
+            double width = samples.at(i + 1) - samples.at(i);
+            double utility = (i + 1) - m;
+            double prob = width * std::exp(privacy_budget * utility / 2.0);
+            probs.at(i) = std::max(prob, 0.0);
+        }
+        for (std::size_t i = m; i < n; i++)
+        {
+            double width = samples.at(i + 1) - samples.at(i);
+            double utility = m - i;
+            double prob = width * std::exp(privacy_budget * utility / 2.0);
+            probs.at(i) = std::max(prob, 0.0);
+        }
+        auto dp_q_index = numpy::choice(probs, rng);
+        std::uniform_real_distribution<double> bin(samples.at(dp_q_index), samples.at(dp_q_index + 1));
+        auto dp_q = bin(rng);
+        return dp_q;
+    }
 }
 
 namespace tree_rejection
@@ -78,6 +116,45 @@ namespace tree_rejection
                        { return std::abs(_y - _y_pred); });
         auto score = dp_rms_custom_cauchy(abs_errors, privacy_budget, this->upper_bound, *this->cc);
         LOG_INFO("### diagnosis value 02 ### - rmse_approx={1}", score);
+        return score;
+    }
+
+    DPQuantileScorer::DPQuantileScorer(double shift, double scale, const std::vector<double> &qs, double upper_bound, std::mt19937 &rng)
+    {
+        this->shift = shift;
+        this->scale = scale;
+        this->qs = qs;
+        this->upper_bound = upper_bound;
+        this->rng = rng;
+    }
+
+    double DPQuantileScorer::score_tree(double privacy_budget, const std::vector<double> &y, const std::vector<double> &y_pred)
+    {
+        std::vector<double> abs_errors(y.size());
+        std::transform(y.begin(), y.end(),
+                       y_pred.begin(), abs_errors.begin(), [](double _y, double _y_pred)
+                       { return std::abs(_y - _y_pred); });
+        std::sort(abs_errors.begin(), abs_errors.end());
+
+        std::size_t n = this->qs.size();
+        std::vector<double> quantiles;
+        auto per_quantile_budget = privacy_budget / n;
+        for (auto q : this->qs)
+        {
+            quantiles.push_back(
+                exp_q(q, 0.0, abs_errors, this->upper_bound, per_quantile_budget, this->rng));
+        }
+
+        auto qs_ = this->qs;
+        qs_.insert(qs_.begin(), 0.0);
+        qs_.push_back(1.0);
+        quantiles.push_back(quantiles.back());
+        double sum = 0.0;
+        for (std::size_t i = 1; i < qs_.size(); ++i)
+        {
+            sum += (qs_.at(i) - qs_.at(i - 1)) * std::pow(quantiles.at(i - 1), 2.0);
+        }
+        auto score = this->shift + this->scale * std::sqrt(sum);
         return score;
     }
 

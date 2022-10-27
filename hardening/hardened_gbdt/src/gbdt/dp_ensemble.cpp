@@ -93,7 +93,7 @@ namespace
         int rows_per_step;
         if (mp.balance_partition)
         {
-            rows_per_step = dataset.length / n_steps;
+            rows_per_step = dataset.length / (n_steps - tree_index);
         }
         else
         {
@@ -148,13 +148,26 @@ DPEnsemble::~DPEnsemble()
 /** Methods */
 // Note: The training has side effects on the dataset (affecting especially
 // the gradients and the dataset rows).
-void DPEnsemble::train(DataSet *dataset)
+void DPEnsemble::train(DataSet &dataset)
 {
-    this->dataset = dataset;
-    this->init_score = params->task->compute_init_score(dataset->y);
+    this->init_score = this->params->task->compute_init_score(dataset.y);
+    this->init_gradients(dataset);
     LOG_DEBUG("Training initialized with score: {1}", init_score);
-    //this->vanilla_training_loop();
-    this->tree_rejection_training_loop();
+    auto flavor = this->params->training_variant;
+    if (flavor == "vanilla")
+    {
+        LOG_INFO("Running vanilla training (no optimization).");
+        this->vanilla_training_loop(dataset);
+    }
+    else if (flavor == "dp_argmax_scoring")
+    {
+        LOG_INFO("Running optimized training.");
+        this->dp_argmax_scoring_training_loop(dataset);
+    }
+    else
+    {
+        throw std::runtime_error("Training mode not recognized.");
+    }
 }
 
 // Predict values from the ensemble of gradient boosted trees
@@ -178,70 +191,55 @@ vector<double> DPEnsemble::predict(VVD &X)
     return predictions;
 }
 
-void DPEnsemble::update_gradients(vector<double> &gradients, int trial_index)
+void DPEnsemble::vanilla_training_loop(DataSet &dataset)
 {
-    if (trial_index == 0)
-    {
-        // init gradients
-        vector<double> init_scores(this->dataset->length, this->init_score);
-        gradients = params->task->compute_gradients(this->dataset->y, init_scores);
-    }
-    else
-    {
-        // update gradients
-        vector<double> y_pred = predict(this->dataset->X);
-        gradients = (this->params->task)->compute_gradients(this->dataset->y, y_pred);
-    }
-}
-
-void DPEnsemble::vanilla_training_loop()
-{
+    auto original_dataset_length = dataset.length;
     auto mp = *this->params;
-    auto dataset = *this->dataset;
     dataset.shuffle_dataset(mp.rng);
     auto n_steps = mp.n_trees_to_accept;
     auto step_budget = mp.privacy_budget; // parallel composition
 
     for (int tree_index = 0; tree_index < n_steps; ++tree_index)
     {
-        this->update_gradients(dataset.gradients, tree_index);
+        LOG_INFO("tree_index={1}", tree_index);
+        this->update_gradients(dataset);
 
         auto tree_params = setup_tree_params(mp, step_budget, tree_index);
 
-        auto p = setup_tree_data(dataset, mp, n_steps, this->dataset->length, tree_index);
+        auto p = setup_tree_data(dataset, mp, n_steps, original_dataset_length, tree_index);
         auto tree_dataset = p.first;
         auto remaining_dataset = p.second;
 
         /* actual tree construction */
-        DPTree tree = DPTree(&mp, &tree_params, &tree_dataset, tree_index, this->grid);
+        DPTree tree = DPTree(this->params, &tree_params, &tree_dataset, tree_index, this->grid);
         tree.fit();
         this->trees.push_back(tree);
         dataset = remaining_dataset;
     }
 }
 
-void DPEnsemble::tree_rejection_training_loop()
+void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
 {
+    auto original_dataset_length = dataset.length;
     auto mp = *this->params;
-    auto dataset = *this->dataset;
     dataset.shuffle_dataset(mp.rng);
 
     auto score = this->init_score;
     auto n_steps = mp.n_trees_to_accept;
     auto step_budget = (mp.privacy_budget - mp.dp_argmax_privacy_budget) / 2.0; // parallel composition
     auto tree_budget = step_budget * mp.ensemble_rejector_budget_split;
-    auto score_budget = step_budget - tree_budget;
+    auto score_budget = (step_budget - tree_budget) / static_cast<double>(mp.n_trees_to_accept); // division due to repetitive usage of dataset.X for tree scoring
     std::bernoulli_distribution biased_coin{mp.stopping_prob};
 
     int T = std::max((1.0 / mp.stopping_prob) * std::log(2.0 / mp.dp_argmax_privacy_budget), 1.0 + 1.0 / (e * mp.stopping_prob));
     LOG_INFO("### diagnosis value 08 ### - T={1}", T);
     for (int tree_index = 0; tree_index < n_steps; ++tree_index)
     {
-        this->update_gradients(dataset.gradients, tree_index);
+        this->update_gradients(dataset);
 
         auto tree_params = setup_tree_params(mp, step_budget, tree_index);
 
-        auto p = setup_tree_data(dataset, mp, n_steps, this->dataset->length, tree_index);
+        auto p = setup_tree_data(dataset, mp, n_steps, original_dataset_length, tree_index);
         auto tree_dataset = p.first;
         auto remaining_dataset = p.second;
 
@@ -249,7 +247,7 @@ void DPEnsemble::tree_rejection_training_loop()
         for (int trial = 0; trial < T; ++trial)
         {
             /* actual tree construction */
-            DPTree tree = DPTree(&mp, &tree_params, &tree_dataset, tree_index, this->grid);
+            DPTree tree = DPTree(this->params, &tree_params, &tree_dataset, tree_index, this->grid);
             tree.fit();
             this->trees.push_back(tree);
 
@@ -268,10 +266,21 @@ void DPEnsemble::tree_rejection_training_loop()
                 break; // early unsuccessful exit, reject tree
             }
             this->trees.pop_back(); // late unsuccessful exit, reject tree
-                LOG_INFO("generalized_dp_argmax: late unsuccessful exit");
-
+            LOG_INFO("generalized_dp_argmax: late unsuccessful exit");
         }
 
         dataset = remaining_dataset;
     }
+}
+
+void DPEnsemble::init_gradients(DataSet &ds)
+{
+    std::vector<double> init_scores(ds.length, this->init_score);
+    ds.gradients = params->task->compute_gradients(ds.y, init_scores);
+}
+
+void DPEnsemble::update_gradients(DataSet &ds)
+{
+    auto y_pred = this->predict(ds.X);
+    ds.gradients = (this->params->task)->compute_gradients(ds.y, y_pred);
 }
