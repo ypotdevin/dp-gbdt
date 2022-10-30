@@ -102,12 +102,14 @@ def parse_args():
         description="Perform Bayesian optimization over the hyperparameter space."
     )
     parser.add_argument(
-        "experiment", type=str, help="Which experiment/benchmark to execute.",
+        "experiment",
+        type=str,
+        help="Which experiment/benchmark to execute.",
     )
     parser.add_argument(
         "--budget",
         type=float,
-        default=[0.1, 0.5, 1.0, 2.0],
+        default=[],
         dest="privacy_budgets",
         action="append",
     )
@@ -180,25 +182,25 @@ def abalone_parameter_grid():
     return parameter_grid
 
 
-def baseline(args) -> pd.DataFrame:
+def baseline_grid(args) -> pd.DataFrame:
     dfs = []
-    ensemble_budgets = [0.1, 0.5, 1.0, 2.0]
-    for ensemble_budget in ensemble_budgets:
+    total_budgets = args.privacy_budgets
+    for ensemble_budget in total_budgets:
         parameter_grid = abalone_parameter_grid()
+        parameter_grid["training_variant"] = ["vanilla"]
         parameter_grid["privacy_budget"] = [ensemble_budget]
         parameter_grid["ensemble_rejector_budget_split"] = [1.0]
         parameter_grid["tree_rejector"] = [
             dpgbdt.make_tree_rejector("constant", decision=False)
         ]
-        df = tune(
+        df = tune_grid(
             dpgbdt.DPGBDTRegressor(),
             get_abalone,
             parameter_grid,
             label=args.label,
-            n_trials=args.n_trials,
             local_dir=args.local_dir,
             n_jobs=args.num_cores,
-            time_budget_s=args.time_budget_s // len(ensemble_budgets),
+            time_budget_s=args.time_budget_s // len(total_budgets),
         )
         dfs.append(df)
     df = pd.concat(dfs)
@@ -343,7 +345,7 @@ def dp_quantile_ts_grid(args) -> pd.DataFrame:
 
 def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
     return dict(
-        baseline=baseline,
+        baseline_grid=baseline_grid,
         quantile_lin_comb=quantile_lin_comb,
         dp_rmse=dp_rmse,
         dp_rmse_ts=dp_rmse_ts,

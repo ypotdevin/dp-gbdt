@@ -90,24 +90,6 @@ std::string get_time_string()
     return std::string(buffer);
 }
 
-std::vector<double> linspace(double low, double high, size_t num)
-{
-    std::vector<double> points(num);
-    if (num == 1)
-    {
-        points.push_back(low);
-    }
-    else
-    {
-        auto delta = (high - low) / (num - 1);
-        for (size_t i = 0; i < num; ++i)
-        {
-            points[i] = low + i * delta;
-        }
-    }
-    return points;
-}
-
 void normalize(std::vector<double> &values)
 {
     auto normalization_factor = std::accumulate(values.begin(), values.end(), 0.0);
@@ -121,5 +103,28 @@ namespace numpy
     {
         std::discrete_distribution<std::size_t> index_distribution(probabilities.begin(), probabilities.end());
         return index_distribution(rng);
+    }
+
+    std::vector<double> linspace(double low, double high, double step_size)
+    {
+        if (low > high)
+        {
+            return std::vector<double>{};
+        }
+        else if (low == high)
+        {
+            return std::vector<double>{low};
+        }
+        else
+        {
+            size_t n_points = (high - low) / step_size + 1;
+            std::vector<double> points(n_points);
+
+            for (size_t i = 0; i < n_points; ++i)
+            {
+                points[i] = low + i * step_size;
+            }
+            return points;
+        }
     }
 }

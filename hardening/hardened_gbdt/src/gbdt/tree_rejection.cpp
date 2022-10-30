@@ -255,7 +255,7 @@ namespace tree_rejection
         std::transform(y.begin(), y.end(),
                        y_pred.begin(), y_pred.begin(), [](double _y, double _y_pred)
                        { return std::abs(_y - _y_pred); });
-        auto diagnosis_quants = dvec2listrepr(quantiles(y_pred, linspace(0.5, 1.0, 11))); // [0.50, 0.55, …, 0.95, 1.0]
+        auto diagnosis_quants = dvec2listrepr(quantiles(y_pred, numpy::linspace(0.5, 1.0, 0.05))); // [0.50, 0.55, …, 0.95, 1.0]
         LOG_INFO("### diagnosis value 01 ### - rmse={1}", compute_rmse(y_pred));
         LOG_INFO("### diagnosis value 03 ### - quantiles={1}", diagnosis_quants);
 

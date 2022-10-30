@@ -25,11 +25,13 @@ double compute_rmse(std::vector<double> differences);
 double compute_rmse(const std::vector<double> &source, const std::vector<double> &target);
 std::string get_time_string();
 std::vector<double> linspace(double low, double high, size_t num);
+
 void normalize(std::vector<double> &values);
 
 namespace numpy
 {
     std::size_t choice(const std::vector<double> &probabilities, std::mt19937 &rng);
+    std::vector<double> linspace(double low, double high, double step_size);
 }
 
 #endif // UTILS_H

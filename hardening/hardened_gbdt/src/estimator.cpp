@@ -25,6 +25,10 @@ namespace dpgbdt
         this->params->leaf_clipping = true;
         this->params->use_decay = false;
         this->params->task = std::shared_ptr<Task>(new Regression());
+        /* TODO */
+        this->params->grid_lower_bounds = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        this->params->grid_upper_bounds = {0.0, 1.0, 1.0, 1.5, 3.0, 2.0, 1.0, 1.5};
+        this->params->grid_step_sizes = {1.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
     }
 
     Estimator::Estimator(
@@ -67,9 +71,17 @@ namespace dpgbdt
         this->params->leaf_clipping = leaf_clipping;
         this->params->use_decay = use_decay;
         this->params->task = std::shared_ptr<Task>(new Regression());
+        /* TODO */
+        this->params->grid_lower_bounds = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        this->params->grid_upper_bounds = {0.0, 1.0, 1.0, 1.5, 3.0, 2.0, 1.0, 1.5};
+        this->params->grid_step_sizes = {1.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
+        this->params->cat_values = {{0.0, 1.0, 2.0}, {}, {}, {}, {}, {}, {}, {}, {}};
     }
 
-    Estimator &Estimator::fit(std::vector<std::vector<double>> X, std::vector<double> y, std::vector<int> cat_idx, std::vector<int> num_idx)
+    Estimator &Estimator::fit(const std::vector<std::vector<double>> &X,
+                              const std::vector<double> &y,
+                              const std::vector<int> &cat_idx,
+                              const std::vector<int> &num_idx)
     {
         /* This might lead to problems, since DPEnsemble takes (?) ownership of
          * passed ModelParams (but does not use shared_pointers instead of raw
