@@ -13,7 +13,9 @@
 namespace
 {
     const double e = 2.71828182845904523536;
-    TreeParams setup_tree_params(const ModelParams &mp, double tree_budget, int tree_index)
+    TreeParams setup_tree_params(const ModelParams &mp,
+                                 double tree_budget,
+                                 int tree_index)
     {
         TreeParams tree_params;
         tree_params.tree_privacy_budget = tree_budget;
@@ -25,8 +27,9 @@ namespace
         }
         else
         {
-            tree_params.delta_v = std::min((double)(mp.l2_threshold / (1 + mp.l2_lambda)),
-                                           2 * mp.l2_threshold * pow(1 - mp.learning_rate, tree_index));
+            tree_params.delta_v = std::min(
+                (double)(mp.l2_threshold / (1 + mp.l2_lambda)),
+                2 * mp.l2_threshold * pow(1 - mp.learning_rate, tree_index));
         }
         return tree_params;
     }
@@ -36,7 +39,11 @@ namespace
      * for the current tree dataset as defined by line 8 of Li et al.'s
      * Algorithm 2.
      */
-    int line_eight(int original_dataset_length, double learning_rate, int n_trees_to_accept, int tree_index)
+    int line_eight(
+        int original_dataset_length,
+        double learning_rate,
+        int n_trees_to_accept,
+        int tree_index)
     {
         int rows_per_step = (original_dataset_length * learning_rate *
                              std::pow(1.0 - learning_rate, tree_index + 1.0)) /
@@ -58,7 +65,10 @@ namespace
      * absolute gradient naturally, or by clipping, is less than l2_threshold;
      * second component: the remaining rows
      */
-    std::pair<DataSet, DataSet> gradient_filtered_data(DataSet &dataset, int num_rows, double l2_threshold)
+    std::pair<DataSet, DataSet> gradient_filtered_data(
+        DataSet &dataset,
+        int num_rows,
+        double l2_threshold)
     {
         DataSet tree_dataset;
         DataSet remaining_dataset;
@@ -77,7 +87,8 @@ namespace
         else
         {
             auto num_missing = num_rows - within_range.length;
-            auto additional_within_range = out_of_range.clipped_gradients(l2_threshold).take(num_missing);
+            auto additional_within_range =
+                out_of_range.clipped_gradients(l2_threshold).take(num_missing);
             tree_dataset = join(within_range, additional_within_range);
             remaining_dataset = out_of_range.drop(num_missing);
         }
@@ -88,7 +99,12 @@ namespace
      * @return std::pair<DataSet, DataSet> first component: the rows dedicated
      * to the current tree; second component: the remaining rows
      */
-    std::pair<DataSet, DataSet> setup_tree_data(DataSet &dataset, const ModelParams &mp, int n_steps, int original_dataset_length, int tree_index)
+    std::pair<DataSet, DataSet> setup_tree_data(
+        DataSet &dataset,
+        const ModelParams &mp,
+        int n_steps,
+        int original_dataset_length,
+        int tree_index)
     {
         int rows_per_step;
         if (mp.balance_partition)
@@ -97,16 +113,22 @@ namespace
         }
         else
         {
-            rows_per_step = line_eight(original_dataset_length, mp.learning_rate, mp.n_trees_to_accept, tree_index);
+            rows_per_step = line_eight(original_dataset_length,
+                                       mp.learning_rate,
+                                       mp.n_trees_to_accept,
+                                       tree_index);
         }
 
         if (mp.gradient_filtering)
         {
-            return gradient_filtered_data(dataset, rows_per_step, mp.l2_threshold);
+            return gradient_filtered_data(dataset,
+                                          rows_per_step,
+                                          mp.l2_threshold);
         }
         else
         {
-            return std::pair<DataSet, DataSet>(dataset.take(rows_per_step), dataset.drop(rows_per_step));
+            return std::pair<DataSet, DataSet>(dataset.take(rows_per_step),
+                                               dataset.drop(rows_per_step));
         }
     }
 }
@@ -117,23 +139,32 @@ using namespace std;
 
 DPEnsemble::DPEnsemble(ModelParams *parameters) : params(parameters)
 {
-    if (parameters->privacy_budget <= 0)
+    if (this->params->privacy_budget <= 0)
     {
         throw std::runtime_error("hardened gbdt cannot be run with pb<=0");
     }
 
     this->rng = rng;
 
-    // prepare the linspace grid
-    if (params->use_grid)
+    /* Setup data independent grid for tree node splitting later*/
+    if (!(this->params->grid_lower_bounds.size() ==
+              this->params->grid_upper_bounds.size() &&
+          this->params->grid_upper_bounds.size() ==
+              this->params->grid_step_sizes.size()))
     {
-        double grid_range = std::get<1>(params->grid_borders) - std::get<0>(params->grid_borders);
-        double step_size = params->grid_step_size;
-        int grid_size = (int)grid_range / step_size;
-        this->grid = std::vector<double>(grid_size, 0);
-        int counter = 0;
-        std::generate(this->grid.begin(), this->grid.end(), [&counter, &step_size]() mutable
-                      { return counter++ * step_size; });
+        throw std::runtime_error(
+            "Number of grid bounds and step sizes do not match!");
+    }
+    else
+    {
+        for (size_t i = 0; i < this->params->grid_lower_bounds.size(); ++i)
+        {
+            this->_grid.push_back(
+                numpy::linspace(
+                    this->params->grid_lower_bounds.at(i),
+                    this->params->grid_upper_bounds.at(i),
+                    this->params->grid_step_sizes.at(i)));
+        }
     }
 }
 
@@ -178,8 +209,11 @@ vector<double> DPEnsemble::predict(VVD &X)
     {
         vector<double> pred = tree.predict(X);
 
-        std::transform(pred.begin(), pred.end(),
-                       predictions.begin(), predictions.begin(), std::plus<double>());
+        std::transform(pred.begin(),
+                       pred.end(),
+                       predictions.begin(),
+                       predictions.begin(),
+                       std::plus<double>());
     }
 
     double innit_score = this->init_score;
@@ -206,12 +240,20 @@ void DPEnsemble::vanilla_training_loop(DataSet &dataset)
 
         auto tree_params = setup_tree_params(mp, step_budget, tree_index);
 
-        auto p = setup_tree_data(dataset, mp, n_steps, original_dataset_length, tree_index);
+        auto p = setup_tree_data(dataset,
+                                 mp,
+                                 n_steps,
+                                 original_dataset_length,
+                                 tree_index);
         auto tree_dataset = p.first;
         auto remaining_dataset = p.second;
 
         /* actual tree construction */
-        DPTree tree = DPTree(this->params, &tree_params, &tree_dataset, tree_index, this->grid);
+        DPTree tree = DPTree(this->params,
+                             &tree_params,
+                             &tree_dataset,
+                             tree_index,
+                             this->_grid);
         tree.fit();
         this->trees.push_back(tree);
         dataset = remaining_dataset;
@@ -228,10 +270,13 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
     auto n_steps = mp.n_trees_to_accept;
     auto step_budget = (mp.privacy_budget - mp.dp_argmax_privacy_budget) / 2.0; // parallel composition
     auto tree_budget = step_budget * mp.ensemble_rejector_budget_split;
-    auto score_budget = (step_budget - tree_budget) / static_cast<double>(mp.n_trees_to_accept); // division due to repetitive usage of dataset.X for tree scoring
+    auto score_budget = (step_budget - tree_budget) /
+                        static_cast<double>(mp.n_trees_to_accept); // division due to repetitive usage of dataset.X for tree scoring
     std::bernoulli_distribution biased_coin{mp.stopping_prob};
 
-    int T = std::max((1.0 / mp.stopping_prob) * std::log(2.0 / mp.dp_argmax_privacy_budget), 1.0 + 1.0 / (e * mp.stopping_prob));
+    int T = std::max((1.0 / mp.stopping_prob) *
+                         std::log(2.0 / mp.dp_argmax_privacy_budget),
+                     1.0 + 1.0 / (e * mp.stopping_prob));
     LOG_INFO("### diagnosis value 08 ### - T={1}", T);
     for (int tree_index = 0; tree_index < n_steps; ++tree_index)
     {
@@ -239,7 +284,11 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
 
         auto tree_params = setup_tree_params(mp, step_budget, tree_index);
 
-        auto p = setup_tree_data(dataset, mp, n_steps, original_dataset_length, tree_index);
+        auto p = setup_tree_data(dataset,
+                                 mp,
+                                 n_steps,
+                                 original_dataset_length,
+                                 tree_index);
         auto tree_dataset = p.first;
         auto remaining_dataset = p.second;
 
@@ -247,12 +296,18 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
         for (int trial = 0; trial < T; ++trial)
         {
             /* actual tree construction */
-            DPTree tree = DPTree(this->params, &tree_params, &tree_dataset, tree_index, this->grid);
+            DPTree tree = DPTree(this->params,
+                                 &tree_params,
+                                 &tree_dataset,
+                                 tree_index,
+                                 this->_grid);
             tree.fit();
             this->trees.push_back(tree);
 
             auto raw_predictions = predict(dataset.X);
-            auto current_score = mp.tree_scorer->score_tree(score_budget, dataset.y, raw_predictions);
+            auto current_score = mp.tree_scorer->score_tree(score_budget,
+                                                            dataset.y,
+                                                            raw_predictions);
             LOG_INFO("### diagnosis value 02 ### - rmse_approx={1}", score);
             if (current_score < score)
             {

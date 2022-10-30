@@ -31,9 +31,9 @@ struct ModelParams
     double l2_lambda = 0.1;
 
     // secondary model parameters
-    unsigned use_grid = false;
-    std::tuple<double, double> grid_borders;
-    double grid_step_size;
+    std::vector<double> grid_lower_bounds;
+    std::vector<double> grid_upper_bounds;
+    std::vector<double> grid_step_sizes;
     std::vector<std::vector<double>> cat_values;
     unsigned scale_X = false;
     double scale_X_percentile = 95;

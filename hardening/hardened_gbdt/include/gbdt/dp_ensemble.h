@@ -27,9 +27,10 @@ public:
 private:
     // fields
     ModelParams *params;
-    //DataSet *dataset;
+    // DataSet *dataset;
     double init_score;
-    std::vector<double> grid;
+    // std::vector<double> grid;
+    std::vector<std::vector<double>> _grid;
     std::mt19937 rng;
 
     // methods

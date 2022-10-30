@@ -190,8 +190,8 @@ void DataSet::scale_X_columns(ModelParams &params)
             min_val = constant_time::min(min_val, X[row][col]);
             max_val = constant_time::max(max_val, X[row][col]);
         }
-        lower = std::get<0>(params.grid_borders);
-        upper = std::get<1>(params.grid_borders);
+        lower = params.grid_lower_bounds.at(col);
+        upper = params.grid_upper_bounds.at(col);
         for (int row = 0; row < length; row++)
         {
             X[row][col] = (X[row][col] - min_val) / (max_val - min_val) * (upper - lower) + lower;

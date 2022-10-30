@@ -293,7 +293,7 @@ cdef class PyEstimator:
         np.ndarray[double, ndim=2, mode="c"] X not None,
         np.ndarray[double, ndim=1, mode="c"] y not None,
         list cat_idx,
-        list num_idx
+        list num_idx,
     ):
         cdef vector[vector[double]] x_vec = X
         cdef vector[double] y_vec = y
