@@ -134,6 +134,3 @@ namespace dpgbdt
         }
     }
 }
-throw std::runtime_error("Estimator is not fitted.");
-}
-}
