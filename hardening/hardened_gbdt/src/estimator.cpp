@@ -1,5 +1,6 @@
 #include <stdexcept>
 #include "estimator.h"
+#include "spdlog/spdlog.h"
 
 namespace dpgbdt
 {
@@ -25,6 +26,11 @@ namespace dpgbdt
         this->params->leaf_clipping = true;
         this->params->use_decay = false;
         this->params->task = std::shared_ptr<Task>(new Regression());
+        /* TODO */
+        this->params->grid_lower_bounds = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        this->params->grid_upper_bounds = {0.0, 1.0, 1.0, 1.5, 3.0, 2.0, 1.0, 1.5};
+        this->params->grid_step_sizes = {1.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
+        this->verbosity = "warning";
     }
 
     Estimator::Estimator(
@@ -45,7 +51,8 @@ namespace dpgbdt
         bool balance_partition,
         bool gradient_filtering,
         bool leaf_clipping,
-        bool use_decay)
+        bool use_decay,
+        std::string verbosity)
     {
         this->params = std::shared_ptr<ModelParams>(new ModelParams());
         this->params->rng = rng;
@@ -67,6 +74,12 @@ namespace dpgbdt
         this->params->leaf_clipping = leaf_clipping;
         this->params->use_decay = use_decay;
         this->params->task = std::shared_ptr<Task>(new Regression());
+        /* TODO */
+        this->params->grid_lower_bounds = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        this->params->grid_upper_bounds = {0.0, 1.0, 1.0, 1.5, 3.0, 2.0, 1.0, 1.5};
+        this->params->grid_step_sizes = {1.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
+        this->params->cat_values = {{0.0, 1.0, 2.0}, {}, {}, {}, {}, {}, {}, {}, {}};
+        this->verbosity = verbosity;
     }
 
     Estimator &Estimator::fit(std::vector<std::vector<double>> X, std::vector<double> y, std::vector<int> cat_idx, std::vector<int> num_idx)
@@ -74,6 +87,30 @@ namespace dpgbdt
         /* This might lead to problems, since DPEnsemble takes (?) ownership of
          * passed ModelParams (but does not use shared_pointers instead of raw
          * pointers). */
+        if (this->verbosity == "debug")
+        {
+            spdlog::set_level(spdlog::level::debug);
+        }
+        else if (this->verbosity == "info")
+        {
+            spdlog::set_level(spdlog::level::info);
+        }
+        else if (this->verbosity == "warning")
+        {
+            spdlog::set_level(spdlog::level::warn);
+        }
+        else if (this->verbosity == "error")
+        {
+            spdlog::set_level(spdlog::level::err);
+        }
+        else if (this->verbosity == "off")
+        {
+            spdlog::set_level(spdlog::level::off);
+        }
+        else
+        {
+            throw std::runtime_error("Unknown verbosity level.");
+        }
         this->ensemble = std::shared_ptr<DPEnsemble>(new DPEnsemble(this->params.get()));
         this->params->cat_idx = cat_idx;
         this->params->num_idx = num_idx;

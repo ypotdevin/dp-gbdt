@@ -28,6 +28,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         gradient_filtering: bool = True,
         leaf_clipping: bool = True,
         use_decay: bool = False,
+        verbosity: str = "warning",
         # prototype arguments
         tr_qs=None,
         tr_coefficients=None,
@@ -107,6 +108,9 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
                 after training. Defaults to True.
             use_decay (bool, optional): Whether to assign each internal
                 node a decaying factor. Defaults to False.
+            verbosity (str, optional): How verbose the training should
+            be. Defaults to "warning", which only shows warnings or
+            errors messages, but no info/debug messages.
         """
         self.seed = seed
         self.privacy_budget = privacy_budget
@@ -126,6 +130,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         self.gradient_filtering = gradient_filtering
         self.leaf_clipping = leaf_clipping
         self.use_decay = use_decay
+        self.verbosity = verbosity
         self.tr_qs = tr_qs
         self.tr_coefficients = tr_coefficients
         self.tr_U = tr_U
@@ -207,6 +212,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
             gradient_filtering=self.gradient_filtering,
             leaf_clipping=self.leaf_clipping,
             use_decay=self.use_decay,
+            verbosity=self.verbosity,
         )
         self.estimator_.fit(X, y, cat_idx, num_idx)
 

@@ -52,6 +52,8 @@ namespace dpgbdt
          * @param gradient_filtering whether to perform gradient filtering
          * @param leaf_clipping whether to perform leaf clipping
          * @param use_decay whether to use decay
+         * @param verbosity the verbosity (log level) of the training (default:
+         * only warnings)
          */
         Estimator(
             std::mt19937 const &rng,
@@ -71,7 +73,8 @@ namespace dpgbdt
             bool balance_partition,
             bool gradient_filtering,
             bool leaf_clipping,
-            bool use_decay);
+            bool use_decay,
+            std::string verbosity);
 
         /**
          * @brief Perform input validation and fit the DP GBDT to the provided
@@ -102,6 +105,7 @@ namespace dpgbdt
     private:
         std::shared_ptr<ModelParams> params;
         std::shared_ptr<DPEnsemble> ensemble;
+        std::string verbosity;
     };
 
 }

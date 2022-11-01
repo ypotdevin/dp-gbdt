@@ -173,7 +173,7 @@ cdef class PyEstimator:
     cdef Estimator* estimator
     cdef PyMT19937 rng
     cdef double privacy_budget, ensemble_rejector_budget_split, dp_argmax_privacy_budget, dp_argmax_stopping_prob, learning_rate, l2_threshold, l2_lambda
-    cdef string training_variant
+    cdef string training_variant, verbosity
     cdef PyTreeRejector tree_rejector
     cdef PyTreeScorer tree_scorer
     cdef int n_trees_to_accept, max_depth, min_samples_split
@@ -198,12 +198,13 @@ cdef class PyEstimator:
         bool balance_partition,
         bool gradient_filtering,
         bool leaf_clipping,
-        bool use_decay
+        bool use_decay,
+        str verbosity
     ):
         self.rng = rng
         self.privacy_budget = privacy_budget
         self.ensemble_rejector_budget_split = ensemble_rejector_budget_split
-        self.training_variant = training_variant.encode('UTF-8') # converting to bytes
+        self.training_variant = training_variant.encode("UTF-8") # converting to bytes
         self.tree_rejector = tree_rejector
         self.tree_scorer = tree_scorer
         self.dp_argmax_privacy_budget = dp_argmax_privacy_budget
@@ -218,11 +219,12 @@ cdef class PyEstimator:
         self.gradient_filtering = gradient_filtering
         self.leaf_clipping = leaf_clipping
         self.use_decay = use_decay
+        self.verbosity = verbosity.encode("UTF-8")
         self.estimator = new Estimator(
             rng=rng.c_rng,
             privacy_budget=privacy_budget,
             ensemble_rejector_budget_split=ensemble_rejector_budget_split,
-            training_variant=training_variant.encode('UTF-8'), # converting to bytes
+            training_variant=self.training_variant,
             tree_rejector=tree_rejector.sptr_tr,
             tree_scorer=tree_scorer.sptr_ts,
             dp_argmax_privacy_budget=dp_argmax_privacy_budget,
@@ -237,6 +239,7 @@ cdef class PyEstimator:
             gradient_filtering=gradient_filtering,
             leaf_clipping=leaf_clipping,
             use_decay=use_decay,
+            verbosity=self.verbosity,
         )
 
 
@@ -265,6 +268,7 @@ cdef class PyEstimator:
                 self.gradient_filtering,
                 self.leaf_clipping,
                 self.use_decay,
+                self.verbosity,
             )
         )
 
@@ -286,7 +290,8 @@ cdef class PyEstimator:
                f"balance_partition={self.balance_partition},"\
                f"gradient_filtering={self.gradient_filtering},"\
                f"leaf_clipping={self.leaf_clipping},"\
-               f"use_decay={self.use_decay})"
+               f"use_decay={self.use_decay},"\
+               f"verbosity={self.verbosity})"
 
     def fit(
         self,

@@ -27,7 +27,8 @@ cdef extern from "estimator.h" namespace "dpgbdt":
             bool balance_partition,
             bool gradient_filtering,
             bool leaf_clipping,
-            bool use_decay
+            bool use_decay,
+            string verbosity
         ) except +
         Estimator fit(vector[vector[double]] X, vector[double] y, vector[int] cat_idx, vector[int] num_idx)
         vector[double] predict(vector[vector[double]] X)
