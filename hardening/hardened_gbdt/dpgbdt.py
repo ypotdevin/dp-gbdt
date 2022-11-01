@@ -175,8 +175,6 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
             self.tree_rejector = make_tree_rejector("constant", decision=False)
         elif type(self.tree_rejector) is str:
             self.tree_rejector = _make_tree_rejector_from_self(self)
-        else:
-            raise ValueError(f"Illegal value for tree_rejector: {self.tree_rejector}")
         if self.tree_scorer is None:
             self.tree_scorer = make_tree_scorer(
                 "dp_rmse",
@@ -186,8 +184,6 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
             )
         elif type(self.tree_scorer) is str:
             self.tree_scorer = _make_tree_scorer_from_self(self)
-        else:
-            raise ValueError(f"Illegal value for tree_scorer: {self.tree_scorer}")
         if cat_idx is None:
             cat_idx = []
         if num_idx is None:

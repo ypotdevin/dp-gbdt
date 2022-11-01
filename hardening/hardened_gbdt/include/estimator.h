@@ -87,7 +87,10 @@ namespace dpgbdt
          * @param num_idx which columns (indices) of X are of numerical nature?
          * @return the fitted estimator
          */
-        Estimator &fit(std::vector<std::vector<double>> X, std::vector<double> y, std::vector<int> cat_idx, std::vector<int> num_idx);
+        Estimator &fit(const std::vector<std::vector<double>> &X,
+                       const std::vector<double> &y,
+                       const std::vector<int> &cat_idx,
+                       const std::vector<int> &num_idx);
 
         /**
          * @brief Infer the output variables corresponding to the provided input

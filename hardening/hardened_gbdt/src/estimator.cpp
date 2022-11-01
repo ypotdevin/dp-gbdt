@@ -82,7 +82,10 @@ namespace dpgbdt
         this->verbosity = verbosity;
     }
 
-    Estimator &Estimator::fit(std::vector<std::vector<double>> X, std::vector<double> y, std::vector<int> cat_idx, std::vector<int> num_idx)
+    Estimator &Estimator::fit(const std::vector<std::vector<double>> &X,
+                              const std::vector<double> &y,
+                              const std::vector<int> &cat_idx,
+                              const std::vector<int> &num_idx)
     {
         /* This might lead to problems, since DPEnsemble takes (?) ownership of
          * passed ModelParams (but does not use shared_pointers instead of raw
@@ -130,4 +133,7 @@ namespace dpgbdt
             throw std::runtime_error("Estimator is not fitted.");
         }
     }
+}
+throw std::runtime_error("Estimator is not fitted.");
+}
 }
