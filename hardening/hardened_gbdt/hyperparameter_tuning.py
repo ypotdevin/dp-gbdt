@@ -4,7 +4,7 @@ from typing import Any, Callable, Optional, Tuple
 import numpy as np
 import pandas as pd
 from ray.tune.sklearn import TuneSearchCV, TuneGridSearchCV
-from sklearn.model_selection import RepeatedKFold
+from sklearn.model_selection import GridSearchCV, RepeatedKFold
 
 import dpgbdt
 
@@ -61,6 +61,28 @@ def tune_grid(
         local_dir=local_dir,
         n_jobs=n_jobs,
         time_budget_s=time_budget_s,
+        scoring="neg_root_mean_squared_error",
+        cv=cv,
+    )
+    tune_search.fit(X_train, y_train, cat_idx=cat_idx, num_idx=num_idx)
+    df = pd.DataFrame(tune_search.cv_results_)
+    return df
+
+
+def sklearn_grid(
+    regressor,
+    data_provider: Callable[[], Tuple[np.ndarray, np.ndarray, list[int], list[int]]],
+    parameter_grid: dict[str, Any],
+    n_jobs: Optional[int] = None,
+    cv=None,
+) -> Tuple[pd.DataFrame, dict[str, Any]]:
+    if cv is None:
+        cv = RepeatedKFold(n_splits=5, n_repeats=2)
+    X_train, y_train, cat_idx, num_idx = data_provider()
+    tune_search = GridSearchCV(
+        regressor,
+        parameter_grid,
+        n_jobs=n_jobs,
         scoring="neg_root_mean_squared_error",
         cv=cv,
     )
@@ -171,12 +193,12 @@ def abalone_parameter_distribution():
 
 def abalone_parameter_grid():
     parameter_grid = dict(
-        learning_rate=np.logspace(-6, 1, 8),
-        max_depth=[1, 3, 6],
+        learning_rate=[0.1],
+        max_depth=[1, 6],
         # 20.0 is the max. difference between any target value and the
         # average target value
         l2_threshold=np.linspace(0.5, 20.0, 10),
-        l2_lambda=[0.1, 1],
+        l2_lambda=[0.1],
         n_trees_to_accept=[2, 3, 5, 8],
     )
     return parameter_grid
@@ -193,95 +215,11 @@ def baseline_grid(args) -> pd.DataFrame:
         parameter_grid["tree_rejector"] = [
             dpgbdt.make_tree_rejector("constant", decision=False)
         ]
-        df = tune_grid(
+        df = sklearn_grid(
             dpgbdt.DPGBDTRegressor(),
             get_abalone,
             parameter_grid,
-            label=args.label,
-            local_dir=args.local_dir,
             n_jobs=args.num_cores,
-            time_budget_s=args.time_budget_s // len(total_budgets),
-        )
-        dfs.append(df)
-    df = pd.concat(dfs)
-    return df
-
-
-def quantile_lin_comb(args) -> pd.DataFrame:
-    dfs = []
-    ensemble_budgets = [0.1, 0.5, 1.0]
-    for ensemble_budget in ensemble_budgets:
-        parameter_grid = abalone_parameter_grid()
-        parameter_grid["privacy_budget"] = [ensemble_budget]
-        tree_rejector = dpgbdt.make_tree_rejector(
-            "quantile_linear_combination",
-            qs=[0.50, 0.85, 0.95],
-            coefficients=[0.23837927, 0.29496094, 0.16520499],
-        )
-        parameter_grid["tree_rejector"] = [tree_rejector]
-        df = tune(
-            dpgbdt.DPGBDTRegressor(),
-            get_abalone,
-            parameter_grid,
-            label=args.label,
-            n_trials=args.n_trials,
-            local_dir=args.local_dir,
-            n_jobs=args.num_cores,
-            time_budget_s=args.time_budget_s // len(ensemble_budgets),
-        )
-        dfs.append(df)
-    df = pd.concat(dfs)
-    return df
-
-
-def dp_rmse(args) -> pd.DataFrame:
-    dfs = []
-    ensemble_budgets = [0.1, 0.5, 1.0, 2.0]
-    for ensemble_budget in ensemble_budgets:
-        parameter_grid = abalone_parameter_grid()
-        parameter_grid["privacy_budget"] = [ensemble_budget]
-        parameter_grid["ensemble_rejector_budget_split"] = (1e-2, 1 - 1e-2)
-        parameter_grid["tree_rejector"] = ["dp_rmse"]
-        parameter_grid["tr_U"] = (0.1, 100.0)
-        parameter_grid["tr_gamma"] = (1 + 1e-2, 10.0)
-
-        df = tune(
-            dpgbdt.DPGBDTRegressor(),
-            get_abalone,
-            parameter_grid,
-            label=args.label,
-            n_trials=args.n_trials,
-            local_dir=args.local_dir,
-            n_jobs=args.num_cores,
-            time_budget_s=args.time_budget_s // len(ensemble_budgets),
-        )
-        dfs.append(df)
-    df = pd.concat(dfs)
-    return df
-
-
-def dp_rmse_ts(args) -> pd.DataFrame:
-    dfs = []
-    ensemble_budgets = [0.1, 0.5, 1.0, 2.0]
-    for ensemble_budget in ensemble_budgets:
-        parameter_grid = abalone_parameter_grid()
-        parameter_grid["privacy_budget"] = [ensemble_budget]
-        parameter_grid["ensemble_rejector_budget_split"] = (1e-2, 1 - 1e-2)
-        parameter_grid["tree_scorer"] = ["dp_rmse"]
-        parameter_grid["dp_argmax_privacy_budget"] = (1e-2, 1 - 1e-2)
-        parameter_grid["dp_argmax_stopping_prob"] = (1e-2, 1 - 1e-2)
-        parameter_grid["ts_upper_bound"] = (0.1, 100.0)
-        parameter_grid["ts_gamma"] = (1e-2, 1 - 1e-2)
-
-        df = tune(
-            dpgbdt.DPGBDTRegressor(),
-            get_abalone,
-            parameter_grid,
-            label=args.label,
-            n_trials=args.n_trials,
-            local_dir=args.local_dir,
-            n_jobs=args.num_cores,
-            time_budget_s=args.time_budget_s // len(ensemble_budgets),
         )
         dfs.append(df)
     df = pd.concat(dfs)
@@ -346,9 +284,6 @@ def dp_quantile_ts_grid(args) -> pd.DataFrame:
 def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
     return dict(
         baseline_grid=baseline_grid,
-        quantile_lin_comb=quantile_lin_comb,
-        dp_rmse=dp_rmse,
-        dp_rmse_ts=dp_rmse_ts,
         dp_rmse_ts_grid=dp_rmse_ts_grid,
         dp_quantile_ts_grid=dp_quantile_ts_grid,
     )[which]
