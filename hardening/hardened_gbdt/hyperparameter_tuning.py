@@ -166,7 +166,7 @@ def parse_args():
     parser.add_argument(
         "--num-cores",
         type=int,
-        default=None,
+        default=-1,
         help="Number of CPU cores to use for hyperparameter search. Default: all cores.",
     )
     parser.add_argument(
