@@ -198,7 +198,7 @@ def abalone_parameter_grid():
         # 20.0 is the max. difference between any target value and the
         # average target value
         l2_threshold=np.linspace(0.5, 20.0, 10),
-        l2_lambda=np.linspace(0.1, 1.0, 0.0),
+        l2_lambda=[0.1],
         n_trees_to_accept=[2, 3, 5, 8],
     )
     return parameter_grid
@@ -253,21 +253,18 @@ def dp_rmse_ts_grid(args) -> pd.DataFrame:
     for total_budget in total_budgets:
         parameter_grid = abalone_parameter_grid()
         parameter_grid["privacy_budget"] = [total_budget]
-        parameter_grid["ensemble_rejector_budget_split"] = [0.6, 0.7, 0.8, 0.9]
+        parameter_grid["ensemble_rejector_budget_split"] = [0.6, 0.75, 0.9]
         parameter_grid["tree_scorer"] = ["dp_rmse"]
         parameter_grid["dp_argmax_privacy_budget"] = [0.001, 0.01]
-        parameter_grid["dp_argmax_stopping_prob"] = [0.01, 0.1, 0.2, 0.5]
+        parameter_grid["dp_argmax_stopping_prob"] = [0.1, 0.2]
         parameter_grid["ts_upper_bound"] = parameter_grid["l2_threshold"]
-        parameter_grid["ts_gamma"] = [2, 5]
+        parameter_grid["ts_gamma"] = [2]
 
-        df = tune_grid(
+        df = sklearn_grid(
             dpgbdt.DPGBDTRegressor(),
             get_abalone,
             parameter_grid,
-            label=args.label,
-            local_dir=args.local_dir,
             n_jobs=args.num_cores,
-            time_budget_s=args.time_budget_s // len(total_budgets),
         )
         dfs.append(df)
     df = pd.concat(dfs)
