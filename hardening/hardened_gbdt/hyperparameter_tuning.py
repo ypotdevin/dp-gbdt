@@ -277,22 +277,19 @@ def dp_quantile_ts_grid(args) -> pd.DataFrame:
     for total_budget in total_budgets:
         parameter_grid = abalone_parameter_grid()
         parameter_grid["privacy_budget"] = [total_budget]
-        parameter_grid["ensemble_rejector_budget_split"] = [0.6, 0.7, 0.8, 0.9]
+        parameter_grid["ensemble_rejector_budget_split"] = [0.6, 0.75, 0.9]
         parameter_grid["tree_scorer"] = ["dp_quantile"]
         parameter_grid["dp_argmax_privacy_budget"] = [0.001, 0.01]
-        parameter_grid["dp_argmax_stopping_prob"] = [0.01, 0.1, 0.2, 0.5]
+        parameter_grid["dp_argmax_stopping_prob"] = [0.1, 0.2]
         parameter_grid["ts_shift"] = [0.0]
         parameter_grid["ts_scale"] = [0.79]
         parameter_grid["ts_upper_bound"] = parameter_grid["l2_threshold"]
 
-        df = tune_grid(
+        df = sklearn_grid(
             dpgbdt.DPGBDTRegressor(ts_qs=[0.5, 0.90, 0.95]),
             get_abalone,
             parameter_grid,
-            label=args.label,
-            local_dir=args.local_dir,
             n_jobs=args.num_cores,
-            time_budget_s=args.time_budget_s // len(total_budgets),
         )
         dfs.append(df)
     df = pd.concat(dfs)
