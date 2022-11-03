@@ -21,10 +21,9 @@ void basic_run()
     std::vector<double> y{1.0, 4.0, 2.0, 2.9, 1.0};
     std::vector<int> cat_idx{0};
     std::vector<int> num_idx{1, 2, 3};
-    std::vector<std::vector<double>> cat_values{{}}; // TODO
 
     dpgbdt::Estimator regressor;
-    regressor.fit(X, y, cat_idx, num_idx, cat_values);
+    regressor.fit(X, y, cat_idx, num_idx);
     auto y_pred = regressor.predict(X);
     auto rmse = compute_rmse(y, y_pred);
     std::cout << rmse << std::endl;
@@ -41,8 +40,7 @@ void diagnosis_run()
     regressor.fit(dataset->X,
                   dataset->y,
                   parameters.cat_idx,
-                  parameters.num_idx,
-                  parameters.cat_values);
+                  parameters.num_idx);
     auto y_pred = regressor.predict(dataset->X);
     auto rmse = compute_rmse(dataset->y, y_pred);
     std::cout << rmse << std::endl;
@@ -80,12 +78,12 @@ void good_vanilla_setting()
         true,
         true,
         true,
-        false);
+        false,
+        "debug");
     regressor.fit(dataset->X,
                   dataset->y,
                   parameters.cat_idx,
-                  parameters.num_idx,
-                  parameters.cat_values);
+                  parameters.num_idx);
     auto y_pred = regressor.predict(dataset->X);
     auto rmse = compute_rmse(dataset->y, y_pred);
     std::cout << rmse << std::endl;
@@ -125,12 +123,12 @@ void good_dp_argmax_scoring_setting()
         true,
         true,
         true,
-        false);
+        false,
+        "debug");
     regressor.fit(dataset->X,
                   dataset->y,
                   parameters.cat_idx,
-                  parameters.num_idx,
-                  parameters.cat_values);
+                  parameters.num_idx);
     auto y_pred = regressor.predict(dataset->X);
     auto rmse = compute_rmse(dataset->y, y_pred);
     std::cout << rmse << std::endl;
