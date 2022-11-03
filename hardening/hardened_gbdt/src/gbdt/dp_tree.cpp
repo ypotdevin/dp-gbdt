@@ -240,9 +240,24 @@ TreeNode *DPTree::find_best_split(
                                feature_index) !=
                            this->params->cat_idx.end();
 
-        if (categorical)
+        /*
+            TODO: At some time decide which variant should be final.
+            For now, it doesn't seem to be reasonable to make this a
+            hyperparameter (again).
+        */
+        bool use_grid = false;
+        if (use_grid)
         {
-            for (double feature_value : this->params->cat_values[feature_index])
+            std::vector<double> feature_values;
+            if (categorical)
+            {
+                feature_values = this->params->cat_values[feature_index];
+            }
+            else
+            {
+                feature_values = this->grid.at(feature_index);
+            }
+            for (double feature_value : feature_values)
             {
                 // compute gain
                 double gain = compute_gain(X_transposed,
@@ -252,13 +267,12 @@ TreeNode *DPTree::find_best_split(
                                            feature_value,
                                            lhs_size,
                                            categorical);
-
-                bool row_not_live = false;
                 bool no_gain = (gain == -1.);
-                // if either the row is not live, or the gain is -1 (aka the split guides all samples to the
-                // same child -> useless split) then the gain of this split is set to 0.
+                // if gain is -1 (aka the split guides all samples to the same
+                // child -> useless split) then the gain of this split is set
+                // to 0.
                 gain = constant_time::select(
-                    constant_time::logical_or(no_gain, row_not_live),
+                    no_gain,
                     0.0,
                     gain);
 
@@ -270,19 +284,21 @@ TreeNode *DPTree::find_best_split(
                                                           feature_value,
                                                           gain);
                 candidate.lhs_size = lhs_size;
-                candidate.rhs_size = std::accumulate(live_samples.begin(),
-                                                     live_samples.end(),
-                                                     0) -
+                candidate.rhs_size = std::accumulate(
+                                         live_samples.begin(),
+                                         live_samples.end(),
+                                         0) -
                                      lhs_size;
                 probabilities.push_back(candidate);
             }
         }
         else
         {
-            for (double feature_value : this->grid.at(feature_index))
+            // auto feature_values = X_transposed[feature_index];
+            /* Don't use the grid - use the feature values to split */
+            for (size_t row = 0; row < live_samples.size(); row++)
             {
-
-                // double feature_value = X_transposed[feature_index][row];
+                double feature_value = X_transposed[feature_index][row];
 
                 // compute gain
                 double gain = compute_gain(X_transposed,
@@ -293,10 +309,11 @@ TreeNode *DPTree::find_best_split(
                                            lhs_size,
                                            categorical);
 
-                bool row_not_live = false; // constant_time::logical_not(live_samples[row]);
+                bool row_not_live = constant_time::logical_not(live_samples[row]);
                 bool no_gain = (gain == -1.);
-                // if either the row is not live, or the gain is -1 (aka the split guides all samples to the
-                // same child -> useless split) then the gain of this split is set to 0.
+                // if either the row is not live, or the gain is -1 (aka the
+                // split guides all samples to the same child -> useless split)
+                // then the gain of this split is set to 0.
                 gain = constant_time::select(
                     constant_time::logical_or(no_gain, row_not_live),
                     0.0,
