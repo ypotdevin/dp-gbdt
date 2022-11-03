@@ -198,17 +198,30 @@ def abalone_parameter_grid():
         # 20.0 is the max. difference between any target value and the
         # average target value
         l2_threshold=np.linspace(0.5, 20.0, 10),
-        l2_lambda=[0.1],
+        l2_lambda=np.linspace(0.1, 1.0, 0.0),
         n_trees_to_accept=[2, 3, 5, 8],
     )
     return parameter_grid
 
 
-def baseline_grid(args) -> pd.DataFrame:
+def abalone_parameter_dense_grid():
+    parameter_grid = dict(
+        learning_rate=[0.01, 0.1, 1.0],
+        max_depth=[1, 2, 3, 4, 5, 6],
+        # 20.0 is the max. difference between any target value and the
+        # average target value
+        l2_threshold=np.linspace(0.5, 20.0, 20),
+        l2_lambda=np.linspace(0.1, 1.0, 10),
+        n_trees_to_accept=[2, 3, 5, 8],
+    )
+    return parameter_grid
+
+
+def baseline_template(args, grid: dict[str, Any]) -> pd.DataFrame:
     dfs = []
     total_budgets = args.privacy_budgets
     for ensemble_budget in total_budgets:
-        parameter_grid = abalone_parameter_grid()
+        parameter_grid = grid
         parameter_grid["training_variant"] = ["vanilla"]
         parameter_grid["privacy_budget"] = [ensemble_budget]
         parameter_grid["ensemble_rejector_budget_split"] = [1.0]
@@ -224,6 +237,14 @@ def baseline_grid(args) -> pd.DataFrame:
         dfs.append(df)
     df = pd.concat(dfs)
     return df
+
+
+def baseline_grid(args) -> pd.DataFrame:
+    return baseline_template(args, abalone_parameter_grid())
+
+
+def baseline_dense_grid(args) -> pd.DataFrame:
+    return baseline_template(args, abalone_parameter_dense_grid())
 
 
 def dp_rmse_ts_grid(args) -> pd.DataFrame:
@@ -284,6 +305,7 @@ def dp_quantile_ts_grid(args) -> pd.DataFrame:
 def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
     return dict(
         baseline_grid=baseline_grid,
+        baseline_dense_grid=baseline_dense_grid,
         dp_rmse_ts_grid=dp_rmse_ts_grid,
         dp_quantile_ts_grid=dp_quantile_ts_grid,
     )[which]
