@@ -230,6 +230,19 @@ def abalone_parameter_dense_grid():
     return parameter_grid
 
 
+def abalone_parameter_dense_grid_20221107():
+    parameter_grid = dict(
+        learning_rate=[0.01, 0.1, 1.0],
+        max_depth=[1, 2, 3, 4, 5, 6],
+        # 20.0 is the max. difference between any target value and the
+        # average target value
+        l2_threshold=np.linspace(0.5, 20.0, 20),
+        l2_lambda=np.linspace(0.1, 1.0, 10),
+        n_trees_to_accept=[1, 2, 3, 5, 8, 10, 20, 50],
+    )
+    return parameter_grid
+
+
 def baseline_template(args, grid: dict[str, Any]) -> pd.DataFrame:
     dfs = []
     total_budgets = args.privacy_budgets
@@ -262,6 +275,10 @@ def baseline_grid_20221107(args) -> pd.DataFrame:
 
 def baseline_dense_grid(args) -> pd.DataFrame:
     return baseline_template(args, abalone_parameter_dense_grid())
+
+
+def baseline_dense_grid_20221107(args) -> pd.DataFrame:
+    return baseline_template(args, abalone_parameter_dense_grid_20221107())
 
 
 def dp_rmse_ts_template(args, grid: dict[str, Any]) -> pd.DataFrame:
@@ -333,6 +350,7 @@ def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
         baseline_grid=baseline_grid,
         baseline_grid_20221107=baseline_grid_20221107,
         baseline_dense_grid=baseline_dense_grid,
+        baseline_dense_grid_20221107=baseline_dense_grid_20221107,
         dp_rmse_ts_grid=dp_rmse_ts_grid,
         dp_rmse_ts_grid_20221107=dp_rmse_ts_grid_20221107,
         dp_quantile_ts_grid=dp_quantile_ts_grid,
