@@ -199,7 +199,20 @@ def abalone_parameter_grid():
         # average target value
         l2_threshold=np.linspace(0.5, 20.0, 10),
         l2_lambda=[0.1],
-        n_trees_to_accept=[2, 3, 5, 8],
+        n_trees_to_accept=[1, 2, 3, 5, 8, 10, 20, 50],
+    )
+    return parameter_grid
+
+
+def abalone_parameter_grid_20221107():
+    parameter_grid = dict(
+        learning_rate=[0.1],
+        max_depth=[1, 6],
+        # 20.0 is the max. difference between any target value and the
+        # average target value
+        l2_threshold=np.linspace(0.5, 20.0, 10),
+        l2_lambda=[0.1],
+        n_trees_to_accept=[1, 2, 3, 5, 8, 10, 20, 50],
     )
     return parameter_grid
 
@@ -243,22 +256,21 @@ def baseline_grid(args) -> pd.DataFrame:
     return baseline_template(args, abalone_parameter_grid())
 
 
+def baseline_grid_20221107(args) -> pd.DataFrame:
+    return baseline_template(args, abalone_parameter_grid_20221107())
+
+
 def baseline_dense_grid(args) -> pd.DataFrame:
     return baseline_template(args, abalone_parameter_dense_grid())
 
 
-def dp_rmse_ts_grid(args) -> pd.DataFrame:
+def dp_rmse_ts_template(args, grid: dict[str, Any]) -> pd.DataFrame:
     dfs = []
     total_budgets = args.privacy_budgets
     for total_budget in total_budgets:
-        parameter_grid = abalone_parameter_grid()
+        parameter_grid = grid
         parameter_grid["privacy_budget"] = [total_budget]
-        parameter_grid["ensemble_rejector_budget_split"] = [0.6, 0.75, 0.9]
         parameter_grid["tree_scorer"] = ["dp_rmse"]
-        parameter_grid["dp_argmax_privacy_budget"] = [0.001, 0.01]
-        parameter_grid["dp_argmax_stopping_prob"] = [0.1, 0.2]
-        parameter_grid["ts_upper_bound"] = parameter_grid["l2_threshold"]
-        parameter_grid["ts_gamma"] = [2]
 
         df = sklearn_grid(
             dpgbdt.DPGBDTRegressor(),
@@ -269,6 +281,26 @@ def dp_rmse_ts_grid(args) -> pd.DataFrame:
         dfs.append(df)
     df = pd.concat(dfs)
     return df
+
+
+def dp_rmse_ts_grid(args) -> pd.DataFrame:
+    grid = abalone_parameter_grid()
+    grid["ensemble_rejector_budget_split"] = [0.6, 0.75, 0.9]
+    grid["dp_argmax_privacy_budget"] = [0.001, 0.01]
+    grid["dp_argmax_stopping_prob"] = [0.1, 0.2]
+    grid["ts_upper_bound"] = grid["l2_threshold"]
+    grid["ts_gamma"] = [2]
+    return dp_rmse_ts_template(args, grid)
+
+
+def dp_rmse_ts_grid_20221107(args) -> pd.DataFrame:
+    grid = abalone_parameter_grid_20221107()
+    grid["ensemble_rejector_budget_split"] = [0.2, 0.4, 0.6, 0.75, 0.9]
+    grid["dp_argmax_privacy_budget"] = [0.0001, 0.001, 0.01]
+    grid["dp_argmax_stopping_prob"] = [0.01, 0.1, 0.2, 0.4]
+    grid["ts_upper_bound"] = grid["l2_threshold"]
+    grid["ts_gamma"] = [2]
+    return dp_rmse_ts_template(args, grid)
 
 
 def dp_quantile_ts_grid(args) -> pd.DataFrame:
@@ -299,8 +331,10 @@ def dp_quantile_ts_grid(args) -> pd.DataFrame:
 def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
     return dict(
         baseline_grid=baseline_grid,
+        baseline_grid_20221107=baseline_grid_20221107,
         baseline_dense_grid=baseline_dense_grid,
         dp_rmse_ts_grid=dp_rmse_ts_grid,
+        dp_rmse_ts_grid_20221107=dp_rmse_ts_grid_20221107,
         dp_quantile_ts_grid=dp_quantile_ts_grid,
     )[which]
 
