@@ -320,22 +320,18 @@ def dp_rmse_ts_grid_20221107(args) -> pd.DataFrame:
     return dp_rmse_ts_template(args, grid)
 
 
-def dp_quantile_ts_grid(args) -> pd.DataFrame:
+def dp_quantile_ts_template(
+    args, grid: dict[str, Any], ts_qs: list[float]
+) -> pd.DataFrame:
     dfs = []
     total_budgets = args.privacy_budgets
     for total_budget in total_budgets:
-        parameter_grid = abalone_parameter_grid()
+        parameter_grid = grid()
         parameter_grid["privacy_budget"] = [total_budget]
-        parameter_grid["ensemble_rejector_budget_split"] = [0.6, 0.75, 0.9]
         parameter_grid["tree_scorer"] = ["dp_quantile"]
-        parameter_grid["dp_argmax_privacy_budget"] = [0.001, 0.01]
-        parameter_grid["dp_argmax_stopping_prob"] = [0.1, 0.2]
-        parameter_grid["ts_shift"] = [0.0]
-        parameter_grid["ts_scale"] = [0.79]
-        parameter_grid["ts_upper_bound"] = parameter_grid["l2_threshold"]
 
         df = sklearn_grid(
-            dpgbdt.DPGBDTRegressor(ts_qs=[0.5, 0.90, 0.95]),
+            dpgbdt.DPGBDTRegressor(ts_qs=ts_qs),
             get_abalone,
             parameter_grid,
             n_jobs=args.num_cores,
@@ -343,6 +339,28 @@ def dp_quantile_ts_grid(args) -> pd.DataFrame:
         dfs.append(df)
     df = pd.concat(dfs)
     return df
+
+
+def dp_quantile_ts_grid(args) -> pd.DataFrame:
+    grid = abalone_parameter_grid()
+    grid["ensemble_rejector_budget_split"] = [0.6, 0.75, 0.9]
+    grid["dp_argmax_privacy_budget"] = [0.001, 0.01]
+    grid["dp_argmax_stopping_prob"] = [0.1, 0.2]
+    grid["ts_shift"] = [0.0]
+    grid["ts_scale"] = [0.79]
+    grid["ts_upper_bound"] = grid["l2_threshold"]
+    return dp_quantile_ts_template(args, grid, ts_qs=[0.5, 0.90, 0.95])
+
+
+def dp_quantile_ts_grid_20221107(args) -> pd.DataFrame:
+    grid = abalone_parameter_grid_20221107()
+    grid["ensemble_rejector_budget_split"] = [0.2, 0.4, 0.6, 0.75, 0.9]
+    grid["dp_argmax_privacy_budget"] = [0.0001, 0.001, 0.01]
+    grid["dp_argmax_stopping_prob"] = [0.01, 0.1, 0.2, 0, 4]
+    grid["ts_shift"] = [0.0]
+    grid["ts_scale"] = [0.5, 0.79, 1]
+    grid["ts_upper_bound"] = grid["l2_threshold"]
+    return dp_quantile_ts_template(args, grid, ts_qs=[0.5, 0.90, 0.95])
 
 
 def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
@@ -354,6 +372,7 @@ def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
         dp_rmse_ts_grid=dp_rmse_ts_grid,
         dp_rmse_ts_grid_20221107=dp_rmse_ts_grid_20221107,
         dp_quantile_ts_grid=dp_quantile_ts_grid,
+        dp_quantile_ts_grid_20221107=dp_quantile_ts_grid_20221107,
     )[which]
 
 
