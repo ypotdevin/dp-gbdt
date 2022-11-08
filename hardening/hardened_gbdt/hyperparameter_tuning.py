@@ -326,7 +326,7 @@ def dp_quantile_ts_template(
     dfs = []
     total_budgets = args.privacy_budgets
     for total_budget in total_budgets:
-        parameter_grid = grid()
+        parameter_grid = grid
         parameter_grid["privacy_budget"] = [total_budget]
         parameter_grid["tree_scorer"] = ["dp_quantile"]
 
