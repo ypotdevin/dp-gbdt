@@ -399,7 +399,7 @@ TreeNode *DPTree::find_best_split(
         LOG_DEBUG("max_depth ({1}) or min_samples ({2})-> leaf (pred={3:.2f})",
                   current_depth, live_size, node->prediction);
     }
-
+    LOG_DEBUG("split value: {1}", node->split_value);
     return node;
 }
 
