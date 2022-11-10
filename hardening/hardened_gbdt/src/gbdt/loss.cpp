@@ -151,6 +151,7 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
         {
             smooth_sens = smooth_sense_candidate;
             maximizer_k = k;
+            maximizer_local_sens = local_sens;
         }
 
         suffix_sum += U; // replace smallest by U, but only after calculation

@@ -183,7 +183,7 @@ void DPEnsemble::train(DataSet &dataset)
 {
     this->init_score = this->params->task->compute_init_score(dataset.y);
     this->init_gradients(dataset);
-    LOG_DEBUG("Training initialized with score: {1}", init_score);
+    LOG_DEBUG("Training initialized with ensemble-score: {1}", init_score);
     auto flavor = this->params->training_variant;
     if (flavor == "vanilla")
     {
@@ -266,7 +266,8 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
     auto mp = *this->params;
     dataset.shuffle_dataset(mp.rng);
 
-    auto score = this->init_score;
+    std::vector<double> mean_target_values(dataset.y.size(), this->init_score);
+    auto score = compute_rmse(absolute_differences(mean_target_values, dataset.y));
     auto n_steps = mp.n_trees_to_accept;
     auto step_budget = (mp.privacy_budget - mp.dp_argmax_privacy_budget) / 2.0; // parallel composition
     auto tree_budget = step_budget * mp.ensemble_rejector_budget_split;
@@ -293,8 +294,10 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
         auto remaining_dataset = p.second;
 
         /* the actual generalized DP argmax algorithm from Liu and Talwar 2018 */
-        for (int trial = 0; trial < T; ++trial)
+        int trial = 0;
+        for (; trial < T; ++trial)
         {
+            LOG_DEBUG("### diagnosis value 09 ### - trial={1}, trial");
             /* actual tree construction */
             DPTree tree = DPTree(this->params,
                                  &tree_params,
@@ -308,10 +311,11 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
             auto current_score = mp.tree_scorer->score_tree(score_budget,
                                                             dataset.y,
                                                             raw_predictions);
-            LOG_INFO("### diagnosis value 02 ### - rmse_approx={1}", score);
+            LOG_INFO("### diagnosis value 02 ### - current rmse_approx={1}", current_score);
             if (current_score < score)
             {
                 LOG_INFO("generalized_dp_argmax: successful exit");
+                score = current_score;
                 break; // successful exit, keep tree
             }
             if (biased_coin(mp.rng))
@@ -320,6 +324,9 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
                 LOG_INFO("generalized_dp_argmax: early unsuccessful exit");
                 break; // early unsuccessful exit, reject tree
             }
+        }
+        if (trial == T)
+        {
             this->trees.pop_back(); // late unsuccessful exit, reject tree
             LOG_INFO("generalized_dp_argmax: late unsuccessful exit");
         }
