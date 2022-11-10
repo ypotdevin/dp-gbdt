@@ -20,6 +20,9 @@ COL_NAME_MAPPING: dict[str, str] = dict(
     param_dp_argmax_stopping_prob="dp_argmax_stopping_prob",
     param_ts_upper_bound="ts_upper_bound",
     param_ts_gamma="ts_gamma",
+    param_ts_shift="ts_shift",
+    param_ts_scale="ts_scale",
+    param_training_variant="training_variant",
 )
 
 
@@ -43,7 +46,7 @@ def _rmse(x, y) -> float:
     return np.sqrt(np.mean(np.square(x - y)))
 
 
-def baseline():
+def baseline_sanity_check():
     X, y, cat_idx, num_idx = get_abalone()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
@@ -73,8 +76,56 @@ def baseline():
             print(f"score of just {score}")
 
 
+def baseline(csv_filename: str, index: int):
+    X, y, cat_idx, num_idx = get_abalone()
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+    df = pd.read_csv(csv_filename)
+    params = params_from_series(df.loc[index])
+    extended_params = extend_params(
+        params,
+        training_variant="vanilla",
+        tree_scorer=None,
+        verbosity="debug",
+    )
+
+    print(f"Parameters: {extended_params}")
+    estimator = dpgbdt.DPGBDTRegressor(**extended_params)
+    estimator.fit(X_train, y_train, cat_idx, num_idx)
+    print(f"fitted estimator: {estimator}")
+    score = _rmse(estimator.predict(X_test), y_test)
+    print(score)
+
+
+def dp_rmse(csv_filename: str, index: int):
+    X, y, cat_idx, num_idx = get_abalone()
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+    df = pd.read_csv(csv_filename)
+    params = params_from_series(df.loc[index])
+    extended_params = extend_params(
+        params,
+        training_variant="dp_argmax_scoring",
+        tree_scorer="dp_rmse",
+        verbosity="debug",
+    )
+
+    print(f"Parameters: {extended_params}")
+    estimator = dpgbdt.DPGBDTRegressor(**extended_params)
+    estimator.fit(X_train, y_train, cat_idx, num_idx)
+    print(f"fitted estimator: {estimator}")
+    score = _rmse(estimator.predict(X_test), y_test)
+    print(score)
+
+
+def dp_quantile():
+    return None
+
+
 if __name__ == "__main__":
-    baseline()
+    baseline("baseline_dense-gridspace_20221107_feature-grid.csv", 112872)
+    baseline("baseline_gridspace_20221109_feature-grid.csv", 3865)
+    dp_rmse("dp_rmse_ts_gridspace_20221107_feature-grid.csv", 278592)
 
     # X, y, cat_idx, num_idx = get_abalone()
     # X_train, X_test, y_train, y_test = train_test_split(X, y)
