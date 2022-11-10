@@ -245,7 +245,7 @@ TreeNode *DPTree::find_best_split(
             For now, it doesn't seem to be reasonable to make this a
             hyperparameter (again).
         */
-        bool use_grid = true;
+        bool use_grid = false;
         if (use_grid)
         {
             std::vector<double> feature_values;
