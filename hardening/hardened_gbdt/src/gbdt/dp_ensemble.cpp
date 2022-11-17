@@ -287,8 +287,6 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
     auto mp = *this->params;
     dataset.shuffle_dataset(mp.rng);
 
-    // std::vector<double> initial_guess(dataset.y.size(), this->init_score);
-    // auto score = compute_rmse(initial_guess, dataset.y);
     auto n_steps = mp.n_trees_to_accept;
     auto step_budget = (mp.privacy_budget - mp.dp_argmax_privacy_budget) / 2.0; // parallel composition
     auto tree_budget = step_budget * mp.ensemble_rejector_budget_split;
@@ -303,9 +301,7 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
     for (int tree_index = 0; tree_index < n_steps; ++tree_index)
     {
         this->update_gradients(dataset);
-
         auto tree_params = setup_tree_params(mp, tree_budget, tree_index);
-
         auto p = setup_tree_data(dataset,
                                  mp,
                                  n_steps,
@@ -313,7 +309,6 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
                                  tree_index);
         auto tree_dataset = p.first;
         auto remaining_dataset = p.second;
-
         _dp_argmax(dataset,
                    mp,
                    tree_params,
@@ -324,6 +319,9 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
                    tree_index);
         dataset = remaining_dataset;
     }
+    LOG_INFO(
+        "### diagnosis value 10 ### - Finished training with n_accepted_trees={1}",
+        this->trees.size());
 }
 
 void DPEnsemble::_dp_argmax(
@@ -338,19 +336,16 @@ void DPEnsemble::_dp_argmax(
 {
     auto ensemble_prediction = this->predict(dataset.X);
     auto ensemble_score = compute_rmse(ensemble_prediction, dataset.y);
-
     /* the actual generalized DP argmax algorithm from Liu and Talwar 2018 */
     for (int trial = 0; trial < T; ++trial)
     {
         LOG_DEBUG("### diagnosis value 09 ### - trial={1}", trial);
-        /* actual tree construction */
         DPTree tree = DPTree(this->params,
                              &tree_params,
                              &tree_dataset,
                              tree_index,
                              this->_grid);
         tree.fit();
-        // this->trees.push_back(tree);
         auto prediction_including_tree = incremental_predict(
             ensemble_prediction,
             mp.learning_rate,
@@ -364,7 +359,6 @@ void DPEnsemble::_dp_argmax(
         if (score_including_tree < ensemble_score)
         {
             LOG_INFO("generalized_dp_argmax: successful exit");
-            ensemble_score = score_including_tree;
             this->trees.push_back(tree);
             return;
         }
