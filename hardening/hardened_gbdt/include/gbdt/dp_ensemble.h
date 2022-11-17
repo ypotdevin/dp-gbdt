@@ -48,5 +48,14 @@ private:
      * decrease the ensemble loss.
      */
     void dp_argmax_scoring_training_loop(DataSet &dataset);
+
+    void _dp_argmax(DataSet &dataset,
+                    ModelParams &mp,
+                    TreeParams &tree_params,
+                    DataSet &tree_dataset,
+                    double score_budget,
+                    std::bernoulli_distribution &biased_coin,
+                    int T,
+                    int tree_index);
 };
 #endif // DPENSEMBLE_H

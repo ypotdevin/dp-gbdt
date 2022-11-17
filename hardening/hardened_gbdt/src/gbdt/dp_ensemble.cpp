@@ -131,6 +131,27 @@ namespace
                                                dataset.drop(rows_per_step));
         }
     }
+
+    /**
+     * @brief Generate the prediction of an ensemble including `tree`, based
+     * upon the ensemble's previous prediction (without `tree`).
+     */
+    std::vector<double> incremental_predict(
+        const std::vector<double> &old_prediction,
+        double learning_rate,
+        VVD &X,
+        DPTree &tree)
+    {
+        auto tree_prediction = tree.predict(X);
+        std::transform(
+            old_prediction.begin(),
+            old_prediction.end(),
+            tree_prediction.begin(),
+            tree_prediction.begin(),
+            [learning_rate](double old_pred, double t_pred)
+            { return old_pred + learning_rate * t_pred; });
+        return tree_prediction;
+    }
 }
 
 using namespace std;
@@ -205,7 +226,7 @@ void DPEnsemble::train(DataSet &dataset)
 vector<double> DPEnsemble::predict(VVD &X)
 {
     vector<double> predictions(X.size(), 0);
-    for (auto tree : trees)
+    for (auto &tree : trees)
     {
         vector<double> pred = tree.predict(X);
 
@@ -266,8 +287,8 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
     auto mp = *this->params;
     dataset.shuffle_dataset(mp.rng);
 
-    std::vector<double> mean_target_values(dataset.y.size(), this->init_score);
-    auto score = compute_rmse(absolute_differences(mean_target_values, dataset.y));
+    // std::vector<double> initial_guess(dataset.y.size(), this->init_score);
+    // auto score = compute_rmse(initial_guess, dataset.y);
     auto n_steps = mp.n_trees_to_accept;
     auto step_budget = (mp.privacy_budget - mp.dp_argmax_privacy_budget) / 2.0; // parallel composition
     auto tree_budget = step_budget * mp.ensemble_rejector_budget_split;
@@ -283,7 +304,7 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
     {
         this->update_gradients(dataset);
 
-        auto tree_params = setup_tree_params(mp, step_budget, tree_index);
+        auto tree_params = setup_tree_params(mp, tree_budget, tree_index);
 
         auto p = setup_tree_data(dataset,
                                  mp,
@@ -293,46 +314,68 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
         auto tree_dataset = p.first;
         auto remaining_dataset = p.second;
 
-        /* the actual generalized DP argmax algorithm from Liu and Talwar 2018 */
-        int trial = 0;
-        for (; trial < T; ++trial)
-        {
-            LOG_DEBUG("### diagnosis value 09 ### - trial={1}, trial");
-            /* actual tree construction */
-            DPTree tree = DPTree(this->params,
-                                 &tree_params,
-                                 &tree_dataset,
-                                 tree_index,
-                                 this->_grid);
-            tree.fit();
-            this->trees.push_back(tree);
-
-            auto raw_predictions = predict(dataset.X);
-            auto current_score = mp.tree_scorer->score_tree(score_budget,
-                                                            dataset.y,
-                                                            raw_predictions);
-            LOG_INFO("### diagnosis value 02 ### - current rmse_approx={1}", current_score);
-            if (current_score < score)
-            {
-                LOG_INFO("generalized_dp_argmax: successful exit");
-                score = current_score;
-                break; // successful exit, keep tree
-            }
-            if (biased_coin(mp.rng))
-            {
-                this->trees.pop_back();
-                LOG_INFO("generalized_dp_argmax: early unsuccessful exit");
-                break; // early unsuccessful exit, reject tree
-            }
-        }
-        if (trial == T)
-        {
-            this->trees.pop_back(); // late unsuccessful exit, reject tree
-            LOG_INFO("generalized_dp_argmax: late unsuccessful exit");
-        }
-
+        _dp_argmax(dataset,
+                   mp,
+                   tree_params,
+                   tree_dataset,
+                   score_budget,
+                   biased_coin,
+                   T,
+                   tree_index);
         dataset = remaining_dataset;
     }
+}
+
+void DPEnsemble::_dp_argmax(
+    DataSet &dataset,
+    ModelParams &mp,
+    TreeParams &tree_params,
+    DataSet &tree_dataset,
+    double score_budget,
+    std::bernoulli_distribution &biased_coin,
+    int T,
+    int tree_index)
+{
+    auto ensemble_prediction = this->predict(dataset.X);
+    auto ensemble_score = compute_rmse(ensemble_prediction, dataset.y);
+
+    /* the actual generalized DP argmax algorithm from Liu and Talwar 2018 */
+    for (int trial = 0; trial < T; ++trial)
+    {
+        LOG_DEBUG("### diagnosis value 09 ### - trial={1}", trial);
+        /* actual tree construction */
+        DPTree tree = DPTree(this->params,
+                             &tree_params,
+                             &tree_dataset,
+                             tree_index,
+                             this->_grid);
+        tree.fit();
+        // this->trees.push_back(tree);
+        auto prediction_including_tree = incremental_predict(
+            ensemble_prediction,
+            mp.learning_rate,
+            dataset.X,
+            tree);
+        auto score_including_tree = mp.tree_scorer->score_tree(
+            score_budget,
+            dataset.y,
+            prediction_including_tree);
+        LOG_INFO("### diagnosis value 02 ### - current rmse_approx={1}", score_including_tree);
+        if (score_including_tree < ensemble_score)
+        {
+            LOG_INFO("generalized_dp_argmax: successful exit");
+            ensemble_score = score_including_tree;
+            this->trees.push_back(tree);
+            return;
+        }
+        if (biased_coin(mp.rng))
+        {
+            LOG_INFO("generalized_dp_argmax: early unsuccessful exit");
+            return;
+        }
+    }
+    LOG_INFO("generalized_dp_argmax: late unsuccessful exit");
+    return;
 }
 
 void DPEnsemble::init_gradients(DataSet &ds)

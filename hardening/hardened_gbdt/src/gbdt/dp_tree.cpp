@@ -144,10 +144,11 @@ TreeNode *DPTree::make_leaf_node(int current_depth, vector<int> &live_samples)
 vector<double> DPTree::predict(VVD &X)
 {
     vector<double> predictions;
+    predictions.reserve(X.size());
     // iterate over all samples
-    for (auto row : X)
+    for (auto &row : X)
     {
-        double pred = _predict(&row, root_node);
+        double pred = _predict(&row, this->root_node);
         predictions.push_back(pred);
     }
 
@@ -190,7 +191,7 @@ double DPTree::_predict(vector<double> *row, TreeNode *node)
                                   right_result));
     }
 
-    // decide whether to take the current node's prediction, or the prediction of its sucessors
+    // decide whether to take the current node's prediction, or the prediction of its successors
     return constant_time::select(node->is_leaf,
                                  node->prediction,
                                  next_level_prediction);
