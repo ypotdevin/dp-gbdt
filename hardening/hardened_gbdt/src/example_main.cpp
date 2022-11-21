@@ -100,18 +100,18 @@ void good_dp_argmax_rmse_scoring_setting()
     dpgbdt::Estimator regressor(
         rng,
         10.0, // privacy_budget
-        0.75, // ensemble_rejector_budget_split
+        0.90, // ensemble_rejector_budget_split
         "dp_argmax_scoring",
         std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(5, 100.0, 2.0, rng)), // this will be ignored
         std::shared_ptr<tree_rejection::DPrMSEScorer>(new tree_rejection::DPrMSEScorer(20.0, 2.0, rng)),
-        0.01, // dp_argmax_privacy_budget
-        0.1,  // dp_argmax_stopping_prob
-        0.1,  // learning_rate
-        50,   // n_trees_to_accept
-        6,    // max_depth
-        2,    // min_samples_split
-        7,    // l2_threshold
-        0.1,  // l2_lambda
+        0.001, // dp_argmax_privacy_budget
+        0.01,  // dp_argmax_stopping_prob
+        0.1,   // learning_rate
+        50,    // n_trees_to_accept
+        6,     // max_depth
+        2,     // min_samples_split
+        9.167, // l2_threshold
+        0.1,   // l2_lambda
         true,
         true,
         true,
@@ -166,5 +166,5 @@ void long_dp_argmax_rmse_scoring_setting()
 
 int main(int argc, char **argv)
 {
-    long_dp_argmax_rmse_scoring_setting();
+    good_dp_argmax_rmse_scoring_setting();
 }
