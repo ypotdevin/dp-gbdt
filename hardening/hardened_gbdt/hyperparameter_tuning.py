@@ -119,6 +119,36 @@ def get_abalone() -> Tuple[np.ndarray, np.ndarray, list[int], list[int]]:
     return X, y, cat_idx, num_idx
 
 
+def get_wine() -> Tuple[np.ndarray, np.ndarray, list[int], list[int]]:
+    """Parse the wine dataset.
+    Returns:
+      Any: X, y, cat_idx, num_idx
+    """
+    data = pd.read_csv(
+        "./datasets/real/winequality-red.csv",
+        names=[
+            "fixed acidity",
+            "volatile acidity",
+            "citric acid",
+            "residual sugar",
+            "chlorides",
+            "free sulfur dioxide",
+            "total sulfur dioxide",
+            "density",
+            "pH",
+            "sulphates",
+            "alcohol",
+            "quality",
+        ],
+    )
+    y = data.quality.values.astype(float)
+    del data["quality"]
+    X = data.values.astype(float)
+    cat_idx = []
+    num_idx = list(range(1, X.shape[1]))
+    return X, y, cat_idx, num_idx
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Perform Bayesian optimization over the hyperparameter space."
@@ -256,7 +286,28 @@ def abalone_parameter_dense_grid_20221107():
     return parameter_grid
 
 
-def baseline_template(args, grid: dict[str, Any]) -> pd.DataFrame:
+def wine_parameter_grid_20221121():
+    parameter_grid = dict(
+        learning_rate=[0.01, 0.1, 1.0],
+        max_depth=[1, 5, 10],
+        # 3.0 is the max. abs. difference between any target value and
+        # the average target value
+        l2_threshold=[0.03, 0.3, 3.0],
+        l2_lambda=[0.01, 0.05, 0.1, 0.5, 1.0],
+        n_trees_to_accept=[1, 5, 10, 20, 50, 100],
+    )
+    return parameter_grid
+
+
+def baseline_template(
+    args,
+    grid: dict[str, Any],
+    data_provider: Callable[
+        [], Tuple[np.ndarray, np.ndarray, list[int], list[int]]
+    ] = None,
+) -> pd.DataFrame:
+    if data_provider is None:
+        data_provider = get_abalone
     dfs = []
     total_budgets = args.privacy_budgets
     for ensemble_budget in total_budgets:
@@ -269,7 +320,7 @@ def baseline_template(args, grid: dict[str, Any]) -> pd.DataFrame:
         ]
         df = sklearn_grid(
             dpgbdt.DPGBDTRegressor(),
-            get_abalone,
+            data_provider,
             parameter_grid,
             n_jobs=args.num_cores,
         )
@@ -300,7 +351,13 @@ def baseline_grid_20221109(args) -> pd.DataFrame:
     return baseline_template(args, grid)
 
 
-def dp_rmse_ts_template(args, grid: dict[str, Any]) -> pd.DataFrame:
+def dp_rmse_ts_template(
+    args,
+    grid: dict[str, Any],
+    data_provider: Callable[
+        [], Tuple[np.ndarray, np.ndarray, list[int], list[int]]
+    ] = None,
+) -> pd.DataFrame:
     dfs = []
     total_budgets = args.privacy_budgets
     for total_budget in total_budgets:
@@ -310,7 +367,7 @@ def dp_rmse_ts_template(args, grid: dict[str, Any]) -> pd.DataFrame:
 
         df = sklearn_grid(
             dpgbdt.DPGBDTRegressor(),
-            get_abalone,
+            data_provider,
             parameter_grid,
             n_jobs=args.num_cores,
         )
@@ -350,7 +407,12 @@ def dp_rmse_ts_grid_20221109(args) -> pd.DataFrame:
 
 
 def dp_quantile_ts_template(
-    args, grid: dict[str, Any], ts_qs: list[float]
+    args,
+    grid: dict[str, Any],
+    ts_qs: list[float],
+    data_provider: Callable[
+        [], Tuple[np.ndarray, np.ndarray, list[int], list[int]]
+    ] = None,
 ) -> pd.DataFrame:
     dfs = []
     total_budgets = args.privacy_budgets
@@ -361,7 +423,7 @@ def dp_quantile_ts_template(
 
         df = sklearn_grid(
             dpgbdt.DPGBDTRegressor(ts_qs=ts_qs),
-            get_abalone,
+            data_provider,
             parameter_grid,
             n_jobs=args.num_cores,
         )
@@ -406,6 +468,11 @@ def dp_quantile_ts_grid_20221109(args) -> pd.DataFrame:
     return pd.concat(dfs)
 
 
+def wine_baseline_grid_20221121(args) -> pd.DataFrame:
+    grid = wine_parameter_grid_20221121()
+    return baseline_template(args, grid, data_provider=get_wine)
+
+
 def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
     return dict(
         baseline_grid=baseline_grid,
@@ -419,6 +486,7 @@ def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
         dp_quantile_ts_grid=dp_quantile_ts_grid,
         dp_quantile_ts_grid_20221107=dp_quantile_ts_grid_20221107,
         dp_quantile_ts_grid_20221109=dp_quantile_ts_grid_20221109,
+        wine_baseline_grid_20221121=wine_baseline_grid_20221121,
     )[which]
 
 

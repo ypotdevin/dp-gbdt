@@ -75,10 +75,17 @@ namespace dpgbdt
         this->params->use_decay = use_decay;
         this->params->task = std::shared_ptr<Task>(new Regression());
         /* TODO */
+        /* abalone values
         this->params->grid_lower_bounds = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
         this->params->grid_upper_bounds = {0.0, 1.0, 1.0, 1.5, 3.0, 2.0, 1.0, 1.5};
         this->params->grid_step_sizes = {1.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
         this->params->cat_values = {{0.0, 1.0, 2.0}, {}, {}, {}, {}, {}, {}, {}, {}};
+        */
+        /* wine values */
+        this->params->grid_lower_bounds = {4.0, 0.0, 0.0, 0.0, 0.0, 1.0, 6.0, 0.99, 2.5, 0.0, 7.0};
+        this->params->grid_upper_bounds = {16.0, 2.0, 1.0, 15.0, 1.0, 80.0, 300.0, 1.0, 5.0, 2, 18};
+        this->params->grid_step_sizes = {0.1, 0.01, 0.01, 0.1, 0.001, 1.0, 1.0, 0.0001, 0.01, 0.01, 0.1};
+        this->params->cat_values = {{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}};
         this->verbosity = verbosity;
     }
 
