@@ -385,7 +385,7 @@ def dp_quantile_ts_grid_20221107(args) -> pd.DataFrame:
     grid = abalone_parameter_grid_20221107()
     grid["ensemble_rejector_budget_split"] = [0.2, 0.4, 0.6, 0.75, 0.9]
     grid["dp_argmax_privacy_budget"] = [0.0001, 0.001, 0.01]
-    grid["dp_argmax_stopping_prob"] = [0.01, 0.1, 0.2, 0, 4]
+    grid["dp_argmax_stopping_prob"] = [0.01, 0.1, 0.2, 0.4]
     grid["ts_shift"] = [0.0]
     grid["ts_scale"] = [0.5, 0.79, 1]
     grid["ts_upper_bound"] = grid["l2_threshold"]
