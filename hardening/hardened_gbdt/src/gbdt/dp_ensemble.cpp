@@ -309,14 +309,14 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
                                  tree_index);
         auto tree_dataset = p.first;
         auto remaining_dataset = p.second;
-        _dp_argmax(dataset,
-                   mp,
-                   tree_params,
-                   tree_dataset,
-                   score_budget,
-                   biased_coin,
-                   T,
-                   tree_index);
+        dp_argmax(dataset,
+                  mp,
+                  tree_params,
+                  tree_dataset,
+                  score_budget,
+                  biased_coin,
+                  T,
+                  tree_index);
         dataset = remaining_dataset;
     }
     LOG_INFO(
@@ -324,7 +324,7 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
         this->trees.size());
 }
 
-void DPEnsemble::_dp_argmax(
+void DPEnsemble::dp_argmax(
     DataSet &dataset,
     ModelParams &mp,
     TreeParams &tree_params,
@@ -355,6 +355,7 @@ void DPEnsemble::_dp_argmax(
             score_budget,
             dataset.y,
             prediction_including_tree);
+        LOG_DEBUG("score excluding new tree: {1}, score including new tree: {2}", ensemble_score, score_including_tree);
         LOG_INFO("### diagnosis value 02 ### - current rmse_approx={1}", score_including_tree);
         if (score_including_tree < ensemble_score)
         {
