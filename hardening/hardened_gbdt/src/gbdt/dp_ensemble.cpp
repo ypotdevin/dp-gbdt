@@ -360,7 +360,11 @@ void DPEnsemble::dp_argmax(
             score_budget,
             dataset.y,
             prediction_including_tree);
+        /* TODO: For logging purpose only */
+        auto abs_diffs = absolute_differences(prediction_including_tree, dataset.y);
         LOG_DEBUG("score excluding new tree: {1}, score including new tree: {2}", ensemble_score, score_including_tree);
+        LOG_INFO("### diagnosis value 01 ### - rmse of absolute differences rmse={1}", compute_rmse(abs_diffs));
+        LOG_INFO("### diagnosis value 11 ### - stdev of absolute differences std={1}", compute_stdev(abs_diffs, compute_mean(abs_diffs)));
         LOG_INFO("### diagnosis value 02 ### - current rmse_approx={1}", score_including_tree);
         if (score_including_tree < ensemble_score)
         {

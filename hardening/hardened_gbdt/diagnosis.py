@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 import dpgbdt
-from example_main import get_abalone
+from example_main import abalone_fit_arguments
 
 COL_NAME_MAPPING: dict[str, str] = dict(
     param_learning_rate="learning_rate",
@@ -47,7 +47,9 @@ def _rmse(x, y) -> float:
 
 
 def baseline_sanity_check():
-    X, y, cat_idx, num_idx = get_abalone()
+    fit_args = abalone_fit_arguments()
+    X = fit_args.pop("X")
+    y = fit_args.pop("y")
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
     df = pd.read_csv("baseline.csv")
@@ -67,7 +69,7 @@ def baseline_sanity_check():
 
         print(f"Parameters: {params}")
         estimator = dpgbdt.DPGBDTRegressor(**extended_params)
-        estimator.fit(X_train, y_train, cat_idx, num_idx)
+        estimator.fit(X_train, y_train, **fit_args)
         print(f"fitted estimator: {estimator}")
         score = _rmse(estimator.predict(X_test), y_test)
         if score <= 2.6:
@@ -77,7 +79,9 @@ def baseline_sanity_check():
 
 
 def baseline(csv_filename: str, index: int):
-    X, y, cat_idx, num_idx = get_abalone()
+    fit_args = abalone_fit_arguments()
+    X = fit_args.pop("X")
+    y = fit_args.pop("y")
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
     df = pd.read_csv(csv_filename)
@@ -91,14 +95,16 @@ def baseline(csv_filename: str, index: int):
 
     print(f"Parameters: {extended_params}")
     estimator = dpgbdt.DPGBDTRegressor(**extended_params)
-    estimator.fit(X_train, y_train, cat_idx, num_idx)
+    estimator.fit(X_train, y_train, **fit_args)
     print(f"fitted estimator: {estimator}")
     score = _rmse(estimator.predict(X_test), y_test)
     print(score)
 
 
 def dp_rmse(csv_filename: str, index: int):
-    X, y, cat_idx, num_idx = get_abalone()
+    fit_args = abalone_fit_arguments()
+    X = fit_args.pop("X")
+    y = fit_args.pop("y")
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
     df = pd.read_csv(csv_filename)
@@ -112,7 +118,7 @@ def dp_rmse(csv_filename: str, index: int):
 
     print(f"Parameters: {extended_params}")
     estimator = dpgbdt.DPGBDTRegressor(**extended_params)
-    estimator.fit(X_train, y_train, cat_idx, num_idx)
+    estimator.fit(X_train, y_train, **fit_args)
     print(f"fitted estimator: {estimator}")
     score = _rmse(estimator.predict(X_test), y_test)
     print(score)
@@ -123,9 +129,9 @@ def dp_quantile():
 
 
 if __name__ == "__main__":
-    baseline("baseline_dense-gridspace_20221107_feature-grid.csv", 112872)
-    baseline("baseline_gridspace_20221109_feature-grid.csv", 3865)
-    dp_rmse("dp_rmse_ts_gridspace_20221107_feature-grid.csv", 278592)
+    # baseline("baseline_dense-gridspace_20221107_feature-grid.csv", 112872)
+    # baseline("baseline_gridspace_20221109_feature-grid.csv", 3865)
+    dp_rmse("dp_rmse_ts_gridspace_feature-grid.csv", 19221)
 
     # X, y, cat_idx, num_idx = get_abalone()
     # X_train, X_test, y_train, y_test = train_test_split(X, y)
