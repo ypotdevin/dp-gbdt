@@ -299,12 +299,26 @@ cdef class PyEstimator:
         np.ndarray[double, ndim=1, mode="c"] y not None,
         list cat_idx,
         list num_idx,
+        np.ndarray[double, ndim=1, mode="c"] grid_lower_bounds not None,
+        np.ndarray[double, ndim=1, mode="c"] grid_upper_bounds not None,
+        np.ndarray[double, ndim=1, mode="c"] grid_step_sizes not None,
     ):
         cdef vector[vector[double]] x_vec = X
         cdef vector[double] y_vec = y
         cdef vector[int] cat_idx_vec = cat_idx
         cdef vector[int] num_idx_vec = num_idx
-        self.estimator.fit(X, y, cat_idx_vec, num_idx_vec)
+        cdef vector[double] grid_lower_bounds_vec = grid_lower_bounds
+        cdef vector[double] grid_upper_bounds_vec = grid_upper_bounds
+        cdef vector[double] grid_step_sizes_vec = grid_step_sizes
+        self.estimator.fit(
+            X,
+            y,
+            cat_idx_vec,
+            num_idx_vec,
+            grid_lower_bounds_vec,
+            grid_upper_bounds_vec,
+            grid_step_sizes_vec
+        )
         return self
 
     def predict(self, np.ndarray[double, ndim=2, mode="c"] X not None):

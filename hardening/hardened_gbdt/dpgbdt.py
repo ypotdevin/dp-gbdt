@@ -142,7 +142,16 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         self.ts_scale = ts_scale
         self.ts_qs = ts_qs
 
-    def fit(self, X, y, cat_idx=None, num_idx=None):
+    def fit(
+        self,
+        X,
+        y,
+        cat_idx=None,
+        num_idx=None,
+        grid_lower_bounds=None,
+        grid_upper_bounds=None,
+        grid_step_sizes=None,
+    ):
         """Build up the gradient boosted tree ensemble.
 
         Parameters
@@ -157,6 +166,12 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         num_idx : list of int
             The indices of numerical value columns. Defaults to all
             columns.
+        grid_lower_bounds : array-like, shape (n_features,)
+            The lower bounds of the grid to split on.
+        grid_upper_bounds : array-like, shape (n_features,)
+            The upper bounds of the grid to split on.
+        grid_step_sizes : array-like, shape (n_features,)
+            The step sizes of the grid to split on.
 
         Returns
         -------
@@ -188,6 +203,12 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
             cat_idx = []
         if num_idx is None:
             num_idx = list(range(len(X[0])))
+        if grid_lower_bounds is None:
+            grid_lower_bounds = []
+        if grid_upper_bounds is None:
+            grid_upper_bounds = []
+        if grid_step_sizes is None:
+            grid_step_sizes = []
 
         self.estimator_ = pyestimator.PyEstimator(
             rng=self.rng_,
@@ -210,7 +231,15 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
             use_decay=self.use_decay,
             verbosity=self.verbosity,
         )
-        self.estimator_.fit(X, y, cat_idx, num_idx)
+        self.estimator_.fit(
+            X,
+            y,
+            cat_idx,
+            num_idx,
+            grid_lower_bounds,
+            grid_upper_bounds,
+            grid_step_sizes,
+        )
 
         return self
 

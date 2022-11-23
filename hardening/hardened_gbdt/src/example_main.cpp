@@ -21,9 +21,18 @@ void basic_run()
     std::vector<double> y{1.0, 4.0, 2.0, 2.9, 1.0};
     std::vector<int> cat_idx{0};
     std::vector<int> num_idx{1, 2, 3};
+    std::vector<double> grid_lower_bounds = {0.0, -10.0, 0.0};
+    std::vector<double> grid_upper_bounds = {2.0, 10.0, 1.0};
+    std::vector<double> grid_step_sizes = {1.0, 1.0, 0.01};
 
     dpgbdt::Estimator regressor;
-    regressor.fit(X, y, cat_idx, num_idx);
+    regressor.fit(X,
+                  y,
+                  cat_idx,
+                  num_idx,
+                  grid_lower_bounds,
+                  grid_upper_bounds,
+                  grid_step_sizes);
     auto y_pred = regressor.predict(X);
     auto rmse = compute_rmse(y, y_pred);
     std::cout << rmse << std::endl;
@@ -40,7 +49,10 @@ void diagnosis_run()
     regressor.fit(dataset->X,
                   dataset->y,
                   parameters.cat_idx,
-                  parameters.num_idx);
+                  parameters.num_idx,
+                  parameters.grid_lower_bounds,
+                  parameters.grid_upper_bounds,
+                  parameters.grid_step_sizes);
     auto y_pred = regressor.predict(dataset->X);
     auto rmse = compute_rmse(dataset->y, y_pred);
     std::cout << rmse << std::endl;
@@ -69,7 +81,7 @@ void good_vanilla_setting()
         std::shared_ptr<tree_rejection::DPrMSEScorer>(new tree_rejection::DPrMSEScorer(100.0, 2.0, rng)),        // this will be ignored
         0.1,                                                                                                     // this will be ignored
         0.05,                                                                                                    // this will be ignored
-        1.561,
+        1.561,                                                                                                   // learning_rate
         1,
         4,
         2,
@@ -83,7 +95,10 @@ void good_vanilla_setting()
     regressor.fit(dataset->X,
                   dataset->y,
                   parameters.cat_idx,
-                  parameters.num_idx);
+                  parameters.num_idx,
+                  parameters.grid_lower_bounds,
+                  parameters.grid_upper_bounds,
+                  parameters.grid_step_sizes);
     auto y_pred = regressor.predict(dataset->X);
     auto rmse = compute_rmse(dataset->y, y_pred);
     std::cout << rmse << std::endl;
@@ -120,7 +135,10 @@ void good_dp_argmax_rmse_scoring_setting()
     regressor.fit(dataset->X,
                   dataset->y,
                   parameters.cat_idx,
-                  parameters.num_idx);
+                  parameters.num_idx,
+                  parameters.grid_lower_bounds,
+                  parameters.grid_upper_bounds,
+                  parameters.grid_step_sizes);
     auto y_pred = regressor.predict(dataset->X);
     auto rmse = compute_rmse(dataset->y, y_pred);
     std::cout << rmse << std::endl;
@@ -157,7 +175,10 @@ void long_dp_argmax_rmse_scoring_setting()
     regressor.fit(dataset->X,
                   dataset->y,
                   parameters.cat_idx,
-                  parameters.num_idx);
+                  parameters.num_idx,
+                  parameters.grid_lower_bounds,
+                  parameters.grid_upper_bounds,
+                  parameters.grid_step_sizes);
     auto y_pred = regressor.predict(dataset->X);
     auto rmse = compute_rmse(dataset->y, y_pred);
     std::cout << rmse << std::endl;

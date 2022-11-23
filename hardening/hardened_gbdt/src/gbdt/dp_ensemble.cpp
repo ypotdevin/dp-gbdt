@@ -166,27 +166,6 @@ DPEnsemble::DPEnsemble(ModelParams *parameters) : params(parameters)
     }
 
     this->rng = rng;
-
-    /* Setup data independent grid for tree node splitting later*/
-    if (!(this->params->grid_lower_bounds.size() ==
-              this->params->grid_upper_bounds.size() &&
-          this->params->grid_upper_bounds.size() ==
-              this->params->grid_step_sizes.size()))
-    {
-        throw std::runtime_error(
-            "Number of grid bounds and step sizes do not match!");
-    }
-    else
-    {
-        for (size_t i = 0; i < this->params->grid_lower_bounds.size(); ++i)
-        {
-            this->_grid.push_back(
-                numpy::linspace(
-                    this->params->grid_lower_bounds.at(i),
-                    this->params->grid_upper_bounds.at(i),
-                    this->params->grid_step_sizes.at(i)));
-        }
-    }
 }
 
 DPEnsemble::~DPEnsemble()
@@ -202,6 +181,32 @@ DPEnsemble::~DPEnsemble()
 // the gradients and the dataset rows).
 void DPEnsemble::train(DataSet &dataset)
 {
+    /* Setup data independent grid for tree node splitting later*/
+    if (!(this->params->grid_lower_bounds.size() ==
+              this->params->grid_upper_bounds.size() &&
+          this->params->grid_upper_bounds.size() ==
+              this->params->grid_step_sizes.size()))
+    {
+        throw std::runtime_error(
+            "Number of grid bounds and step sizes do not match!");
+    }
+    else if (this->params->grid_lower_bounds.size() == 0)
+    {
+        throw std::runtime_error(
+            "Empty grid!");
+    }
+    else
+    {
+        for (size_t i = 0; i < this->params->grid_lower_bounds.size(); ++i)
+        {
+            this->_grid.push_back(
+                numpy::linspace(
+                    this->params->grid_lower_bounds.at(i),
+                    this->params->grid_upper_bounds.at(i),
+                    this->params->grid_step_sizes.at(i)));
+        }
+    }
+
     this->init_score = this->params->task->compute_init_score(dataset.y);
     this->init_gradients(dataset);
     LOG_DEBUG("Training initialized with ensemble-score: {1}", init_score);

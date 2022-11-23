@@ -33,6 +33,9 @@ DataSet *Parser::get_abalone(ModelParams &parameters,
     std::vector<int> target_idx = {8};
     std::vector<int> drop_idx = {};
     std::vector<int> cat_values = {}; // empty -> will be filled with the present values in the dataset
+    parameters.grid_lower_bounds = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    parameters.grid_upper_bounds = {0.0, 1.0, 1.0, 1.5, 3.0, 2.0, 1.0, 1.5};
+    parameters.grid_step_sizes = {1.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
 
     return parse_file(file, name, num_rows, num_cols, num_samples, task, num_idx,
                       cat_idx, cat_values, target_idx, drop_idx, parameters);
@@ -104,6 +107,9 @@ DataSet *Parser::get_wine(ModelParams &parameters, size_t num_samples)
     std::vector<int> target_idx = {11};
     std::vector<int> drop_idx = {};
     std::vector<int> cat_values = {};
+    parameters.grid_lower_bounds = {4.0, 0.0, 0.0, 0.0, 0.0, 1.0, 6.0, 0.99, 2.5, 0.0, 7.0};
+    parameters.grid_upper_bounds = {16.0, 2.0, 1.0, 15.0, 1.0, 80.0, 300.0, 1.0, 5.0, 2, 18};
+    parameters.grid_step_sizes = {0.1, 0.01, 0.01, 0.1, 0.001, 1.0, 1.0, 0.0001, 0.01, 0.01, 0.1};
 
     return parse_file(file, name, num_rows, num_cols, num_samples, task, num_idx,
                       cat_idx, cat_values, target_idx, drop_idx, parameters);

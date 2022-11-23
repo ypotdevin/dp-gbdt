@@ -3,98 +3,38 @@ from typing import Any, Callable, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from ray.tune.sklearn import TuneSearchCV, TuneGridSearchCV
 from sklearn.model_selection import GridSearchCV, RepeatedKFold
 
 import dpgbdt
 
 
-def tune(
-    regressor,
-    data_provider: Callable[[], Tuple[np.ndarray, np.ndarray, list[int], list[int]]],
-    parameter_grid: dict[str, Any],
-    label: str,
-    n_trials: int,
-    local_dir: str,
-    n_jobs: Optional[int] = None,
-    time_budget_s: Optional[int] = None,
-    search_optimization="hyperopt",
-    cv=None,
-) -> Tuple[pd.DataFrame, dict[str, Any]]:
-    if cv is None:
-        cv = RepeatedKFold(n_splits=5, n_repeats=2)
-    X_train, y_train, cat_idx, num_idx = data_provider()
-    tune_search = TuneSearchCV(
-        regressor,
-        parameter_grid,
-        name=label,
-        search_optimization=search_optimization,
-        n_trials=n_trials,
-        local_dir=local_dir,
-        n_jobs=n_jobs,
-        time_budget_s=time_budget_s,
-        scoring="neg_root_mean_squared_error",
-        cv=cv,
-    )
-    tune_search.fit(X_train, y_train, cat_idx=cat_idx, num_idx=num_idx)
-    df = pd.DataFrame(tune_search.cv_results_)
-    return df
-
-
-def tune_grid(
-    regressor,
-    data_provider: Callable[[], Tuple[np.ndarray, np.ndarray, list[int], list[int]]],
-    parameter_grid: dict[str, Any],
-    label: str,
-    local_dir: str,
-    n_jobs: Optional[int] = None,
-    time_budget_s: Optional[int] = None,
-    cv=None,
-) -> Tuple[pd.DataFrame, dict[str, Any]]:
-    if cv is None:
-        cv = RepeatedKFold(n_splits=5, n_repeats=2)
-    X_train, y_train, cat_idx, num_idx = data_provider()
-    tune_search = TuneGridSearchCV(
-        regressor,
-        parameter_grid,
-        name=label,
-        local_dir=local_dir,
-        n_jobs=n_jobs,
-        time_budget_s=time_budget_s,
-        scoring="neg_root_mean_squared_error",
-        cv=cv,
-    )
-    tune_search.fit(X_train, y_train, cat_idx=cat_idx, num_idx=num_idx)
-    df = pd.DataFrame(tune_search.cv_results_)
-    return df
-
-
 def sklearn_grid(
     regressor,
-    data_provider: Callable[[], Tuple[np.ndarray, np.ndarray, list[int], list[int]]],
+    data_provider: Callable[[], dict[str, Any]],
     parameter_grid: dict[str, Any],
     n_jobs: Optional[int] = None,
     cv=None,
 ) -> Tuple[pd.DataFrame, dict[str, Any]]:
     if cv is None:
         cv = RepeatedKFold(n_splits=5, n_repeats=2)
-    X_train, y_train, cat_idx, num_idx = data_provider()
-    tune_search = GridSearchCV(
+    sklearn_search = GridSearchCV(
         regressor,
         parameter_grid,
         n_jobs=n_jobs,
         scoring="neg_root_mean_squared_error",
         cv=cv,
     )
-    tune_search.fit(X_train, y_train, cat_idx=cat_idx, num_idx=num_idx)
-    df = pd.DataFrame(tune_search.cv_results_)
+    sklearn_search.fit(**data_provider())
+    df = pd.DataFrame(sklearn_search.cv_results_)
     return df
 
 
 def get_abalone() -> Tuple[np.ndarray, np.ndarray, list[int], list[int]]:
-    """Parse the abalone dataset.
+    """Parse the abalone dataset and return parameters suitable for
+    `fit`.
+
     Returns:
-      Any: X, y, cat_idx, num_idx
+      dict[str, Any]: An assignment to `fit`'s arguments.
     """
     data = pd.read_csv(
         "./datasets/real/abalone.data",
@@ -111,18 +51,22 @@ def get_abalone() -> Tuple[np.ndarray, np.ndarray, list[int], list[int]]:
         ],
     )
     data["sex"], _ = pd.factorize(data["sex"])
-    y = data.rings.values.astype(float)
+    args = dict(y=data.rings.values.astype(float))
     del data["rings"]
-    X = data.values.astype(float)
-    cat_idx = [0]  # Sex
-    num_idx = list(range(1, X.shape[1]))  # Other attributes
-    return X, y, cat_idx, num_idx
+    args["X"] = data.values.astype(float)
+    args["cat_idx"] = [0]  # Sex
+    args["num_idx"] = list(range(1, args["X"].shape[1]))  # Other attributes
+    args["grid_lower_bounds"] = np.array(args["X"].shape[1] * [0.0])
+    args["grid_upper_bounds"] = np.array([2.0, 1.0, 1.0, 1.5, 3.0, 2.0, 1.0, 1.5])
+    args["grid_step_sizes"] = np.array([1.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01])
+    return args
 
 
-def get_wine() -> Tuple[np.ndarray, np.ndarray, list[int], list[int]]:
+def get_wine() -> dict[str, Any]:
     """Parse the wine dataset.
+
     Returns:
-      Any: X, y, cat_idx, num_idx
+      dict[str, Any]: An assignment to `fit`'s arguments.
     """
     data = pd.read_csv(
         "./datasets/real/winequality-red.csv",
@@ -141,12 +85,54 @@ def get_wine() -> Tuple[np.ndarray, np.ndarray, list[int], list[int]]:
             "quality",
         ],
     )
-    y = data.quality.values.astype(float)
+    args = dict(y=data.quality.values.astype(float))
     del data["quality"]
-    X = data.values.astype(float)
-    cat_idx = []
-    num_idx = list(range(1, X.shape[1]))
-    return X, y, cat_idx, num_idx
+    args["X"] = data.values.astype(float)
+    args["cat_idx"] = []
+    args["num_idx"] = list(range(1, args["X"].shape[1]))
+    args["grid_lower_bounds"] = np.array(
+        [4.0, 0.0, 0.0, 0.0, 0.0, 1.0, 6.0, 0.99, 2.5, 0.0, 7.0]
+    )
+    args["grid_upper_bounds"] = np.array(
+        [16.0, 2.0, 1.0, 15.0, 1.0, 80.0, 300.0, 1.0, 5.0, 2, 18]
+    )
+    args["grid_step_sizes"] = np.array(
+        [0.1, 0.01, 0.01, 0.1, 0.001, 1.0, 1.0, 0.0001, 0.01, 0.01, 0.1]
+    )
+    return args
+
+
+def get_concrete() -> dict[str, Any]:
+    """Parse the concrete dataset.
+
+    Returns:
+      dict[str, Any]: An assignment to `fit`'s arguments.
+    """
+    data = pd.read_csv(
+        "./datasets/real/Concrete_Data_Yeh.csv",
+        names=[
+            "cement",
+            "blast furnace slag",
+            "fly ash",
+            "water",
+            "superplasticizer",
+            "coarse aggregate",
+            "fine aggregate",
+            "age",
+            "compressive_strength",
+        ],
+    )
+    args = dict(y=data.age.values.astype(float))
+    del data["quality"]
+    args["X"] = data.values.astype(float)
+    args["cat_idx"] = []
+    args["num_idx"] = list(range(1, args["X"].shape[1]))
+    args["grid_lower_bounds"] = np.array(args["X"].shape[1] * [0.0])
+    args["grid_upper_bounds"] = np.array(
+        [1000.0, 500.0, 500.0, 500.0, 100.0, 1500, 1500.0, 365.0]
+    )
+    args["grid_step_sizes"] = np.array([1.0, 1.0, 1.0, 1.0, 0.1, 1.0, 1.0, 1.0])
+    return args
 
 
 def parse_args():
@@ -302,9 +288,7 @@ def wine_parameter_grid_20221121():
 def baseline_template(
     args,
     grid: dict[str, Any],
-    data_provider: Callable[
-        [], Tuple[np.ndarray, np.ndarray, list[int], list[int]]
-    ] = None,
+    data_provider: Callable[[], dict[str, Any]] = None,
 ) -> pd.DataFrame:
     if data_provider is None:
         data_provider = get_abalone
@@ -354,10 +338,10 @@ def baseline_grid_20221109(args) -> pd.DataFrame:
 def dp_rmse_ts_template(
     args,
     grid: dict[str, Any],
-    data_provider: Callable[
-        [], Tuple[np.ndarray, np.ndarray, list[int], list[int]]
-    ] = None,
+    data_provider: Callable[[], dict[str, Any]] = None,
 ) -> pd.DataFrame:
+    if data_provider is None:
+        data_provider = get_abalone
     dfs = []
     total_budgets = args.privacy_budgets
     for total_budget in total_budgets:
@@ -410,10 +394,10 @@ def dp_quantile_ts_template(
     args,
     grid: dict[str, Any],
     ts_qs: list[float],
-    data_provider: Callable[
-        [], Tuple[np.ndarray, np.ndarray, list[int], list[int]]
-    ] = None,
+    data_provider: Callable[[], dict[str, Any]] = None,
 ) -> pd.DataFrame:
+    if data_provider is None:
+        data_provider = get_abalone
     dfs = []
     total_budgets = args.privacy_budgets
     for total_budget in total_budgets:

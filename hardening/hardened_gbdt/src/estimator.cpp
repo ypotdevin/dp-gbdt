@@ -26,10 +26,6 @@ namespace dpgbdt
         this->params->leaf_clipping = true;
         this->params->use_decay = false;
         this->params->task = std::shared_ptr<Task>(new Regression());
-        /* TODO */
-        this->params->grid_lower_bounds = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-        this->params->grid_upper_bounds = {0.0, 1.0, 1.0, 1.5, 3.0, 2.0, 1.0, 1.5};
-        this->params->grid_step_sizes = {1.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
         this->verbosity = "warning";
     }
 
@@ -74,25 +70,16 @@ namespace dpgbdt
         this->params->leaf_clipping = leaf_clipping;
         this->params->use_decay = use_decay;
         this->params->task = std::shared_ptr<Task>(new Regression());
-        /* TODO */
-        /* abalone values
-        this->params->grid_lower_bounds = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-        this->params->grid_upper_bounds = {0.0, 1.0, 1.0, 1.5, 3.0, 2.0, 1.0, 1.5};
-        this->params->grid_step_sizes = {1.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
-        this->params->cat_values = {{0.0, 1.0, 2.0}, {}, {}, {}, {}, {}, {}, {}, {}};
-        */
-        /* wine values */
-        this->params->grid_lower_bounds = {4.0, 0.0, 0.0, 0.0, 0.0, 1.0, 6.0, 0.99, 2.5, 0.0, 7.0};
-        this->params->grid_upper_bounds = {16.0, 2.0, 1.0, 15.0, 1.0, 80.0, 300.0, 1.0, 5.0, 2, 18};
-        this->params->grid_step_sizes = {0.1, 0.01, 0.01, 0.1, 0.001, 1.0, 1.0, 0.0001, 0.01, 0.01, 0.1};
-        this->params->cat_values = {{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}};
         this->verbosity = verbosity;
     }
 
     Estimator &Estimator::fit(const std::vector<std::vector<double>> &X,
                               const std::vector<double> &y,
                               const std::vector<int> &cat_idx,
-                              const std::vector<int> &num_idx)
+                              const std::vector<int> &num_idx,
+                              const std::vector<double> &grid_lower_bounds,
+                              const std::vector<double> &grid_upper_bounds,
+                              const std::vector<double> &grid_step_sizes)
     {
         /* This might lead to problems, since DPEnsemble takes (?) ownership of
          * passed ModelParams (but does not use shared_pointers instead of raw
@@ -124,6 +111,9 @@ namespace dpgbdt
         this->ensemble = std::shared_ptr<DPEnsemble>(new DPEnsemble(this->params.get()));
         this->params->cat_idx = cat_idx;
         this->params->num_idx = num_idx;
+        this->params->grid_lower_bounds = grid_lower_bounds;
+        this->params->grid_upper_bounds = grid_upper_bounds;
+        this->params->grid_step_sizes = grid_step_sizes;
         DataSet dataset = DataSet(X, y);
         this->ensemble->train(dataset);
         return *this;

@@ -34,7 +34,7 @@ struct ModelParams
     std::vector<double> grid_lower_bounds;
     std::vector<double> grid_upper_bounds;
     std::vector<double> grid_step_sizes;
-    std::vector<std::vector<double>> cat_values;
+    std::vector<std::vector<double>> cat_values; // deprecated
     unsigned scale_X = false;
     double scale_X_percentile = 95;
     double scale_X_privacy_budget = 0.4;

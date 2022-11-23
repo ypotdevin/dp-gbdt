@@ -85,12 +85,18 @@ namespace dpgbdt
          * @param cat_idx which columns (indices) of X are of categorical
          * nature?
          * @param num_idx which columns (indices) of X are of numerical nature?
+         * @param grid_lower_bounds the lower bounds of the grid to split on.
+         * @param grid_upper_bounds the upper bounds of the grid to split on.
+         * @param grid_step_sizes the step sizes of the grid to split on.
          * @return the fitted estimator
          */
         Estimator &fit(const std::vector<std::vector<double>> &X,
                        const std::vector<double> &y,
                        const std::vector<int> &cat_idx,
-                       const std::vector<int> &num_idx);
+                       const std::vector<int> &num_idx,
+                       const std::vector<double> &grid_lower_bounds,
+                       const std::vector<double> &grid_upper_bounds,
+                       const std::vector<double> &grid_step_sizes);
 
         /**
          * @brief Infer the output variables corresponding to the provided input

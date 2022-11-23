@@ -249,16 +249,16 @@ TreeNode *DPTree::find_best_split(
         bool use_grid = true;
         if (use_grid)
         {
-            std::vector<double> feature_values;
-            if (categorical)
-            {
-                feature_values = this->params->cat_values[feature_index];
-            }
-            else
-            {
-                feature_values = this->grid.at(feature_index);
-            }
-            for (double feature_value : feature_values)
+            // std::vector<double> feature_values;
+            // if (categorical)
+            // {
+            //     feature_values = this->params->cat_values[feature_index];
+            // }
+            // else
+            // {
+            //     feature_values = this->grid.at(feature_index);
+            // }
+            for (double feature_value : this->grid.at(feature_index))
             {
                 // compute gain
                 double gain = compute_gain(X_transposed,

@@ -30,7 +30,15 @@ cdef extern from "estimator.h" namespace "dpgbdt":
             bool use_decay,
             string verbosity
         ) except +
-        Estimator fit(vector[vector[double]] X, vector[double] y, vector[int] cat_idx, vector[int] num_idx)
+        Estimator fit(
+            vector[vector[double]] X,
+            vector[double] y,
+            vector[int] cat_idx,
+            vector[int] num_idx,
+            vector[double] grid_lower_bounds,
+            vector[double] grid_upper_bounds,
+            vector[double] grid_step_sizes
+        )
         vector[double] predict(vector[vector[double]] X)
 
 cdef extern from "tree_rejection.h" namespace "tree_rejection":
