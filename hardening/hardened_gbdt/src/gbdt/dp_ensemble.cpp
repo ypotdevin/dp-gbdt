@@ -143,6 +143,10 @@ namespace
         DPTree &tree)
     {
         auto tree_prediction = tree.predict(X);
+        if (old_prediction.size() != tree_prediction.size())
+        {
+            throw std::runtime_error("Length of ensemble's and tree's prediction do not match.");
+        }
         std::transform(
             old_prediction.begin(),
             old_prediction.end(),
@@ -170,7 +174,7 @@ DPEnsemble::DPEnsemble(ModelParams *parameters) : params(parameters)
 
 DPEnsemble::~DPEnsemble()
 {
-    for (auto tree : trees)
+    for (auto &tree : trees)
     {
         tree.delete_tree(tree.root_node);
     }
@@ -288,9 +292,9 @@ void DPEnsemble::vanilla_training_loop(DataSet &dataset)
 
 void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
 {
-    auto original_dataset_length = dataset.length;
     auto mp = *this->params;
     dataset.shuffle_dataset(mp.rng);
+    auto initial_dataset = dataset; // For evaluation (prevent this from shrinking)
 
     auto n_steps = mp.n_trees_to_accept;
     auto step_budget = (mp.privacy_budget - mp.dp_argmax_privacy_budget) / 2.0; // parallel composition
@@ -302,6 +306,8 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
     int T = std::max((1.0 / mp.stopping_prob) *
                          std::log(2.0 / mp.dp_argmax_privacy_budget),
                      1.0 + 1.0 / (e * mp.stopping_prob));
+    auto ensemble_prediction = this->predict(initial_dataset.X);
+    auto ensemble_score = std::numeric_limits<double>::infinity();
     LOG_INFO("### diagnosis value 08 ### - T={1}", T);
     for (int tree_index = 0; tree_index < n_steps; ++tree_index)
     {
@@ -310,18 +316,20 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
         auto p = setup_tree_data(dataset,
                                  mp,
                                  n_steps,
-                                 original_dataset_length,
+                                 initial_dataset.length,
                                  tree_index);
         auto tree_dataset = p.first;
         auto remaining_dataset = p.second;
-        dp_argmax(dataset,
+        dp_argmax(initial_dataset,
                   mp,
                   tree_params,
                   tree_dataset,
                   score_budget,
                   biased_coin,
                   T,
-                  tree_index);
+                  tree_index,
+                  ensemble_prediction,
+                  ensemble_score);
         dataset = remaining_dataset;
     }
     LOG_INFO(
@@ -330,17 +338,17 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
 }
 
 void DPEnsemble::dp_argmax(
-    DataSet &dataset,
+    DataSet &initial_dataset,
     ModelParams &mp,
     TreeParams &tree_params,
     DataSet &tree_dataset,
     double score_budget,
     std::bernoulli_distribution &biased_coin,
     int T,
-    int tree_index)
+    int tree_index,
+    std::vector<double> &ensemble_prediction,
+    double &ensemble_score)
 {
-    auto ensemble_prediction = this->predict(dataset.X);
-    auto ensemble_score = compute_rmse(ensemble_prediction, dataset.y);
     /* the actual generalized DP argmax algorithm from Liu and Talwar 2018 */
     for (int trial = 0; trial < T; ++trial)
     {
@@ -354,11 +362,11 @@ void DPEnsemble::dp_argmax(
         auto prediction_including_tree = incremental_predict(
             ensemble_prediction,
             mp.learning_rate,
-            dataset.X,
+            initial_dataset.X,
             tree);
         auto score_including_tree = mp.tree_scorer->score_tree(
             score_budget,
-            dataset.y,
+            initial_dataset.y,
             prediction_including_tree);
         LOG_DEBUG(
             "score excluding new tree: {1}, score including new tree: {2}",
@@ -371,7 +379,7 @@ void DPEnsemble::dp_argmax(
         /****************** TODO: For logging purpose only ********************/
         auto abs_diffs = absolute_differences(
             prediction_including_tree,
-            dataset.y);
+            initial_dataset.y);
         LOG_INFO(
             "### diagnosis value 01 ### - rmse of absolute differences rmse={1}",
             compute_rmse(abs_diffs));
@@ -382,9 +390,12 @@ void DPEnsemble::dp_argmax(
         if (score_including_tree < ensemble_score)
         {
             LOG_INFO("generalized_dp_argmax: successful exit");
+            ensemble_prediction = prediction_including_tree;
+            ensemble_score = score_including_tree;
             this->trees.push_back(tree);
             return;
         }
+        tree.delete_tree(tree.root_node);
         if (biased_coin(mp.rng))
         {
             LOG_INFO("generalized_dp_argmax: early unsuccessful exit");
