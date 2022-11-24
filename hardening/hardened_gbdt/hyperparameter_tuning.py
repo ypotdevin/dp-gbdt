@@ -459,7 +459,7 @@ def wine_baseline_grid_20221121(args) -> pd.DataFrame:
 
 def wine_dp_rmse_ts_grid_20221121(args) -> pd.DataFrame:
     grid = wine_parameter_grid_20221121()
-    grid["ensemble_rejector_budget_split"] = [0.6, 0.75, 0.9]
+    grid["ensemble_rejector_budget_split"] = [0.5, 0.75, 0.9]
     grid["dp_argmax_privacy_budget"] = [0.001, 0.01]
     grid["dp_argmax_stopping_prob"] = [0.1, 0.2]
     grid["ts_upper_bound"] = grid["l2_threshold"]
@@ -469,7 +469,7 @@ def wine_dp_rmse_ts_grid_20221121(args) -> pd.DataFrame:
 
 def wine_dp_quantile_ts_grid_20221121(args) -> pd.DataFrame:
     grid = wine_parameter_grid_20221121()
-    grid["ensemble_rejector_budget_split"] = [0.6, 0.75, 0.9]
+    grid["ensemble_rejector_budget_split"] = [0.5, 0.75, 0.9]
     grid["dp_argmax_privacy_budget"] = [0.001, 0.01]
     grid["dp_argmax_stopping_prob"] = [0.1, 0.2]
     grid["ts_shift"] = [0.0]
