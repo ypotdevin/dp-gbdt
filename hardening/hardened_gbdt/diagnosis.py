@@ -1,4 +1,7 @@
-from typing import Any
+import contextlib
+import os
+import zipfile
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
@@ -6,6 +9,7 @@ from sklearn.model_selection import train_test_split
 
 import dpgbdt
 from example_main import abalone_fit_arguments
+from stdout_redirector import stdout_redirector
 
 COL_NAME_MAPPING: dict[str, str] = dict(
     param_learning_rate="learning_rate",
@@ -78,50 +82,119 @@ def baseline_sanity_check():
             print(f"score of just {score}")
 
 
-def baseline(csv_filename: str, index: int):
-    fit_args = abalone_fit_arguments()
-    X = fit_args.pop("X")
-    y = fit_args.pop("y")
+def single_configuration(
+    row: pd.Series,
+    additional_parameters: dict[str, Any],
+    fit_args: dict[str, Any],
+    logfilename: str = None,
+):
+    """Relaunch a single configuration of the DP-GBDT regressor,
+    obtaining parameters from a single row of the result DataFrame.
+
+    Args:
+        row (pd.row): the row containing the parameters of the
+            configuration.
+        additional_parameters (dict[str, Any]): further parameters not
+            contained in the row
+        fit_args (dict[str, Any]): the arguments required by the
+            regressors's fit method
+        logfilename (str, optional): If provided, create this logfile
+            and redirect stdout to it. Otherwise don't redirect stdout.
+            Defaults to None.
+    """
+    _fit_args = fit_args.copy()
+    X = _fit_args.pop("X")
+    y = _fit_args.pop("y")
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
-    df = pd.read_csv(csv_filename)
-    params = params_from_series(df.loc[index])
-    extended_params = extend_params(
-        params,
+    params = params_from_series(row)
+    params = {**params, **additional_parameters}
+
+    if logfilename is not None:
+        maybe_redirecting = contextlib.ExitStack()
+        logfile = maybe_redirecting.enter_context(open(logfilename, "wb"))
+        maybe_redirecting.enter_context(stdout_redirector(logfile))
+    else:
+        maybe_redirecting = contextlib.nullcontext()
+    # mind that when actually redirecting, python's stdout and the
+    # extension's stdout might not be in correct order relative to
+    # another (but at least within their own stdout they should be
+    # consistent)
+    with maybe_redirecting:
+        print(f"Parameters: {params}")
+        estimator = dpgbdt.DPGBDTRegressor(**params)
+        estimator.fit(X_train, y_train, **_fit_args)
+        print(f"fitted estimator: {estimator}")
+        score = _rmse(estimator.predict(X_test), y_test)
+        print(f"score: {score}")
+
+
+def multiple_configurations(
+    df: pd.DataFrame,
+    indices: list[int],
+    additional_parameters: dict[str, Any],
+    fit_args: dict[str, Any],
+    logfilename_template: str,
+    zipfilename: Optional[str] = None,
+):
+    indices_and_logfiles = [
+        (index, logfilename_template.format(index=index)) for index in indices
+    ]
+    for (index, logfile) in indices_and_logfiles:
+        single_configuration(
+            df.loc[index],
+            additional_parameters=additional_parameters,
+            fit_args=fit_args,
+            logfilename=logfile,
+        )
+    if zipfilename is not None:
+        with zipfile.ZipFile(
+            zipfilename, mode="w", compression=zipfile.ZIP_DEFLATED
+        ) as zfile:
+            for (_, logfile) in indices_and_logfiles:
+                # print(f"Zipping and removing logfile {logfile}")
+                zfile.write(logfile)
+                os.remove(logfile)
+
+
+def baseline(
+    series: pd.Series,
+    fit_args: dict[str, Any] = None,
+    verbosity: str = "debug",
+    logfilename: str = None,
+):
+    if fit_args is None:
+        fit_args = abalone_fit_arguments()
+    additional_params = dict(
         training_variant="vanilla",
         tree_scorer=None,
-        verbosity="debug",
+        verbosity=verbosity,
+    )
+    single_configuration(
+        row=series,
+        fit_args=fit_args,
+        additional_parameters=additional_params,
+        logfilename=logfilename,
     )
 
-    print(f"Parameters: {extended_params}")
-    estimator = dpgbdt.DPGBDTRegressor(**extended_params)
-    estimator.fit(X_train, y_train, **fit_args)
-    print(f"fitted estimator: {estimator}")
-    score = _rmse(estimator.predict(X_test), y_test)
-    print(score)
 
-
-def dp_rmse(csv_filename: str, index: int):
-    fit_args = abalone_fit_arguments()
-    X = fit_args.pop("X")
-    y = fit_args.pop("y")
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
-    df = pd.read_csv(csv_filename)
-    params = params_from_series(df.loc[index])
-    extended_params = extend_params(
-        params,
+def dp_rmse(
+    series: pd.Series,
+    fit_args: dict[str, Any],
+    verbosity: str = "debug",
+    logfilename: str = None,
+):
+    additional_params = dict(
         training_variant="dp_argmax_scoring",
         tree_scorer="dp_rmse",
-        verbosity="debug",
+        verbosity=verbosity,
     )
-
-    print(f"Parameters: {extended_params}")
-    estimator = dpgbdt.DPGBDTRegressor(**extended_params)
-    estimator.fit(X_train, y_train, **fit_args)
-    print(f"fitted estimator: {estimator}")
-    score = _rmse(estimator.predict(X_test), y_test)
-    print(score)
+    single_configuration(
+        row=series,
+        fit_args=fit_args,
+        additional_parameters=additional_params,
+        logfilename=logfilename,
+    )
 
 
 def dp_quantile():
@@ -129,31 +202,18 @@ def dp_quantile():
 
 
 if __name__ == "__main__":
-    # baseline("baseline_dense-gridspace_20221107_feature-grid.csv", 112872)
+    additional_params = dict(
+        training_variant="vanilla",
+        tree_scorer=None,
+        verbosity="debug",
+    )
+    multiple_configurations(
+        df=pd.read_csv("baseline_dense-gridspace_20221107_feature-grid.csv"),
+        indices=[26951, 44255, 84463, 112872],
+        additional_parameters=additional_params,
+        fit_args=abalone_fit_arguments(),
+        logfilename_template="baseline_dense-gridspace_20221107_feature-grid.{index}.log",
+        zipfilename="baseline_dense-gridspace_20221107_feature-grid.zip",
+    )
     # baseline("baseline_gridspace_20221109_feature-grid.csv", 3865)
-    dp_rmse("dp_rmse_ts_gridspace_feature-grid.csv", 19221)
-
-    # X, y, cat_idx, num_idx = get_abalone()
-    # X_train, X_test, y_train, y_test = train_test_split(X, y)
-
-    # # A simple baseline: mean of the training set
-    # y_pred = np.mean(y_train).repeat(len(y_test))
-    # print("Mean - RMSE: {0:f}".format(np.sqrt(np.mean(np.square(y_pred - y_test)))))
-
-    # df = pd.read_csv("dp_rmse_ts_grid_eps100.0.csv")
-    # line_of_interest = df[
-    #     (df["rank_test_score"] == 1) & (df["param_privacy_budget"] == 100)
-    # ].iloc[0]
-    # print(line_of_interest)
-
-    # params = params_from_series(line_of_interest)
-    # params["dp_argmax_privacy_budget"] = 50.0
-    # print(params)
-    # estimator = dpgbdt.DPGBDTRegressor(**params)
-    # estimator.fit(X_train, y_train, cat_idx, num_idx)
-    # y_pred = estimator.predict(X_test)
-    # print(
-    #     "Depth first growth - RMSE: {0:f}".format(
-    #         np.sqrt(np.mean(np.square(y_pred - y_test)))
-    #     )
-    # )
+    # dp_rmse("dp_rmse_ts_gridspace_feature-grid.csv", 19221)
