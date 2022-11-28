@@ -88,7 +88,7 @@ def single_configuration(
     additional_parameters: dict[str, Any],
     fit_args: dict[str, Any],
     logfilename: str = None,
-):
+) -> dpgbdt.DPGBDTRegressor:
     """Relaunch a single configuration of the DP-GBDT regressor,
     obtaining parameters from a single row of the result DataFrame.
 
@@ -128,6 +128,7 @@ def single_configuration(
         print(f"fitted estimator: {estimator}")
         score = _rmse(estimator.predict(X_test), y_test)
         print(f"score: {score}")
+    return estimator
 
 
 def multiple_configurations(
@@ -141,13 +142,15 @@ def multiple_configurations(
     indices_and_logfiles = [
         (index, logfilename_template.format(index=index)) for index in indices
     ]
+    estimators = []
     for (index, logfile) in indices_and_logfiles:
-        single_configuration(
+        estimator = single_configuration(
             df.loc[index],
             additional_parameters=additional_parameters,
             fit_args=fit_args,
             logfilename=logfile,
         )
+        estimators.append(estimator)
     if zipfilename is not None:
         with zipfile.ZipFile(
             zipfilename, mode="w", compression=zipfile.ZIP_DEFLATED
@@ -156,6 +159,7 @@ def multiple_configurations(
                 # print(f"Zipping and removing logfile {logfile}")
                 zfile.write(logfile)
                 os.remove(logfile)
+    return estimators
 
 
 def all_configurations(
@@ -284,7 +288,16 @@ def log_best_abalone_configurations():
         )
 
 
+def dp_rmse_score_variation():
+    y = abalone_fit_arguments().pop("y")
+    print(type(y))
+    y_pred = np.full_like(y, y.mean())
+    rng = dpgbdt.make_rng(42)
+    scorer = dpgbdt.make_tree_scorer("dp_rmse", upper_bound=20.0, gamma=2.0, rng=rng)
+    score = scorer.score_tree(1.0, y, y_pred)
+    print(score)
+
+
 if __name__ == "__main__":
-    log_best_abalone_configurations()
-    # baseline("baseline_gridspace_20221109_feature-grid.csv", 3865)
-    # dp_rmse("dp_rmse_ts_gridspace_feature-grid.csv", 19221)
+    # log_best_abalone_configurations()
+    dp_rmse_score_variation()

@@ -33,6 +33,16 @@ cdef class PyMT19937:
 cdef class PyTreeScorer:
     cdef shared_ptr[TreeScorer] sptr_ts
 
+    def score_tree(
+        self,
+        double privacy_budget,
+        np.ndarray[double, ndim=1, mode="c"] y not None,
+        np.ndarray[double, ndim=1, mode="c"] y_pred not None,
+    ):
+        cdef vector[double] y_vec = y
+        cdef vector[double] y_pred_vec = y_pred
+        return self.sptr_ts.get().score_tree(privacy_budget, y_vec, y_pred_vec)
+
 cdef class PyDPrMSEScorer(PyTreeScorer):
     cdef double upper_bound, gamma
     cdef PyMT19937 rng
@@ -49,6 +59,7 @@ cdef class PyDPrMSEScorer(PyTreeScorer):
     def __repr__(self):
         return f"PyDPrMSEScorer(upper_bound={self.upper_bound},"\
                f"gamma={self.gamma},rng={self.rng})"
+
 
 cdef class PyDPQuantileScorer(PyTreeScorer):
     cdef double shift, scale, upper_bound
@@ -85,6 +96,7 @@ cdef class PyDPQuantileScorer(PyTreeScorer):
                f"qs={self.qs},"\
                f"upper_bound={self.upper_bound},"\
                f"rng={self.rng})"
+
 
 cdef class PyTreeRejector:
     cdef shared_ptr[TreeRejector] sptr_tr

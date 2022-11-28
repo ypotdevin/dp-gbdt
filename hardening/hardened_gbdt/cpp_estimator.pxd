@@ -43,10 +43,11 @@ cdef extern from "estimator.h" namespace "dpgbdt":
 
 cdef extern from "tree_rejection.h" namespace "tree_rejection":
     cdef cppclass TreeScorer:
-        pass
+        double score_tree(double privacy_budget, vector[double] y, vector[double] y_pred)
 
     cdef cppclass DPrMSEScorer(TreeScorer):
         DPrMSEScorer(double upper_bound, double gamma, mt19937 rng) except +
+        #double score_tree(double privacy_budget, vector[double] y, vector[double] y_pred)
 
     cdef cppclass DPQuantileScorer(TreeScorer):
         DPQuantileScorer(
@@ -56,6 +57,7 @@ cdef extern from "tree_rejection.h" namespace "tree_rejection":
             double upper_bound,
             mt19937 rng
         ) except +
+        #double score_tree(double privacy_budget, vector[double] y, vector[double] y_pred)
 
     cdef cppclass TreeRejector:
         pass
