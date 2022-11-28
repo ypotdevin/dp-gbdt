@@ -290,12 +290,20 @@ def log_best_abalone_configurations():
 
 def dp_rmse_score_variation():
     y = abalone_fit_arguments().pop("y")
-    print(type(y))
     y_pred = np.full_like(y, y.mean())
-    rng = dpgbdt.make_rng(42)
-    scorer = dpgbdt.make_tree_scorer("dp_rmse", upper_bound=20.0, gamma=2.0, rng=rng)
-    score = scorer.score_tree(1.0, y, y_pred)
-    print(score)
+    scores_dict = {}
+    for eps in np.logspace(-3.0, 1.0, 30):
+        rmse_list = []
+        for i in range(100):
+            rng = dpgbdt.make_rng(i)
+            scorer = dpgbdt.make_tree_scorer(
+                "dp_rmse", upper_bound=20.0, gamma=2.0, rng=rng
+            )
+            rmse = scorer.score_tree(eps, y, y_pred)
+            rmse_list.append(rmse)
+            scores_dict[f"eps={eps}"] = rmse_list
+    df = pd.DataFrame(scores_dict)
+    df.to_csv("rmse_variability.csv", index=False)
 
 
 if __name__ == "__main__":
