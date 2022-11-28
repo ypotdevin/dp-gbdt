@@ -1,6 +1,7 @@
 import contextlib
 import os
 import zipfile
+from pathlib import Path
 from typing import Any, Optional
 
 import numpy as np
@@ -157,6 +158,23 @@ def multiple_configurations(
                 os.remove(logfile)
 
 
+def all_configurations(
+    df: pd.DataFrame,
+    additional_parameters: dict[str, Any],
+    fit_args: dict[str, Any],
+    logfilename_template: str,
+    zipfilename: Optional[str] = None,
+):
+    return multiple_configurations(
+        df=df,
+        indices=df.index.values,
+        additional_parameters=additional_parameters,
+        fit_args=fit_args,
+        logfilename_template=logfilename_template,
+        zipfilename=zipfilename,
+    )
+
+
 def baseline(
     series: pd.Series,
     fit_args: dict[str, Any] = None,
@@ -201,19 +219,72 @@ def dp_quantile():
     return None
 
 
-if __name__ == "__main__":
+def best_scores(df: pd.DataFrame) -> pd.DataFrame:
+    df2 = (df[df["rank_test_score"] == 1]).copy()
+    df2["mean_test_score"] = -1 * df2["mean_test_score"]
+    try:
+        df2 = df2[
+            [
+                "mean_test_score",
+                "std_test_score",
+                "param_privacy_budget",
+                "param_learning_rate",
+                "param_max_depth",
+                "param_l2_threshold",
+                "param_l2_lambda",
+                "param_n_trees_to_accept",
+                "param_dp_argmax_privacy_budget",
+                "param_dp_argmax_stopping_prob",
+                "param_ensemble_rejector_budget_split",
+                "param_ts_upper_bound",
+                "rank_test_score",
+            ]
+        ]
+    except KeyError:
+        df2 = df2[
+            [
+                "mean_test_score",
+                "std_test_score",
+                "param_privacy_budget",
+                "param_learning_rate",
+                "param_max_depth",
+                "param_l2_threshold",
+                "param_l2_lambda",
+                "param_n_trees_to_accept",
+                "rank_test_score",
+            ]
+        ]
+    return df2
+
+
+def log_best_abalone_configurations():
     additional_params = dict(
-        training_variant="vanilla",
-        tree_scorer=None,
+        training_variant="dp_argmax_scoring",
+        tree_scorer="dp_rmse",
         verbosity="debug",
     )
-    multiple_configurations(
-        df=pd.read_csv("baseline_dense-gridspace_20221107_feature-grid.csv"),
-        indices=[26951, 44255, 84463, 112872],
-        additional_parameters=additional_params,
-        fit_args=abalone_fit_arguments(),
-        logfilename_template="baseline_dense-gridspace_20221107_feature-grid.{index}.log",
-        zipfilename="baseline_dense-gridspace_20221107_feature-grid.zip",
-    )
+    experiments = [
+        "baseline_dense-gridspace_20221107_feature-grid.csv",
+        "baseline_gridspace_20221107_feature-grid.csv",
+        "dp_rmse_ts_gridspace_feature-grid.csv",
+        "dp_rmse_ts_gridspace_20221107_feature-grid.csv",
+        "dp_quantile_ts_gridspace_feature-grid.csv",
+        "dp_quantile_ts_gridspace_20221107_feature-grid.csv",
+    ]
+    for experiment in experiments:
+        p = Path(experiment)
+        df = pd.read_csv(experiment)
+        df = best_scores(df)
+        all_configurations(
+            df=df,
+            additional_parameters=additional_params,
+            fit_args=abalone_fit_arguments(),
+            logfilename_template=f"{p.stem}" + ".{index}.log",
+            zipfilename=f"{p.stem}.zip",
+        )
+
+
+if __name__ == "__main__":
+    log_best_abalone_configurations()
     # baseline("baseline_gridspace_20221109_feature-grid.csv", 3865)
     # dp_rmse("dp_rmse_ts_gridspace_feature-grid.csv", 19221)
