@@ -224,61 +224,41 @@ def dp_quantile():
 
 
 def best_scores(df: pd.DataFrame) -> pd.DataFrame:
-    df2 = (df[df["rank_test_score"] == 1]).copy()
-    df2["mean_test_score"] = -1 * df2["mean_test_score"]
-    try:
-        df2 = df2[
-            [
-                "mean_test_score",
-                "std_test_score",
-                "param_privacy_budget",
-                "param_learning_rate",
-                "param_max_depth",
-                "param_l2_threshold",
-                "param_l2_lambda",
-                "param_n_trees_to_accept",
-                "param_dp_argmax_privacy_budget",
-                "param_dp_argmax_stopping_prob",
-                "param_ensemble_rejector_budget_split",
-                "param_ts_upper_bound",
-                "rank_test_score",
-            ]
-        ]
-    except KeyError:
-        df2 = df2[
-            [
-                "mean_test_score",
-                "std_test_score",
-                "param_privacy_budget",
-                "param_learning_rate",
-                "param_max_depth",
-                "param_l2_threshold",
-                "param_l2_lambda",
-                "param_n_trees_to_accept",
-                "rank_test_score",
-            ]
-        ]
-    return df2
+    # df2 = (df[df["rank_test_score"] == 1]).copy()
+    # return df2
+    return df[df["rank_test_score"] == 1]
 
 
 def log_best_abalone_configurations():
-    additional_params = dict(
-        training_variant="dp_argmax_scoring",
-        tree_scorer="dp_rmse",
-        verbosity="debug",
-    )
     experiments = [
-        "baseline_dense-gridspace_20221107_feature-grid.csv",
-        "baseline_gridspace_20221107_feature-grid.csv",
-        "dp_rmse_ts_gridspace_feature-grid.csv",
-        "dp_rmse_ts_gridspace_20221107_feature-grid.csv",
-        "dp_quantile_ts_gridspace_feature-grid.csv",
-        "dp_quantile_ts_gridspace_20221107_feature-grid.csv",
+        ("baseline_dense-gridspace_20221107_feature-grid.csv", None, None),
+        ("baseline_gridspace_20221107_feature-grid.csv", None, None),
+        ("dp_rmse_ts_gridspace_feature-grid.csv", "dp_rmse", None),
+        (
+            "dp_rmse_ts_gridspace_20221107_feature-grid.csv",
+            "dp_rmse",
+            None,
+        ),
+        (
+            "dp_quantile_ts_gridspace_feature-grid.csv",
+            "dp_quantile",
+            [0.5, 0.90, 0.95],
+        ),
+        (
+            "dp_quantile_ts_gridspace_20221107_feature-grid.csv",
+            "dp_quantile",
+            [0.5, 0.90, 0.95],
+        ),
     ]
-    for experiment in experiments:
+    for (experiment, tree_scorer, ts_qs) in experiments:
         p = Path(experiment)
         df = pd.read_csv(experiment)
         df = best_scores(df)
+        additional_params = dict(
+            tree_scorer=tree_scorer,
+            ts_qs=ts_qs,
+            verbosity="debug",
+        )
         all_configurations(
             df=df,
             additional_parameters=additional_params,
@@ -286,6 +266,10 @@ def log_best_abalone_configurations():
             logfilename_template=f"{p.stem}" + ".{index}.log",
             zipfilename=f"{p.stem}.zip",
         )
+
+
+def log_best_wine_configurations():
+    pass
 
 
 def dp_rmse_score_variation():
@@ -301,8 +285,21 @@ def dp_rmse_score_variation():
             )
             rmse = scorer.score_tree(eps, y, y_pred)
             rmse_list.append(rmse)
-            scores_dict[f"eps={eps}"] = rmse_list
+            scores_dict[eps] = rmse_list
     df = pd.DataFrame(scores_dict)
+    df = (
+        pd.melt(df, var_name="eps", value_name="dp-rmse")
+        .groupby(["eps"], as_index=False)
+        .agg(
+            # eps=pd.NamedAgg(column="eps", aggfunc="first"),
+            mean_dp_rmse=pd.NamedAgg(column="dp-rmse", aggfunc="mean"),
+            std_dp_rmse=pd.NamedAgg(column="dp-rmse", aggfunc="std"),
+        )
+        .rename(
+            {"std_dp_rmse": "STD(dp-rmse)", "mean_dp_rmse": "MEAN(dp-rmse)"}, axis=1
+        )
+    )
+    df = df.assign(rmse=np.sqrt(((y - y_pred) ** 2).mean()))
     df.to_csv("rmse_variability.csv", index=False)
 
 
