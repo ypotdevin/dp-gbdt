@@ -262,6 +262,7 @@ void DPEnsemble::vanilla_training_loop(DataSet &dataset)
     dataset.shuffle_dataset(mp.rng);
     auto n_steps = mp.n_trees_to_accept;
     auto step_budget = mp.privacy_budget; // parallel composition
+    LOG_DEBUG("### diagnosis value 12 ### - step_budget={1}", step_budget);
 
     for (int tree_index = 0; tree_index < n_steps; ++tree_index)
     {
@@ -298,9 +299,12 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
 
     auto n_steps = mp.n_trees_to_accept;
     auto step_budget = (mp.privacy_budget - mp.dp_argmax_privacy_budget) / 2.0; // parallel composition
+    LOG_DEBUG("### diagnosis value 12 ### - step_budget={1}", step_budget);
     auto tree_budget = step_budget * mp.ensemble_rejector_budget_split;
+    LOG_DEBUG("### diagnosis value 13 ### - tree_budget={1}", tree_budget);
     auto score_budget = (step_budget - tree_budget) /
                         static_cast<double>(mp.n_trees_to_accept); // division due to repetitive usage of dataset.X for tree scoring
+    LOG_DEBUG("### diagnosis value 14 ### - score_budget={1}", score_budget);
     std::bernoulli_distribution biased_coin{mp.stopping_prob};
 
     int T = std::max((1.0 / mp.stopping_prob) *
