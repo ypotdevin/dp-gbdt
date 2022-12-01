@@ -273,6 +273,9 @@ def log_best_wine_configurations():
 
 
 def dp_rmse_score_variation():
+    """How variable is the DP-RMSE-scoring with respect to different
+    privacy budgets?
+    """
     y = abalone_fit_arguments().pop("y")
     y_pred = np.full_like(y, y.mean())
     scores_dict = {}
@@ -291,7 +294,6 @@ def dp_rmse_score_variation():
         pd.melt(df, var_name="eps", value_name="dp-rmse")
         .groupby(["eps"], as_index=False)
         .agg(
-            # eps=pd.NamedAgg(column="eps", aggfunc="first"),
             mean_dp_rmse=pd.NamedAgg(column="dp-rmse", aggfunc="mean"),
             std_dp_rmse=pd.NamedAgg(column="dp-rmse", aggfunc="std"),
         )
@@ -303,6 +305,45 @@ def dp_rmse_score_variation():
     df.to_csv("rmse_variability.csv", index=False)
 
 
+def dp_rmse_score_variation_dataset_size_vs_privacy_budget():
+    """See whether it helps to trade in dataset size for privacy budget.
+    In detail: Does it help to reduce the dataset size to x %, while
+    multiplying the available budget by x?
+    """
+    np_rng = np.random.default_rng()
+    records = []
+    for fraction in np.linspace(0.1, 1.0, 10):
+        y = abalone_fit_arguments().pop("y")
+        y = np_rng.choice(y, size=int(fraction * len(y)), replace=False)
+        y_pred = np.full_like(y, y.mean())
+        rmse = np.sqrt(((y - y_pred) ** 2).mean())
+        for eps in np.logspace(-3.0, 1.0, 30):
+            for i in range(100):
+                rng = dpgbdt.make_rng(i)
+                scorer = dpgbdt.make_tree_scorer(
+                    "dp_rmse", upper_bound=20.0, gamma=2.0, rng=rng
+                )
+                dp_rmse = scorer.score_tree((1 / fraction) * eps, y, y_pred)
+                records.append((fraction, eps, rmse, dp_rmse))
+    df = pd.DataFrame.from_records(
+        records, columns=["fraction", "eps", "rmse", "dp-rmse"]
+    )
+    df = (
+        df.groupby(["eps", "fraction"])
+        .agg(
+            rmse=pd.NamedAgg(column="rmse", aggfunc="first"),
+            mean_dp_rmse=pd.NamedAgg(column="dp-rmse", aggfunc="mean"),
+            std_dp_rmse=pd.NamedAgg(column="dp-rmse", aggfunc="std"),
+        )
+        .reset_index()
+        .rename(
+            {"std_dp_rmse": "STD(dp-rmse)", "mean_dp_rmse": "MEAN(dp-rmse)"}, axis=1
+        )
+    )
+    df.to_csv("dp_rmse_score_variation_dataset_size_vs_privacy_budget.csv", index=False)
+
+
 if __name__ == "__main__":
     # log_best_abalone_configurations()
-    dp_rmse_score_variation()
+    # dp_rmse_score_variation()
+    dp_rmse_score_variation_dataset_size_vs_privacy_budget()
