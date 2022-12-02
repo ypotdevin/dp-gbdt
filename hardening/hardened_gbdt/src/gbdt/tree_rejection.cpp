@@ -158,6 +158,40 @@ namespace tree_rejection
         return score;
     }
 
+    BunSteinkeScorer::BunSteinkeScorer(double upper_bound,
+                                       double beta,
+                                       double relaxation,
+                                       std::mt19937 &rng)
+    {
+        this->upper_bound = upper_bound;
+        this->beta = beta;
+        this->relaxation = relaxation;
+        this->std_laplace = std::unique_ptr<Laplace>(new Laplace(rng));
+    }
+
+    double BunSteinkeScorer::score_tree(double privacy_budget,
+                                        const std::vector<double> &y,
+                                        const std::vector<double> &y_pred)
+    {
+        std::vector<double> abs_errors(y.size());
+        std::transform(y.begin(), y.end(),
+                       y_pred.begin(), abs_errors.begin(), [](double _y, double _y_pred)
+                       { return std::abs(_y - _y_pred); });
+        std::sort(abs_errors.begin(), abs_errors.end());
+        double smooth_sens, rmse;
+        std::tie(smooth_sens, rmse) = rMS_smooth_sensitivity(abs_errors,
+                                                             this->beta,
+                                                             this->upper_bound);
+        auto noise = this->std_laplace->return_a_random_variable();
+        /** TODO: Is this really necessary? Or is beta >= 0 anyway? */
+        auto abs_beta = std::abs(this->beta);
+        auto s = privacy_budget + abs_beta -
+                 (std::exp(abs_beta) - 1.0) * std::log(1.0 / this->relaxation);
+        auto score = rmse +
+                     noise * std::pow(smooth_sens, this->beta) / s;
+        return score;
+    }
+
     ConstantRejector::ConstantRejector(bool decision)
     {
         this->decision = decision;

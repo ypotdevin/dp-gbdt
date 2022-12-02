@@ -343,7 +343,33 @@ def dp_rmse_score_variation_dataset_size_vs_privacy_budget():
     df.to_csv("dp_rmse_score_variation_dataset_size_vs_privacy_budget.csv", index=False)
 
 
+def dp_rmse_score_variation_bun_steinke():
+    y = abalone_fit_arguments().pop("y")
+    y_pred = np.full_like(y, y.mean())
+    rmse = np.sqrt(((y - y_pred) ** 2).mean())
+    records = []
+    for relaxation in np.logspace(-6, -1, 6):
+        for beta in np.logspace(-3, 1, 10):  # TODO
+            for eps in np.logspace(-3.0, 1.0, 30):
+                for i in range(100):
+                    rng = dpgbdt.make_rng(i)
+                    scorer = dpgbdt.make_tree_scorer(
+                        "bun_steinke",
+                        upper_bound=20.0,
+                        beta=beta,
+                        relaxation=relaxation,
+                        rng=rng,
+                    )
+                    dp_rmse = scorer.score_tree(eps, y, y_pred)
+                    records.append((relaxation, beta, eps, rmse, dp_rmse))
+    df = pd.DataFrame.from_records(
+        records, columns=["relaxation", "beta", "eps", "rmse", "dp-rmse"]
+    )
+    df.to_csv("dp_rmse_score_variation_bun_steinke.csv", index=False)
+
+
 if __name__ == "__main__":
     # log_best_abalone_configurations()
     # dp_rmse_score_variation()
-    dp_rmse_score_variation_dataset_size_vs_privacy_budget()
+    # dp_rmse_score_variation_dataset_size_vs_privacy_budget()
+    dp_rmse_score_variation_bun_steinke()
