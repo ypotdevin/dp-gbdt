@@ -4,7 +4,7 @@
 cimport cython
 cimport numpy as np
 from cpp_estimator cimport (Estimator, TreeScorer, DPrMSEScorer, DPQuantileScorer,
-                            TreeRejector, ConstantRejector,
+                            BunSteinkeScorer, TreeRejector, ConstantRejector,
                             QuantileLinearCombinationRejector,
                             DPrMSERejector, ApproxDPrMSERejector, mt19937)
 from libcpp cimport bool
@@ -97,6 +97,37 @@ cdef class PyDPQuantileScorer(PyTreeScorer):
                f"upper_bound={self.upper_bound},"\
                f"rng={self.rng})"
 
+
+cdef class PyBunSteinkeScorer(PyTreeScorer):
+    cdef double upper_bound, beta, relaxation
+    cdef PyMT19937 rng
+
+    def __cinit__(
+        self,
+        double upper_bound,
+        double beta,
+        double relaxation,
+        PyMT19937 rng
+    ):
+        self.upper_bound = upper_bound
+        self.beta = beta
+        self.relaxation = relaxation
+        self.rng = rng
+        self.sptr_ts = shared_ptr[TreeScorer](
+            new BunSteinkeScorer(upper_bound, beta, relaxation, rng.c_rng)
+        )
+
+    def __reduce__(self):
+        return (
+            self.__class__,
+            (self.upper_bound, self.beta, self.relaxation, self.rng)
+        )
+
+    def __repr__(self):
+        return f"PyBunSteinkeScorer(upper_bound={self.upper_bound},"\
+               f"beta={self.beta},"\
+               f"relaxation={self.relaxation},"\
+               f"rng={self.rng})"
 
 cdef class PyTreeRejector:
     cdef shared_ptr[TreeRejector] sptr_tr

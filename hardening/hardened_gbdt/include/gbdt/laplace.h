@@ -17,24 +17,26 @@ private:
     std::default_random_engine generator1;
     std::default_random_engine generator2;
     std::exponential_distribution<double> distribution;
+
 public:
-    Laplace(int seed): generator(seed){};
-    Laplace(double _scale, int seed): scale(_scale), generator(seed), distribution(1.0/_scale){};
+    Laplace(std::mt19937 rng) : generator(rng){};
+    Laplace(int seed) : generator(seed){};
+    Laplace(double _scale, int seed) : scale(_scale), generator(seed), distribution(1.0 / _scale){};
 
     double return_a_random_variable()
     {
         double e1 = distribution(generator);
         double e2 = distribution(generator);
-        return e1-e2;
+        return e1 - e2;
     }
 
     double return_a_random_variable(double _scale)
     {
-        std::exponential_distribution<double> distribution1(1.0/_scale);
-        std::exponential_distribution<double> distribution2(1.0/_scale);
+        std::exponential_distribution<double> distribution1(1.0 / _scale);
+        std::exponential_distribution<double> distribution2(1.0 / _scale);
         double e1 = distribution1(generator);
         double e2 = distribution2(generator);
-        return e1-e2;
+        return e1 - e2;
     }
 };
 

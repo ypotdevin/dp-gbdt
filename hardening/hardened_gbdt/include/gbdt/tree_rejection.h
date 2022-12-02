@@ -38,6 +38,28 @@ namespace tree_rejection
         double score_tree(double privacy_budget, const std::vector<double> &y, const std::vector<double> &y_pred);
     };
 
+    /**
+     * @brief Use insights gained from "Average-Case Averages: Private
+     * Algorithms for Smooth Sensitivity and Mean Estimation", Mark Bun &
+     * Thomas Steinke (2019) to replace the Cauchy noise distribution in
+     * DPrMSEScorer by a Laplace distribution. Consequences: Only approximate
+     * differential privacy (epsilon, delta) is achieved, in contrast to regular
+     * differential privacy (just epsilon).
+     *
+     * Note: The score is still based on rMSE.
+     */
+    class BunSteinkeScorer : public TreeScorer
+    {
+    private:
+        /* `relaxation` is the delta parameter */
+        double upper_bound, beta, relaxation;
+        std::unique_ptr<Laplace> std_laplace;
+
+    public:
+        BunSteinkeScorer(double upper_bound, double beta, double relaxation, std::mt19937 &rng);
+        double score_tree(double privacy_budget, const std::vector<double> &y, const std::vector<double> &y_pred);
+    };
+
     class TreeRejector
     {
     public:
