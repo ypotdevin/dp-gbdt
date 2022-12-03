@@ -187,8 +187,12 @@ namespace tree_rejection
         auto abs_beta = std::abs(this->beta);
         auto s = privacy_budget + abs_beta -
                  (std::exp(abs_beta) - 1.0) * std::log(1.0 / this->relaxation);
-        auto score = rmse +
-                     noise * std::pow(smooth_sens, this->beta) / s;
+        LOG_INFO("s={1}", s);
+        if (s < 0.0)
+        {
+            return std::nan("");
+        }
+        auto score = rmse + noise * smooth_sens / s;
         return score;
     }
 

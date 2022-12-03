@@ -365,6 +365,20 @@ def dp_rmse_score_variation_bun_steinke():
     df = pd.DataFrame.from_records(
         records, columns=["relaxation", "beta", "eps", "rmse", "dp-rmse"]
     )
+    df = (
+        df.groupby(["relaxation", "beta", "eps"])
+        .agg(
+            rmse=pd.NamedAgg(column="rmse", aggfunc="first"),
+            mean_dp_rmse=pd.NamedAgg(column="dp-rmse", aggfunc="mean"),
+            std_dp_rmse=pd.NamedAgg(column="dp-rmse", aggfunc="std"),
+        )
+        .reset_index()
+        .rename(
+            {"mean_dp_rmse": "MEAN(dp-rmse)", "std_dp_rmse": "STD(dp-rmse)"},
+            axis=1,
+        )
+    )
+    df["STD(dp-rmse)/rmse"] = df["STD(dp-rmse)"] / df["rmse"]
     df.to_csv("dp_rmse_score_variation_bun_steinke.csv", index=False)
 
 
