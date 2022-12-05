@@ -38,7 +38,7 @@ cdef extern from "estimator.h" namespace "dpgbdt":
             vector[double] grid_lower_bounds,
             vector[double] grid_upper_bounds,
             vector[double] grid_step_sizes
-        )
+        ) except +
         vector[double] predict(vector[vector[double]] X)
 
 cdef extern from "tree_rejection.h" namespace "tree_rejection":

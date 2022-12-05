@@ -41,7 +41,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         ts_scale: float = 1.0,
         ts_qs: list[float] = None,
         ts_beta: float = None,
-        ts_relaxition: float = None,
+        ts_relaxation: float = None,
     ):
         """Create a new regressor object.
 
@@ -144,7 +144,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         self.ts_scale = ts_scale
         self.ts_qs = ts_qs
         self.ts_beta = ts_beta
-        self.ts_relaxition = ts_relaxition
+        self.ts_relaxation = ts_relaxation
 
     def fit(
         self,
@@ -348,7 +348,7 @@ def _make_tree_scorer_from_self(self) -> pyestimator.PyTreeScorer:
             "bun_steinke",
             upper_bound=self.ts_upper_bound,
             beta=self.ts_beta,
-            relaxition=self.ts_relaxation,
+            relaxation=self.ts_relaxation,
             rng=self.rng_,
         )
     else:

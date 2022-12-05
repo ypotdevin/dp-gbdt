@@ -391,6 +391,10 @@ void DPEnsemble::dp_argmax(
             "### diagnosis value 11 ### - stdev of absolute differences std={1}",
             compute_stdev(abs_diffs, compute_mean(abs_diffs)));
         /**********************************************************************/
+        if (std::isnan(score_including_tree))
+        {
+            throw std::runtime_error("Score including tree is NaN (probably a misconfiguration of the scorer)");
+        }
         if (score_including_tree < ensemble_score)
         {
             LOG_INFO("generalized_dp_argmax: successful exit");
