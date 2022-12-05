@@ -137,7 +137,7 @@ def get_concrete() -> dict[str, Any]:
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Perform Bayesian optimization over the hyperparameter space."
+        description="Perform grid search over the hyperparameter space."
     )
     parser.add_argument(
         "experiment",
@@ -166,13 +166,6 @@ def parse_args():
         " Defaults to <local_dir>/<label>.csv",
     )
     parser.add_argument(
-        "--n-trials",
-        type=int,
-        default=1000,
-        help="The number of configurations to test at most per call to `TuneSearchCV.tune`"
-        " (if the time budget allows).",
-    )
-    parser.add_argument(
         "--local-dir",
         type=str,
         default=None,
@@ -184,13 +177,6 @@ def parse_args():
         type=int,
         default=-1,
         help="Number of CPU cores to use for hyperparameter search. Default: all cores.",
-    )
-    parser.add_argument(
-        "--time-budget-s",
-        type=int,
-        default=3600 * 24,  # 24 hours
-        help="How much time (in seconds) to spend (roughly) at most in total."
-        " Use `None` to deactivate limit.",
     )
     args = parser.parse_args()
     return args
@@ -360,6 +346,37 @@ def dp_rmse_ts_template(
     return df
 
 
+def meta_template(
+    cli_args,
+    grid: dict[str, Any],
+    fit_args: dict[str, Any],
+) -> pd.DataFrame:
+    dfs = []
+    total_budgets = cli_args.privacy_budgets
+    for total_budget in total_budgets:
+        parameter_grid = grid.copy()
+        parameter_grid["privacy_budget"] = [total_budget]
+
+        df = sklearn_grid(
+            dpgbdt.DPGBDTRegressor(),
+            data_provider=lambda: fit_args,
+            parameter_grid=parameter_grid,
+            n_jobs=cli_args.num_cores,
+        )
+        dfs.append(df)
+    df = pd.concat(dfs)
+    return df
+
+
+def bun_steinke_template(
+    cli_args,
+    grid: dict[str, Any],
+    fit_args: dict[str, Any],
+):
+    grid = {**grid, **dict(tree_scorer=["bun_steinke"])}
+    return meta_template(cli_args, grid, fit_args)
+
+
 def dp_rmse_ts_grid(args) -> pd.DataFrame:
     grid = abalone_parameter_grid()
     grid["ensemble_rejector_budget_split"] = [0.6, 0.75, 0.9]
@@ -452,6 +469,17 @@ def dp_quantile_ts_grid_20221109(args) -> pd.DataFrame:
     return pd.concat(dfs)
 
 
+def abalone_bun_steinke(cli_args) -> pd.DataFrame:
+    grid = abalone_parameter_grid()
+    grid["ensemble_rejector_budget_split"] = [0.6, 0.75, 0.9]
+    grid["dp_argmax_privacy_budget"] = [0.001, 0.01]
+    grid["dp_argmax_stopping_prob"] = [0.1, 0.2]
+    grid["ts_upper_bound"] = grid["l2_threshold"]
+    grid["ts_beta"] = np.logspace(-4.0, 0.0, 10)
+    grid["ts_relaxation"] = [1e-6]
+    return bun_steinke_template(cli_args, grid, get_abalone())
+
+
 def wine_baseline_grid_20221121(args) -> pd.DataFrame:
     grid = wine_parameter_grid_20221121()
     return baseline_template(args, grid, data_provider=get_wine)
@@ -496,6 +524,7 @@ def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
         wine_baseline_grid_20221121=wine_baseline_grid_20221121,
         wine_dp_rmse_ts_grid_20221121=wine_dp_rmse_ts_grid_20221121,
         wine_dp_quantile_ts_grid_20221121=wine_dp_quantile_ts_grid_20221121,
+        abalone_bun_steinke=abalone_bun_steinke,
     )[which]
 
 

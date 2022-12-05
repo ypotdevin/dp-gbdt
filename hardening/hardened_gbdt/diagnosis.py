@@ -223,6 +223,27 @@ def dp_quantile():
     return None
 
 
+def bun_steinke(
+    series: pd.Series,
+    fit_args: dict[str, Any],
+    verbosity: str = "debug",
+    logfilename: str = None,
+):
+    additional_params = dict(
+        training_variant="dp_argmax_scoring",
+        tree_scorer="bun_steinke",
+        ts_beta=3.14,
+        ts_relaxation=1e-6,
+        verbosity=verbosity,
+    )
+    single_configuration(
+        row=series,
+        fit_args=fit_args,
+        additional_parameters=additional_params,
+        logfilename=logfilename,
+    )
+
+
 def best_scores(df: pd.DataFrame) -> pd.DataFrame:
     # df2 = (df[df["rank_test_score"] == 1]).copy()
     # return df2
@@ -386,4 +407,7 @@ if __name__ == "__main__":
     # log_best_abalone_configurations()
     # dp_rmse_score_variation()
     # dp_rmse_score_variation_dataset_size_vs_privacy_budget()
-    dp_rmse_score_variation_bun_steinke()
+    # dp_rmse_score_variation_bun_steinke()
+    df = pd.read_csv("dp_rmse_ts_gridspace_feature-grid.csv")
+    df = best_scores(df)
+    bun_steinke(df.iloc[0], abalone_fit_arguments())

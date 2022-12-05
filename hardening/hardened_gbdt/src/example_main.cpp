@@ -185,7 +185,47 @@ void long_dp_argmax_rmse_scoring_setting()
     delete dataset;
 }
 
+void bun_steinke()
+{
+    ModelParams parameters;
+    DataSet *dataset = Parser::get_abalone(parameters, 5000);
+
+    std::mt19937 rng(std::random_device{}());
+
+    dpgbdt::Estimator regressor(
+        rng,
+        1.0,  // privacy_budget
+        0.70, // ensemble_rejector_budget_split
+        "dp_argmax_scoring",
+        std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(5, 100.0, 2.0, rng)), // this will be ignored
+        std::shared_ptr<tree_rejection::BunSteinkeScorer>(new tree_rejection::BunSteinkeScorer(20.0, 3.14, 1e-6, rng)),
+        0.001, // dp_argmax_privacy_budget
+        0.05,  // dp_argmax_stopping_prob
+        0.1,   // learning_rate
+        5,     // n_trees_to_accept
+        6,     // max_depth
+        2,     // min_samples_split
+        9.167, // l2_threshold
+        0.1,   // l2_lambda
+        true,
+        true,
+        true,
+        false,
+        "debug");
+    regressor.fit(dataset->X,
+                  dataset->y,
+                  parameters.cat_idx,
+                  parameters.num_idx,
+                  parameters.grid_lower_bounds,
+                  parameters.grid_upper_bounds,
+                  parameters.grid_step_sizes);
+    auto y_pred = regressor.predict(dataset->X);
+    auto rmse = compute_rmse(dataset->y, y_pred);
+    std::cout << rmse << std::endl;
+    delete dataset;
+}
+
 int main(int argc, char **argv)
 {
-    good_dp_argmax_rmse_scoring_setting();
+    bun_steinke();
 }
