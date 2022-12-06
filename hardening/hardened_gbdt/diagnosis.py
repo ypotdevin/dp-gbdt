@@ -415,5 +415,11 @@ if __name__ == "__main__":
     ##df = best_scores(df)
     ##bun_steinke(df.iloc[0], abalone_fit_arguments())
     log_best_abalone_configurations(
-        [("abalone_bun_steinke_feature-grid.csv", "bun_steinke", None)]
+        [
+            (
+                "share/dp-gbdt-evaluation/abalone_bun_steinke_feature-grid.csv",
+                "bun_steinke",
+                None,
+            )
+        ]
     )
