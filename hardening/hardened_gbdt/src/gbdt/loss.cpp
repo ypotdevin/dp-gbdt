@@ -13,6 +13,68 @@
 #include "loss.h"
 #include "utils.h"
 
+namespace
+{
+    /**
+     * @brief
+     *
+     * @param largest
+     * @param smallest
+     * @param prefix_sum ATTENTION: updated by callee
+     * @param suffix_sum ATTENTION: updated by callee
+     * @param n
+     * @param U_squared
+     * @return double - the local sensitivity at k (k is implicitly given by the
+     * state of prefix_sum and suffix_sum.
+     */
+    double local_sensitivity_at_k(double largest,
+                                  double smallest,
+                                  double &prefix_sum,
+                                  double &suffix_sum,
+                                  size_t n,
+                                  double U_squared)
+    {
+        prefix_sum -= largest; // implicitly replaces largest by 0
+        suffix_sum -= smallest;
+        auto large_zero_diff = fast_rmse_difference(largest, 0, prefix_sum, n);
+        auto small_U_diff = fast_rmse_difference(smallest, U_squared, suffix_sum, n);
+        auto local_sens = std::max(large_zero_diff, small_U_diff);
+
+        // the worst case neighbor at k + 1 is derived from the worst case
+        // neighbor at k by replacing the smallest value by U, see below, and
+        // the largest value by 0 (which has already been done further above).
+        suffix_sum += U_squared;
+        return local_sens;
+    }
+
+    /**
+     * @brief compare the local sensitivity of the k-th neighbor to the current
+     * smooth sensitivity and update if necessary.
+     *
+     * @param local_sensitivity
+     * @param beta
+     * @param k
+     * @param smooth_sensitivity ATTENTION: updated by callee
+     * @param maximizer_k ATTENTION: updated by callee
+     * @param maximizer_local_sensitivity ATTENTION: updated by callee
+     */
+    void compare_local_with_smooth(double local_sensitivity,
+                                   double beta,
+                                   size_t k,
+                                   double &smooth_sensitivity,
+                                   size_t &maximizer_k,
+                                   double &maximizer_local_sensitivity)
+    {
+        auto smooth_sens_candidate = local_sensitivity * std::exp(-beta * k);
+        if (smooth_sens_candidate > smooth_sensitivity)
+        {
+            smooth_sensitivity = smooth_sens_candidate;
+            maximizer_k = k;
+            maximizer_local_sensitivity = local_sensitivity;
+        }
+    }
+}
+
 /* ---------- Regression ---------- */
 
 double Regression::compute_init_score(std::vector<double> &y)
@@ -127,7 +189,7 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
     // will have no effect.
     transform(errors.begin(), errors.end(), errors.begin(), [U](double x)
               { x = clamp(x, -U, U); return x * x; });
-    auto u_squared = U * U;
+    auto U_squared = U * U;
     auto sqe_sum = std::accumulate(errors.begin(), errors.end(), 0.0);
     auto n = errors.size();
     auto rmse = std::sqrt(sqe_sum / n);
@@ -137,28 +199,55 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
     // for diagnostics
     double maximizer_local_sens;
     size_t maximizer_k;
-    for (size_t k = 0; k < n; k++) // traversing the local sensitivities
+
+    auto local_sens = local_sensitivity_at_k(errors.at(n - 1),
+                                             errors.at(0),
+                                             prefix_sum,
+                                             suffix_sum,
+                                             n,
+                                             U_squared);
+    compare_local_with_smooth(local_sens,
+                              beta,
+                              0,
+                              smooth_sens,
+                              maximizer_k,
+                              maximizer_local_sens);
+    LOG_INFO("### diagnosis value 15 ### - local sensitivity for k = 0: local_sensitivity={1}",
+             local_sens);
+
+    for (size_t k = 1; k < n; k++) // traversing the local sensitivities
     {
         auto largest = errors.at(n - k - 1);
         auto smallest = errors.at(k);
-        prefix_sum -= largest; // implicitly replaces largest by 0
-        suffix_sum -= smallest;
-        auto large_zero_diff = fast_rmse_difference(largest, 0, prefix_sum, n);
-        auto small_U_diff = fast_rmse_difference(smallest, u_squared, suffix_sum, n);
-        auto local_sens = std::max(large_zero_diff, small_U_diff);
-        auto smooth_sense_candidate = local_sens * std::exp(-beta * k);
-        if (smooth_sense_candidate > smooth_sens)
-        {
-            smooth_sens = smooth_sense_candidate;
-            maximizer_k = k;
-            maximizer_local_sens = local_sens;
-        }
-
-        // the worst case neighbor at k + 1 is derived from the worst case
-        // neighbor at k by replacing the smallest value by U, see below, and
-        // the largest value by 0 (which has already been done further above).
-        suffix_sum += u_squared;
+        local_sens = local_sensitivity_at_k(largest,
+                                            smallest,
+                                            prefix_sum,
+                                            suffix_sum,
+                                            n,
+                                            U_squared);
+        compare_local_with_smooth(local_sens,
+                                  beta,
+                                  k,
+                                  smooth_sens,
+                                  maximizer_k,
+                                  maximizer_local_sens);
     }
+
+    local_sens = local_sensitivity_at_k(U_squared,
+                                        0.0,
+                                        prefix_sum,
+                                        suffix_sum,
+                                        n,
+                                        U_squared);
+    compare_local_with_smooth(local_sens,
+                              beta,
+                              n,
+                              smooth_sens,
+                              maximizer_k,
+                              maximizer_local_sens);
+    LOG_INFO("### diagnosis value 16 ### - local sensitivity for k == n: global_sensitivity={1}",
+             local_sens);
+
     LOG_INFO("### diagnosis value 04 ### - smooth_sens={1}", smooth_sens);
     LOG_INFO("### diagnosis value 05 ### - maximizer_local_sens={1}", maximizer_local_sens);
     LOG_INFO("### diagnosis value 06 ### - maximizer_k={1}", maximizer_k);
