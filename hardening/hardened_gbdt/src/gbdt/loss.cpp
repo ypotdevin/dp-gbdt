@@ -245,7 +245,7 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
                               smooth_sens,
                               maximizer_k,
                               maximizer_local_sens);
-    LOG_INFO("### diagnosis value 16 ### - local sensitivity for k == n: global_sensitivity={1}",
+    LOG_INFO("### diagnosis value 16 ### - local sensitivity for k = n: global_sensitivity={1}",
              local_sens);
 
     LOG_INFO("### diagnosis value 04 ### - smooth_sens={1}", smooth_sens);
