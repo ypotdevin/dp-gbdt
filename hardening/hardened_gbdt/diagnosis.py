@@ -253,7 +253,7 @@ def best_scores(df: pd.DataFrame) -> pd.DataFrame:
 def log_best_abalone_configurations(
     experiments: Optional[list[Tuple[str, str, Any]]] = None
 ):
-    if experiment is None:
+    if experiments is None:
         experiments = [
             ("baseline_dense-gridspace_20221107_feature-grid.csv", None, None),
             ("baseline_gridspace_20221107_feature-grid.csv", None, None),
