@@ -480,6 +480,17 @@ def abalone_bun_steinke(cli_args) -> pd.DataFrame:
     return bun_steinke_template(cli_args, grid, get_abalone())
 
 
+def abalone_bun_steinke_20221107(cli_args) -> pd.DataFrame:
+    grid = abalone_parameter_grid_20221107()
+    grid["ensemble_rejector_budget_split"] = [0.2, 0.4, 0.6, 0.75, 0.9]
+    grid["dp_argmax_privacy_budget"] = [0.0001, 0.001, 0.01]
+    grid["dp_argmax_stopping_prob"] = [0.01, 0.1, 0.2, 0.4]
+    grid["ts_upper_bound"] = grid["l2_threshold"]
+    grid["ts_beta"] = np.logspace(-4.0, 0.0, 10)
+    grid["ts_relaxation"] = [1e-6]
+    return bun_steinke_template(cli_args, grid, get_abalone())
+
+
 def wine_baseline_grid_20221121(args) -> pd.DataFrame:
     grid = wine_parameter_grid_20221121()
     return baseline_template(args, grid, data_provider=get_wine)
@@ -525,6 +536,7 @@ def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
         wine_dp_rmse_ts_grid_20221121=wine_dp_rmse_ts_grid_20221121,
         wine_dp_quantile_ts_grid_20221121=wine_dp_quantile_ts_grid_20221121,
         abalone_bun_steinke=abalone_bun_steinke,
+        abalone_bun_steinke_20221107=abalone_bun_steinke_20221107,
     )[which]
 
 
