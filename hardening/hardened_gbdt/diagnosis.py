@@ -27,6 +27,8 @@ COL_NAME_MAPPING: dict[str, str] = dict(
     param_ts_gamma="ts_gamma",
     param_ts_shift="ts_shift",
     param_ts_scale="ts_scale",
+    param_ts_beta="ts_beta",
+    param_ts_relaxation="ts_relaxation",
     param_training_variant="training_variant",
 )
 
@@ -417,7 +419,7 @@ if __name__ == "__main__":
     log_best_abalone_configurations(
         [
             (
-                "share/dp-gbdt-evaluation/abalone_bun_steinke_feature-grid.csv",
+                "~/share/dp-gbdt-evaluation/abalone_bun_steinke_feature-grid.csv",
                 "bun_steinke",
                 None,
             )
