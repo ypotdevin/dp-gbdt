@@ -257,23 +257,40 @@ def log_best_abalone_configurations(
 ):
     if experiments is None:
         experiments = [
-            ("baseline_dense-gridspace_20221107_feature-grid.csv", None, None),
-            ("baseline_gridspace_20221107_feature-grid.csv", None, None),
-            ("dp_rmse_ts_gridspace_feature-grid.csv", "dp_rmse", None),
             (
-                "dp_rmse_ts_gridspace_20221107_feature-grid.csv",
+                "~/share/dp-gbdt-evaluation/baseline_dense-gridspace_20221107_feature-grid.csv",
+                None,
+                None,
+            ),
+            (
+                "~/share/dp-gbdt-evaluation/baseline_gridspace_20221107_feature-grid.csv",
+                None,
+                None,
+            ),
+            (
+                "~/share/dp-gbdt-evaluation/dp_rmse_ts_gridspace_feature-grid.csv",
                 "dp_rmse",
                 None,
             ),
             (
-                "dp_quantile_ts_gridspace_feature-grid.csv",
+                "~/share/dp-gbdt-evaluation/dp_rmse_ts_gridspace_20221107_feature-grid.csv",
+                "dp_rmse",
+                None,
+            ),
+            (
+                "~/share/dp-gbdt-evaluation/dp_quantile_ts_gridspace_feature-grid.csv",
                 "dp_quantile",
                 [0.5, 0.90, 0.95],
             ),
             (
-                "dp_quantile_ts_gridspace_20221107_feature-grid.csv",
+                "~/share/dp-gbdt-evaluation/dp_quantile_ts_gridspace_20221107_feature-grid.csv",
                 "dp_quantile",
                 [0.5, 0.90, 0.95],
+            ),
+            (
+                "~/share/dp-gbdt-evaluation/abalone_bun_steinke_feature-grid.csv",
+                "bun_steinke",
+                None,
             ),
         ]
     for (experiment, tree_scorer, ts_qs) in experiments:
@@ -409,19 +426,10 @@ def dp_rmse_score_variation_bun_steinke():
 
 
 if __name__ == "__main__":
-    # log_best_abalone_configurations()
+    log_best_abalone_configurations()
     # dp_rmse_score_variation()
     # dp_rmse_score_variation_dataset_size_vs_privacy_budget()
     # dp_rmse_score_variation_bun_steinke()
     ##df = pd.read_csv("dp_rmse_ts_gridspace_feature-grid.csv")
     ##df = best_scores(df)
     ##bun_steinke(df.iloc[0], abalone_fit_arguments())
-    log_best_abalone_configurations(
-        [
-            (
-                "~/share/dp-gbdt-evaluation/abalone_bun_steinke_feature-grid.csv",
-                "bun_steinke",
-                None,
-            )
-        ]
-    )
