@@ -4,6 +4,7 @@
 cimport cython
 cimport numpy as np
 from cpp_estimator cimport (Estimator,
+                            beta_smooth_sensitivity,
                             TreeScorer, DPrMSEScorer, DPrMSEScorer2,
                             DPQuantileScorer, BunSteinkeScorer,
                             TreeRejector, ConstantRejector,
@@ -428,3 +429,11 @@ cdef class PyEstimator:
         cdef vector[double] y_pred
         y_pred = self.estimator.predict(x_vec)
         return np.asarray(y_pred)
+
+def py_beta_smooth_sensitivity(
+    np.ndarray[double, ndim=1, mode="c"] errors not None,
+    beta: cython.double,
+    upper_bound: cython.double
+) -> cython.double:
+    cdef vector[double] errors_vec = errors
+    return beta_smooth_sensitivity(errors_vec, beta, upper_bound)

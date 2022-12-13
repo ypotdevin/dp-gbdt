@@ -101,6 +101,14 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors,
                                                   double U);
 
 /**
+ * @brief Like rMS_smooth_sensitivity, but only returning the beta-smooth
+ * sensitivity (not the root mean squared error).
+ */
+double beta_smooth_sensitivity(std::vector<double> errors,
+                               const double beta,
+                               double U);
+
+/**
  * @brief Relying on some precomputed values, compute the difference of the root
  * mean (squared) error function values on neighboring error vectors.
  *

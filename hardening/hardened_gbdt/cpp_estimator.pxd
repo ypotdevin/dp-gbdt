@@ -41,6 +41,13 @@ cdef extern from "estimator.h" namespace "dpgbdt":
         ) except +
         vector[double] predict(vector[vector[double]] X)
 
+cdef extern from "loss.h":
+    double beta_smooth_sensitivity(
+        vector[double] errors,
+        double beta,
+        double U
+    )
+
 cdef extern from "tree_rejection.h" namespace "tree_rejection":
     cdef cppclass Beta:
         double beta(double privacy_budget, double relaxation)

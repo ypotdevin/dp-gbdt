@@ -264,6 +264,15 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
     return std::make_tuple(smooth_sens, rmse);
 }
 
+double beta_smooth_sensitivity(std::vector<double> errors,
+                               const double beta,
+                               double U)
+{
+    double sens, rmse;
+    std::tie(sens, rmse) = rMS_smooth_sensitivity(errors, beta, U);
+    return sens;
+}
+
 double fast_rmse_difference(double orig_entry,
                             double replacement_entry,
                             double complementary_sum,
