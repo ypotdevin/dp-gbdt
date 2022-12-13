@@ -348,6 +348,45 @@ def dp_rmse_score_variation():
     df.to_csv("rmse_variability.csv", index=False)
 
 
+def dp_rmse2_score_variation():
+    """How variable is the DP-RMSE-scoring with respect to different
+    privacy budgets and different betas?
+    """
+    y = abalone_fit_arguments().pop("y")
+    y_pred = np.full_like(y, y.mean())
+    rmse = np.sqrt(((y - y_pred) ** 2).mean())
+    records = []
+    for beta in np.logspace(-5, 1, 30):
+        for eps in np.logspace(-3.0, 1.0, 30):
+            for i in range(100):
+                rng = dpgbdt.make_rng(i)
+                scorer = dpgbdt.make_tree_scorer(
+                    "dp_rmse2",
+                    beta=dpgbdt.make_beta("constant_beta", beta=beta),
+                    upper_bound=20.0,
+                    gamma=2.0,
+                    rng=rng,
+                )
+                dp_rmse = scorer.score_tree(eps, y, y_pred)
+                records.append((beta, eps, rmse, dp_rmse))
+    df = pd.DataFrame.from_records(records, columns=["beta", "eps", "rmse", "dp-rmse"])
+    df = (
+        df.groupby(["beta", "eps"])
+        .agg(
+            rmse=pd.NamedAgg(column="rmse", aggfunc="first"),
+            mean_dp_rmse=pd.NamedAgg(column="dp-rmse", aggfunc="mean"),
+            std_dp_rmse=pd.NamedAgg(column="dp-rmse", aggfunc="std"),
+        )
+        .reset_index()
+        .rename(
+            {"mean_dp_rmse": "MEAN(dp-rmse)", "std_dp_rmse": "STD(dp-rmse)"},
+            axis=1,
+        )
+    )
+    df["STD(dp-rmse)/rmse"] = df["STD(dp-rmse)"] / df["rmse"]
+    df.to_csv("dp_rmse2_score_variation.csv", index=False)
+
+
 def dp_rmse_score_variation_dataset_size_vs_privacy_budget():
     """See whether it helps to trade in dataset size for privacy budget.
     In detail: Does it help to reduce the dataset size to x %, while
@@ -392,7 +431,7 @@ def dp_rmse_score_variation_bun_steinke():
     rmse = np.sqrt(((y - y_pred) ** 2).mean())
     records = []
     for relaxation in np.logspace(-6, -1, 6):
-        for beta in np.logspace(-3, 1, 10):  # TODO
+        for beta in np.logspace(-5, 1, 30):
             for eps in np.logspace(-3.0, 1.0, 30):
                 for i in range(100):
                     rng = dpgbdt.make_rng(i)
@@ -426,10 +465,7 @@ def dp_rmse_score_variation_bun_steinke():
 
 
 if __name__ == "__main__":
-    log_best_abalone_configurations()
+    # log_best_abalone_configurations()
     # dp_rmse_score_variation()
-    # dp_rmse_score_variation_dataset_size_vs_privacy_budget()
     # dp_rmse_score_variation_bun_steinke()
-    ##df = pd.read_csv("dp_rmse_ts_gridspace_feature-grid.csv")
-    ##df = best_scores(df)
-    ##bun_steinke(df.iloc[0], abalone_fit_arguments())
+    dp_rmse2_score_variation()

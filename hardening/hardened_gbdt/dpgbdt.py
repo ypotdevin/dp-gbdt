@@ -317,9 +317,17 @@ def make_rng(seed: Optional[int] = None) -> pyestimator.PyMT19937:
     return pyestimator.PyMT19937(seed)
 
 
+def make_beta(which: str, **kwargs) -> pyestimator.PyBeta:
+    selector = dict(
+        constant_beta=pyestimator.PyConstantBeta,
+    )
+    return selector[which](**kwargs)
+
+
 def make_tree_scorer(which: str, **kwargs) -> pyestimator.PyTreeScorer:
     selector = dict(
         dp_rmse=pyestimator.PyDPrMSEScorer,
+        dp_rmse2=pyestimator.PyDPrMSEScorer2,
         dp_quantile=pyestimator.PyDPQuantileScorer,
         bun_steinke=pyestimator.PyBunSteinkeScorer,
     )
@@ -330,6 +338,14 @@ def _make_tree_scorer_from_self(self) -> pyestimator.PyTreeScorer:
     if self.tree_scorer == "dp_rmse":
         return make_tree_scorer(
             "dp_rmse",
+            upper_bound=self.ts_upper_bound,
+            gamma=self.ts_gamma,
+            rng=self.rng_,
+        )
+    elif self.tree_scorer == "dp_rmse2":
+        return make_tree_scorer(
+            "dp_rmse2",
+            beta=make_beta("constant_beta", beta=self.ts_beta),
             upper_bound=self.ts_upper_bound,
             gamma=self.ts_gamma,
             rng=self.rng_,

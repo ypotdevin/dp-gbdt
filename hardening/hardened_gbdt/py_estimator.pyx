@@ -3,10 +3,14 @@
 
 cimport cython
 cimport numpy as np
-from cpp_estimator cimport (Estimator, TreeScorer, DPrMSEScorer, DPQuantileScorer,
-                            BunSteinkeScorer, TreeRejector, ConstantRejector,
+from cpp_estimator cimport (Estimator,
+                            TreeScorer, DPrMSEScorer, DPrMSEScorer2,
+                            DPQuantileScorer, BunSteinkeScorer,
+                            TreeRejector, ConstantRejector,
                             QuantileLinearCombinationRejector,
-                            DPrMSERejector, ApproxDPrMSERejector, mt19937)
+                            DPrMSERejector, ApproxDPrMSERejector,
+                            mt19937,
+                            Beta, ConstantBeta)
 from libcpp cimport bool
 from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
@@ -29,6 +33,25 @@ cdef class PyMT19937:
 
     def __repr__(self):
         return f"PyMT19937(seed={self.seed})"
+
+cdef class PyBeta:
+    cdef shared_ptr[Beta] sptr_b
+
+    def beta(self, double privacy_budget, double relaxation):
+        return self.sptr_b.get().beta(privacy_budget, relaxation)
+
+cdef class PyConstantBeta(PyBeta):
+    cdef double beta_constant
+
+    def __cinit__(self, double beta):
+        self.beta_constant = beta
+        self.sptr_b = shared_ptr[Beta](new ConstantBeta(beta))
+
+    def __reduce__(self):
+        return (self.__class__, (self.beta_constant))
+
+    def __repr__(self):
+        return f"PyConstantBeta(beta={self.beta_constant})"
 
 cdef class PyTreeScorer:
     cdef shared_ptr[TreeScorer] sptr_ts
@@ -60,6 +83,42 @@ cdef class PyDPrMSEScorer(PyTreeScorer):
         return f"PyDPrMSEScorer(upper_bound={self.upper_bound},"\
                f"gamma={self.gamma},rng={self.rng})"
 
+cdef class PyDPrMSEScorer2(PyTreeScorer):
+    cdef PyBeta beta
+    cdef double upper_bound, gamma
+    cdef PyMT19937 rng
+
+    def __cinit__(
+        self,
+        PyBeta beta,
+        double upper_bound,
+        double gamma,
+        PyMT19937 rng
+    ):
+        self.beta = beta
+        self.upper_bound = upper_bound
+        self.gamma = gamma
+        self.rng = rng
+        self.sptr_ts = shared_ptr[TreeScorer](
+            new DPrMSEScorer2(
+                beta.sptr_b,
+                upper_bound,
+                gamma,
+                rng.c_rng
+            )
+        )
+
+    def __reduce__(self):
+        return (
+            self.__class__,
+            (self.beta, self.upper_bound, self.gamma, self.rng)
+        )
+
+    def __repr__(self):
+        return f"PyDPrMSEScorer2(beta={self.beta},"\
+               f"upper_bound={self.upper_bound},"\
+               f"gamma={self.gamma},"\
+               f"rng={self.rng})"
 
 cdef class PyDPQuantileScorer(PyTreeScorer):
     cdef double shift, scale, upper_bound

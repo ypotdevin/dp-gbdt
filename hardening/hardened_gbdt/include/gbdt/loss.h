@@ -60,6 +60,12 @@ double dp_rms_custom_cauchy(std::vector<double> errors,
                             const double U,
                             custom_cauchy::CustomCauchy &cc);
 
+double dp_rms_custom_cauchy(std::vector<double> errors,
+                            double epsilon,
+                            double beta,
+                            double U,
+                            custom_cauchy::CustomCauchy &cc);
+
 /**
  * @param errors The absolute errors (differences) to apply the root mean
  * squared error function on.
@@ -72,6 +78,12 @@ double dp_rms_custom_cauchy(std::vector<double> errors,
 double dp_rms_cauchy(std::vector<double> errors,
                      const double epsilon,
                      const double U,
+                     std::mt19937 &rng);
+
+double dp_rms_cauchy(std::vector<double> errors,
+                     double epsilon,
+                     double beta,
+                     double U,
                      std::mt19937 &rng);
 
 /**

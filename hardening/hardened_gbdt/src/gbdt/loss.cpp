@@ -160,26 +160,36 @@ double BinaryClassification::compute_score(std::vector<double> &y, std::vector<d
 
 double dp_rms_custom_cauchy(std::vector<double> errors, const double epsilon, const double U, custom_cauchy::CustomCauchy &cc)
 {
+    auto beta = epsilon / (2 * (cc.get_gamma() + 1.0));
+    return dp_rms_custom_cauchy(errors, epsilon, beta, U, cc);
+}
+
+double dp_rms_custom_cauchy(std::vector<double> errors, double epsilon, double beta, double U, custom_cauchy::CustomCauchy &cc)
+{
     std::sort(errors.begin(), errors.end());
-    auto gamma = cc.get_gamma();
-    auto beta = epsilon / (2 * (gamma + 1.0));
     double sens, rmse;
+    LOG_INFO("Calculating beta-smooth sensitivity for beta={1}", beta);
     std::tie(sens, rmse) = rMS_smooth_sensitivity(errors, beta, U);
     auto noise = cc.draw();
-    auto dp_rmse = rmse + 2 * (gamma + 1) * sens * noise / epsilon;
+    auto dp_rmse = rmse + 2 * (cc.get_gamma() + 1) * sens * noise / epsilon;
     return dp_rmse;
 }
 
 double dp_rms_cauchy(std::vector<double> errors, const double epsilon, const double U, std::mt19937 &rng)
 {
+    double beta = epsilon / 6.0;
+    return dp_rms_cauchy(errors, epsilon, beta, U, rng);
+}
+
+double dp_rms_cauchy(std::vector<double> errors, double epsilon, double beta, double U, std::mt19937 &rng)
+{
     std::sort(errors.begin(), errors.end());
-    double gamma = 2.0;
-    double beta = epsilon / (2 * (gamma + 1.0));
     double sens, rmse;
+    LOG_INFO("Calculating beta-smooth sensitivity for beta={1}", beta);
     std::tie(sens, rmse) = rMS_smooth_sensitivity(errors, beta, U);
     std::cauchy_distribution<double> distribution(0.0, 1.0);
     auto noise = distribution(rng);
-    auto dp_rmse = rmse + 2 * (gamma + 1) * sens * noise / epsilon;
+    auto dp_rmse = rmse + 6.0 * sens * noise / epsilon;
     return dp_rmse;
 }
 
@@ -219,13 +229,13 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
     {
         auto largest = errors.at(n - k - 1);
         auto smallest = errors.at(k);
-        local_sens = local_sensitivity_at_k(largest,
-                                            smallest,
-                                            prefix_sum,
-                                            suffix_sum,
-                                            n,
-                                            U_squared);
-        compare_local_with_smooth(local_sens,
+        auto current_smooth_sens = local_sensitivity_at_k(largest,
+                                                          smallest,
+                                                          prefix_sum,
+                                                          suffix_sum,
+                                                          n,
+                                                          U_squared);
+        compare_local_with_smooth(current_smooth_sens,
                                   beta,
                                   k,
                                   smooth_sens,
@@ -233,20 +243,20 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
                                   maximizer_local_sens);
     }
 
-    local_sens = local_sensitivity_at_k(U_squared,
-                                        0.0,
-                                        prefix_sum,
-                                        suffix_sum,
-                                        n,
-                                        U_squared);
-    compare_local_with_smooth(local_sens,
+    auto global_sens = local_sensitivity_at_k(U_squared,
+                                              0.0,
+                                              prefix_sum,
+                                              suffix_sum,
+                                              n,
+                                              U_squared);
+    compare_local_with_smooth(global_sens,
                               beta,
                               n,
                               smooth_sens,
                               maximizer_k,
                               maximizer_local_sens);
     LOG_INFO("### diagnosis value 16 ### - local sensitivity for k = n: global_sensitivity={1}",
-             local_sens);
+             global_sens);
 
     LOG_INFO("### diagnosis value 04 ### - smooth_sens={1}", smooth_sens);
     LOG_INFO("### diagnosis value 05 ### - maximizer_local_sens={1}", maximizer_local_sens);

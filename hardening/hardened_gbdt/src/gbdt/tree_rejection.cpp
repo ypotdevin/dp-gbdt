@@ -102,19 +102,77 @@ namespace
 
 namespace tree_rejection
 {
-    DPrMSEScorer::DPrMSEScorer(double upper_bound, double gamma, const std::mt19937 &rng)
+    ConstantBeta::ConstantBeta(double beta) : beta_constant(beta)
     {
-        this->upper_bound = upper_bound;
-        this->cc = std::unique_ptr<custom_cauchy::AdvancedCustomCauchy>(new custom_cauchy::AdvancedCustomCauchy(gamma, rng));
     }
 
-    double DPrMSEScorer::score_tree(double privacy_budget, const std::vector<double> &y, const std::vector<double> &y_pred)
+    double ConstantBeta::beta(double privacy_budget, double relaxation)
     {
-        std::vector<double> abs_errors(y.size());
-        std::transform(y.begin(), y.end(),
-                       y_pred.begin(), abs_errors.begin(), [](double _y, double _y_pred)
-                       { return std::abs(_y - _y_pred); });
-        auto score = dp_rms_custom_cauchy(abs_errors, privacy_budget, this->upper_bound, *this->cc);
+        return this->beta_constant;
+    }
+
+    double StandardCauchyBeta::beta(double privacy_budget, double relaxation)
+    {
+        return privacy_budget / 6.0;
+    }
+
+    CustomCauchyBeta::CustomCauchyBeta(double gamma) : gamma(gamma)
+    {
+        if (gamma <= 1.0)
+        {
+            throw std::runtime_error("Gamma needs to be larger than 1.0");
+        }
+    }
+
+    double CustomCauchyBeta::beta(double privacy_budget, double relaxation)
+    {
+        return privacy_budget / (2 * (this->gamma + 1.0));
+    }
+
+    DPrMSEScorer::DPrMSEScorer(
+        double upper_bound,
+        double gamma,
+        const std::mt19937 &rng)
+        : scorer(std::shared_ptr<CustomCauchyBeta>(new CustomCauchyBeta(gamma)),
+                 upper_bound,
+                 gamma,
+                 rng)
+    {
+    }
+
+    double DPrMSEScorer::score_tree(double privacy_budget,
+                                    const std::vector<double> &y,
+                                    const std::vector<double> &y_pred)
+    {
+        return this->scorer.score_tree(privacy_budget, y, y_pred);
+    }
+
+    DPrMSEScorer2::DPrMSEScorer2(
+        std::shared_ptr<Beta> beta_ptr,
+        double upper_bound,
+        double gamma,
+        const std::mt19937 &rng)
+        : beta(beta_ptr),
+          upper_bound(upper_bound),
+          cc(std::unique_ptr<custom_cauchy::AdvancedCustomCauchy>(
+              new custom_cauchy::AdvancedCustomCauchy(gamma, rng)))
+    {
+        if (upper_bound < 0.0 || gamma <= 1.0)
+        {
+            throw std::runtime_error("DPrMSEScorer2: upper_bound < 0 or gamma <= 1");
+        }
+    }
+
+    double DPrMSEScorer2::score_tree(double privacy_budget,
+                                     const std::vector<double> &y,
+                                     const std::vector<double> &y_pred)
+    {
+        auto abs_errors = absolute_differences(y, y_pred);
+        auto score = dp_rms_custom_cauchy(abs_errors,
+                                          privacy_budget,
+                                          this->beta->beta(privacy_budget, 0.0),
+                                          this->upper_bound,
+                                          *this->cc);
         LOG_INFO("### diagnosis value 02 ### - rmse_approx={1}", score);
         return score;
     }
@@ -164,6 +222,10 @@ namespace tree_rejection
                                        std::mt19937 &rng)
     {
         this->upper_bound = upper_bound;
+        if (beta < 0.0)
+        {
+            throw std::runtime_error("Parameter beta must be not negative!");
+        }
         this->beta = beta;
         this->relaxation = relaxation;
         this->std_laplace = std::unique_ptr<Laplace>(new Laplace(rng));
@@ -173,6 +235,14 @@ namespace tree_rejection
                                         const std::vector<double> &y,
                                         const std::vector<double> &y_pred)
     {
+        LOG_INFO("Calculating beta-smooth sensitivity for beta={1}", this->beta);
+        auto alpha = privacy_budget + this->beta -
+                     (std::exp(this->beta) - 1.0) * std::log(1.0 / this->relaxation);
+        LOG_INFO("### diagnosis value 17 ### alpha={1}", alpha);
+        if (alpha < 0.0)
+        {
+            return std::nan("");
+        }
         std::vector<double> abs_errors(y.size());
         std::transform(y.begin(), y.end(),
                        y_pred.begin(), abs_errors.begin(), [](double _y, double _y_pred)
@@ -183,16 +253,7 @@ namespace tree_rejection
                                                              this->beta,
                                                              this->upper_bound);
         auto noise = this->std_laplace->return_a_random_variable();
-        /** TODO: Is this really necessary? Or is beta >= 0 anyway? */
-        auto abs_beta = std::abs(this->beta);
-        auto s = privacy_budget + abs_beta -
-                 (std::exp(abs_beta) - 1.0) * std::log(1.0 / this->relaxation);
-        LOG_INFO("s={1}", s);
-        if (s < 0.0)
-        {
-            return std::nan("");
-        }
-        auto score = rmse + noise * smooth_sens / s;
+        auto score = rmse + noise * smooth_sens / alpha;
         return score;
     }
 

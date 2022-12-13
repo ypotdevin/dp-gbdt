@@ -9,21 +9,74 @@
 
 namespace tree_rejection
 {
+    class Beta
+    {
+    public:
+        virtual double beta(double privacy_budget, double relaxation) = 0;
+    };
+
+    class ConstantBeta : public Beta
+    {
+    private:
+        double beta_constant;
+
+    public:
+        ConstantBeta(double beta);
+        double beta(double privacy_budget, double relaxation);
+    };
+
+    class StandardCauchyBeta : public Beta
+    {
+    public:
+        double beta(double privacy_budget, double relaxation);
+    };
+
+    class CustomCauchyBeta : public Beta
+    {
+    private:
+        double gamma;
+
+    public:
+        CustomCauchyBeta(double gamma);
+        double beta(double privacy_budget, double relaxation);
+    };
+
     class TreeScorer
     {
     public:
-        virtual double score_tree(double privacy_budget, const std::vector<double> &y, const std::vector<double> &y_pred) = 0;
+        virtual double score_tree(double privacy_budget,
+                                  const std::vector<double> &y,
+                                  const std::vector<double> &y_pred) = 0;
+    };
+
+    class DPrMSEScorer2 : public TreeScorer
+    {
+    private:
+        std::shared_ptr<Beta> beta;
+        double upper_bound;
+        std::unique_ptr<custom_cauchy::CustomCauchy> cc;
+
+    public:
+        DPrMSEScorer2(
+            std::shared_ptr<Beta> beta_ptr,
+            double upper_bound,
+            double gamma,
+            const std::mt19937 &rng);
+        double score_tree(double privacy_budget,
+                          const std::vector<double> &y,
+                          const std::vector<double> &y_pred);
     };
 
     class DPrMSEScorer : public TreeScorer
     {
     private:
-        double upper_bound;
-        std::unique_ptr<custom_cauchy::CustomCauchy> cc;
+        DPrMSEScorer2 scorer;
 
     public:
         DPrMSEScorer(double upper_bound, double gamma, const std::mt19937 &rng);
-        double score_tree(double privacy_budget, const std::vector<double> &y, const std::vector<double> &y_pred);
+        double score_tree(double privacy_budget,
+                          const std::vector<double> &y,
+                          const std::vector<double> &y_pred);
     };
 
     class DPQuantileScorer : public TreeScorer
@@ -34,8 +87,14 @@ namespace tree_rejection
         std::mt19937 rng;
 
     public:
-        DPQuantileScorer(double shift, double scale, const std::vector<double> &qs, double upper_bound, std::mt19937 &rng);
-        double score_tree(double privacy_budget, const std::vector<double> &y, const std::vector<double> &y_pred);
+        DPQuantileScorer(double shift,
+                         double scale,
+                         const std::vector<double> &qs,
+                         double upper_bound,
+                         std::mt19937 &rng);
+        double score_tree(double privacy_budget,
+                          const std::vector<double> &y,
+                          const std::vector<double> &y_pred);
     };
 
     /**
@@ -56,8 +115,13 @@ namespace tree_rejection
         std::unique_ptr<Laplace> std_laplace;
 
     public:
-        BunSteinkeScorer(double upper_bound, double beta, double relaxation, std::mt19937 &rng);
-        double score_tree(double privacy_budget, const std::vector<double> &y, const std::vector<double> &y_pred);
+        BunSteinkeScorer(double upper_bound,
+                         double beta,
+                         double relaxation,
+                         std::mt19937 &rng);
+        double score_tree(double privacy_budget,
+                          const std::vector<double> &y,
+                          const std::vector<double> &y_pred);
     };
 
     class TreeRejector
@@ -75,7 +139,8 @@ namespace tree_rejection
          * @return false accept the most recent tree associated with the
          * prediction `y_pred`.
          */
-        virtual bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred) = 0;
+        virtual bool reject_tree(std::vector<double> &y,
+                                 std::vector<double> &y_pred) = 0;
         /**
          * @brief Set the privacy budget the tree rejector is allowed to spend
          * over the whole training period, in total.
@@ -169,7 +234,8 @@ namespace tree_rejection
          * @param coefficients the corresponding coefficients of the target
          * quantiles (must have same length as `qs`).
          */
-        QuantileLinearCombinationRejector(std::vector<double> qs, std::vector<double> coefficients);
+        QuantileLinearCombinationRejector(std::vector<double> qs,
+                                          std::vector<double> coefficients);
         void print(std::ostream &os) const;
         bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
         void set_total_privacy_budget(double budget);
@@ -196,7 +262,8 @@ namespace tree_rejection
          * may be expressed as non-negative, relative weights. They will be
          * normalized anyway.
          */
-        QuantileCombinationRejector(std::vector<double> qs, std::vector<double> weights);
+        QuantileCombinationRejector(std::vector<double> qs,
+                                    std::vector<double> weights);
         void print(std::ostream &os) const;
         bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
         void set_total_privacy_budget(double budget);
@@ -230,9 +297,13 @@ namespace tree_rejection
          * @param rng the random number generator used by the custom Cauchy
          * distribution.
          */
-        DPrMSERejector(int n_trees_to_accept, double U, double gamma, const std::mt19937 &rng);
+        DPrMSERejector(int n_trees_to_accept,
+                       double U,
+                       double gamma,
+                       const std::mt19937 &rng);
         void print(std::ostream &os) const;
-        bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
+        bool reject_tree(std::vector<double> &y,
+                         std::vector<double> &y_pred);
         void set_total_privacy_budget(double budget);
     };
 
@@ -244,7 +315,10 @@ namespace tree_rejection
         std::unique_ptr<Laplace> laplace_distr;
 
     public:
-        ApproxDPrMSERejector(int n_trees_to_accept, double delta, double U, std::mt19937 &rng);
+        ApproxDPrMSERejector(int n_trees_to_accept,
+                             double delta,
+                             double U,
+                             std::mt19937 &rng);
         void print(std::ostream &os) const;
         bool reject_tree(std::vector<double> &y, std::vector<double> &y_pred);
         void set_total_privacy_budget(double budget);
