@@ -1,6 +1,7 @@
 from typing import Optional, Union
 
 import pyestimator
+from pyestimator import py_beta_smooth_sensitivity
 from numpy.random import default_rng
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.metrics import r2_score

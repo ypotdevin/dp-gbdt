@@ -239,9 +239,9 @@ namespace tree_rejection
         auto alpha = privacy_budget + this->beta -
                      (std::exp(this->beta) - 1.0) * std::log(1.0 / this->relaxation);
         LOG_INFO("### diagnosis value 17 ### alpha={1}", alpha);
-        if (alpha < 0.0)
+        if (alpha <= 0.0)
         {
-            return std::nan("");
+            return std::nan(""); /** TODO: throw a runtime error? */
         }
         std::vector<double> abs_errors(y.size());
         std::transform(y.begin(), y.end(),

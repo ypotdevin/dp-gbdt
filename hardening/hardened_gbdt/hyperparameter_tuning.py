@@ -6,6 +6,7 @@ import pandas as pd
 from sklearn.model_selection import GridSearchCV, RepeatedKFold
 
 import dpgbdt
+from example_main import abalone_fit_arguments
 
 
 def sklearn_grid(
@@ -29,7 +30,7 @@ def sklearn_grid(
     return df
 
 
-def get_abalone() -> Tuple[np.ndarray, np.ndarray, list[int], list[int]]:
+def get_abalone() -> dict[str, Any]:
     """Parse the abalone dataset and return parameters suitable for
     `fit`.
 
@@ -475,7 +476,7 @@ def abalone_bun_steinke(cli_args) -> pd.DataFrame:
     grid["dp_argmax_privacy_budget"] = [0.001, 0.01]
     grid["dp_argmax_stopping_prob"] = [0.1, 0.2]
     grid["ts_upper_bound"] = grid["l2_threshold"]
-    grid["ts_beta"] = np.logspace(-4.0, 0.0, 10)
+    grid["ts_beta"] = [729 * 1e-6]
     grid["ts_relaxation"] = [1e-6]
     return bun_steinke_template(cli_args, grid, get_abalone())
 
@@ -486,7 +487,7 @@ def abalone_bun_steinke_20221107(cli_args) -> pd.DataFrame:
     grid["dp_argmax_privacy_budget"] = [0.0001, 0.001, 0.01]
     grid["dp_argmax_stopping_prob"] = [0.01, 0.1, 0.2, 0.4]
     grid["ts_upper_bound"] = grid["l2_threshold"]
-    grid["ts_beta"] = np.logspace(-4.0, 0.0, 10)
+    grid["ts_beta"] = [729 * 1e-6]
     grid["ts_relaxation"] = [1e-6]
     return bun_steinke_template(cli_args, grid, get_abalone())
 
@@ -517,6 +518,59 @@ def wine_dp_quantile_ts_grid_20221121(args) -> pd.DataFrame:
     return dp_quantile_ts_template(
         args, grid, ts_qs=[0.5, 0.90, 0.95], data_provider=get_wine
     )
+
+
+def abalone_eps_delta_beta_combinations() -> pd.DataFrame:
+    pbs = np.linspace(1e-3, 1.0, 100)
+    rels = np.array([1e-7, 1e-6, 1e-5, 1e-4])
+    bs = np.logspace(-6, -1, 600)
+
+    y = abalone_fit_arguments().pop("y")
+    y_pred = np.full_like(y, y.mean())
+    abs_errors = np.abs(y - y_pred)
+    abs_errors.sort()
+
+    df = _scaling_factors(pbs, rels, bs, abs_errors, 20.0)
+    df.to_csv("abalone_scaling_factors.csv")
+
+
+def wine_eps_delta_beta_combinations() -> pd.DataFrame:
+    pbs = np.linspace(1e-3, 1.0, 100)
+    rels = np.array([1e-7, 1e-6, 1e-5, 1e-4])
+    bs = np.logspace(-6, -1, 600)
+
+    y = abalone_fit_arguments().pop("y")
+    y_pred = np.full_like(y, y.mean())
+    abs_errors = np.abs(y - y_pred)
+    abs_errors.sort()
+
+    df = _scaling_factors(pbs, rels, bs, abs_errors, 20.0)
+    df.to_csv("abalone_scaling_factors.csv")
+
+
+def _scaling_factors(
+    privacy_budgets: np.ndarray,
+    relaxations: np.ndarray,
+    betas: np.ndarray,
+    errors: np.ndarray,
+    upper_bound: float,
+) -> pd.DataFrame:
+    beta_smooth_sensitivities = np.array(
+        [dpgbdt.py_beta_smooth_sensitivity(errors, beta, upper_bound) for beta in betas]
+    )
+    pbs, rels, bs = np.meshgrid(privacy_budgets, relaxations, betas, indexing="ij")
+    alphas = pbs + bs - (np.exp(bs) - 1.0) * np.log(1.0 / rels)
+    alphas = np.where(alphas <= 0.0, np.nan, alphas)
+    scaling_factors = beta_smooth_sensitivities[np.newaxis, np.newaxis, :] / alphas
+    df = pd.DataFrame(
+        dict(
+            privacy_budget=pbs.reshape(-1),
+            relaxation=rels.reshape(-1),
+            beta=bs.reshape(-1),
+            scaling_factor=scaling_factors.reshape(-1),
+        )
+    )
+    return df
 
 
 def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
