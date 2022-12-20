@@ -311,8 +311,8 @@ def log_best_abalone_configurations(
             df=df,
             additional_parameters=additional_params,
             fit_args=abalone_fit_arguments(),
-            logfilename_template=f"{p.stem}" + ".{index}.log",
-            zipfilename=f"{p.stem}.zip",
+            logfilename_template=p.parent / (f"{p.stem}" + ".{index}.log"),
+            zipfilename=p.parent / f"{p.stem}.zip",
         )
 
 
