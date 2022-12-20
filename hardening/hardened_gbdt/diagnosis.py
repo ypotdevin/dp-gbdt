@@ -292,6 +292,11 @@ def log_best_abalone_configurations(
                 "bun_steinke",
                 None,
             ),
+            (
+                "~/share/dp-gbdt-evaluation/abalone_bun_steinke_20221107_feature-grid.csv",
+                "bun_steinke",
+                None,
+            ),
         ]
     for (experiment, tree_scorer, ts_qs) in experiments:
         p = Path(experiment)
@@ -465,7 +470,7 @@ def dp_rmse_score_variation_bun_steinke():
 
 
 if __name__ == "__main__":
-    # log_best_abalone_configurations()
+    log_best_abalone_configurations()
     # dp_rmse_score_variation()
     # dp_rmse_score_variation_bun_steinke()
-    dp_rmse2_score_variation()
+    # dp_rmse2_score_variation()
