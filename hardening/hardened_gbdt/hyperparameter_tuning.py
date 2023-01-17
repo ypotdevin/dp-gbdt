@@ -17,7 +17,7 @@ def sklearn_grid(
     cv=None,
 ) -> Tuple[pd.DataFrame, dict[str, Any]]:
     if cv is None:
-        cv = RepeatedKFold(n_splits=5, n_repeats=2)
+        cv = RepeatedKFold(n_splits=5, n_repeats=10, random_state=42)
     sklearn_search = GridSearchCV(
         regressor,
         parameter_grid,
@@ -290,7 +290,7 @@ def baseline_template(
             dpgbdt.make_tree_rejector("constant", decision=False)
         ]
         df = sklearn_grid(
-            dpgbdt.DPGBDTRegressor(),
+            dpgbdt.DPGBDTRegressor(seed=21),
             data_provider,
             parameter_grid,
             n_jobs=args.num_cores,
@@ -337,7 +337,7 @@ def dp_rmse_ts_template(
         parameter_grid["tree_scorer"] = ["dp_rmse"]
 
         df = sklearn_grid(
-            dpgbdt.DPGBDTRegressor(),
+            dpgbdt.DPGBDTRegressor(seed=21),
             data_provider,
             parameter_grid,
             n_jobs=args.num_cores,
@@ -359,7 +359,7 @@ def meta_template(
         parameter_grid["privacy_budget"] = [total_budget]
 
         df = sklearn_grid(
-            dpgbdt.DPGBDTRegressor(),
+            dpgbdt.DPGBDTRegressor(seed=21),
             data_provider=lambda: fit_args,
             parameter_grid=parameter_grid,
             n_jobs=cli_args.num_cores,
@@ -424,7 +424,7 @@ def dp_quantile_ts_template(
         parameter_grid["tree_scorer"] = ["dp_quantile"]
 
         df = sklearn_grid(
-            dpgbdt.DPGBDTRegressor(ts_qs=ts_qs),
+            dpgbdt.DPGBDTRegressor(seed=21, ts_qs=ts_qs),
             data_provider,
             parameter_grid,
             n_jobs=args.num_cores,
