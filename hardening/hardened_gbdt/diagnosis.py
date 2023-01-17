@@ -6,7 +6,7 @@ from typing import Any, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import RepeatedKFold, cross_val_score, train_test_split
 
 import dpgbdt
 from example_main import abalone_fit_arguments
@@ -90,7 +90,8 @@ def single_configuration(
     additional_parameters: dict[str, Any],
     fit_args: dict[str, Any],
     logfilename: str = None,
-) -> dpgbdt.DPGBDTRegressor:
+    cv=None,
+) -> Tuple[dpgbdt.DPGBDTRegressor, np.ndarray]:
     """Relaunch a single configuration of the DP-GBDT regressor,
     obtaining parameters from a single row of the result DataFrame.
 
@@ -108,7 +109,6 @@ def single_configuration(
     _fit_args = fit_args.copy()
     X = _fit_args.pop("X")
     y = _fit_args.pop("y")
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
     params = params_from_series(row)
     params = {**params, **additional_parameters}
@@ -126,11 +126,26 @@ def single_configuration(
     with maybe_redirecting:
         print(f"Parameters: {params}")
         estimator = dpgbdt.DPGBDTRegressor(**params)
-        estimator.fit(X_train, y_train, **_fit_args)
-        print(f"fitted estimator: {estimator}")
-        score = _rmse(estimator.predict(X_test), y_test)
-        print(f"score: {score}")
-    return estimator
+        if cv is None:
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+            estimator.fit(X_train, y_train, **_fit_args)
+            print(f"fitted estimator: {estimator}")
+            score = _rmse(estimator.predict(X_test), y_test)
+            print(f"score: {score}")
+            return (estimator, np.array(score))
+        else:
+            scores = cross_val_score(
+                estimator,
+                X,
+                y,
+                fit_params=_fit_args,
+                cv=cv,
+                scoring="neg_root_mean_squared_error",
+                n_jobs=8,
+            )
+            print(f"fitted estimator: {estimator}")
+            print(f"scores: {scores}")
+            return (estimator, scores)
 
 
 def multiple_configurations(
@@ -186,7 +201,8 @@ def baseline(
     fit_args: dict[str, Any] = None,
     verbosity: str = "debug",
     logfilename: str = None,
-):
+    cv=None,
+) -> dpgbdt.DPGBDTRegressor:
     if fit_args is None:
         fit_args = abalone_fit_arguments()
     additional_params = dict(
@@ -194,11 +210,12 @@ def baseline(
         tree_scorer=None,
         verbosity=verbosity,
     )
-    single_configuration(
+    return single_configuration(
         row=series,
         fit_args=fit_args,
         additional_parameters=additional_params,
         logfilename=logfilename,
+        cv=cv,
     )
 
 
@@ -207,17 +224,19 @@ def dp_rmse(
     fit_args: dict[str, Any],
     verbosity: str = "debug",
     logfilename: str = None,
-):
+    cv=None,
+) -> dpgbdt.DPGBDTRegressor:
     additional_params = dict(
         training_variant="dp_argmax_scoring",
         tree_scorer="dp_rmse",
         verbosity=verbosity,
     )
-    single_configuration(
+    return single_configuration(
         row=series,
         fit_args=fit_args,
         additional_parameters=additional_params,
         logfilename=logfilename,
+        cv=cv,
     )
 
 
@@ -230,7 +249,8 @@ def bun_steinke(
     fit_args: dict[str, Any],
     verbosity: str = "debug",
     logfilename: str = None,
-):
+    cv=None,
+) -> dpgbdt.DPGBDTRegressor:
     additional_params = dict(
         training_variant="dp_argmax_scoring",
         tree_scorer="bun_steinke",
@@ -238,11 +258,12 @@ def bun_steinke(
         ts_relaxation=1e-6,
         verbosity=verbosity,
     )
-    single_configuration(
+    return single_configuration(
         row=series,
         fit_args=fit_args,
         additional_parameters=additional_params,
         logfilename=logfilename,
+        cv=cv,
     )
 
 
@@ -471,7 +492,12 @@ def dp_rmse_score_variation_bun_steinke():
 
 
 if __name__ == "__main__":
-    log_best_abalone_configurations()
+    df = pd.read_csv("baseline_gridspace_20221107_feature-grid.csv")
+    estimator, scores = baseline(df.loc[3], cv=RepeatedKFold(n_splits=5, n_repeats=200))
+    df = pd.DataFrame(scores, columns=["rmse"])
+    df["rmse"] = df["rmse"] * -1.0
+    df.to_csv("diagnosis_scores.csv")
+    # log_best_abalone_configurations()
     # dp_rmse_score_variation()
     # dp_rmse_score_variation_bun_steinke()
     # dp_rmse2_score_variation()
