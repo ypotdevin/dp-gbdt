@@ -108,6 +108,7 @@ namespace dpgbdt
         {
             throw std::runtime_error("Unknown verbosity level.");
         }
+        std::srand((unsigned)std::time(NULL));
         this->ensemble = std::shared_ptr<DPEnsemble>(new DPEnsemble(this->params.get()));
         this->params->cat_idx = cat_idx;
         this->params->num_idx = num_idx;
