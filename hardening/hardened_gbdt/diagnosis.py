@@ -3,6 +3,7 @@ import os
 import zipfile
 from pathlib import Path
 from typing import Any, Optional, Tuple
+import joblib
 
 import numpy as np
 import pandas as pd
@@ -141,7 +142,7 @@ def single_configuration(
                 fit_params=_fit_args,
                 cv=cv,
                 scoring="neg_root_mean_squared_error",
-                n_jobs=8,
+                n_jobs=32,
             )
             print(f"fitted estimator: {estimator}")
             print(f"scores: {scores}")
@@ -254,8 +255,6 @@ def bun_steinke(
     additional_params = dict(
         training_variant="dp_argmax_scoring",
         tree_scorer="bun_steinke",
-        ts_beta=3.14,
-        ts_relaxation=1e-6,
         verbosity=verbosity,
     )
     return single_configuration(
@@ -491,12 +490,34 @@ def dp_rmse_score_variation_bun_steinke():
     df.to_csv("dp_rmse_score_variation_bun_steinke.csv", index=False)
 
 
-if __name__ == "__main__":
-    df = pd.read_csv("baseline_gridspace_20221107_feature-grid.csv")
-    estimator, scores = baseline(df.loc[3], cv=RepeatedKFold(n_splits=5, n_repeats=200))
+def repeat_crossvalidation_baseline(
+    setting: pd.Series,
+    additional_settings: dict[str, Any],
+    n_repetitions: int,
+    cv,
+    n_jobs=32,
+) -> pd.DataFrame:
+    scores = []
+    _setting = setting.copy()
+    for (param, value) in additional_settings.items():
+        _setting[param] = value
+    scoress = joblib.Parallel(n_jobs=n_jobs)(
+        joblib.delayed(baseline)(series=_setting, cv=cv) for _ in range(n_repetitions)
+    )
+    scores = [score for (_, scores) in scoress for score in scores]
     df = pd.DataFrame(scores, columns=["rmse"])
     df["rmse"] = df["rmse"] * -1.0
-    df.to_csv("diagnosis_scores.csv")
+    return df
+
+
+if __name__ == "__main__":
+    df = pd.read_csv("baseline_gridspace_feature-grid_50rep_srand.csv")
+    repeat_crossvalidation_baseline(
+        setting=df.iloc[19],
+        additional_settings=dict(param_privacy_budget=1.0),
+        n_repetitions=100,
+        cv=RepeatedKFold(n_splits=5, n_repeats=2),
+    )
     # log_best_abalone_configurations()
     # dp_rmse_score_variation()
     # dp_rmse_score_variation_bun_steinke()
