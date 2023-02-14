@@ -32,6 +32,7 @@ private:
     size_t tree_index;
     std::vector<TreeNode *> leaves;
     const std::vector<std::vector<double>> grid;
+    std::uniform_real_distribution<double> random_unit_doubles;
 
     // methods
     TreeNode *make_tree_dfs(int current_depth, std::vector<int> live_samples);

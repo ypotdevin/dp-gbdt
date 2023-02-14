@@ -22,7 +22,9 @@ DPTree::DPTree(
                                                     dataset(dataset),
                                                     tree_index(tree_index),
                                                     grid(grid)
+
 {
+    this->random_unit_doubles = std::uniform_real_distribution<double>(0.0, 1.0);
     // only need to transpose X once
     X_transposed = VVD(dataset->num_x_cols, vector<double>(dataset->length));
     for (int row = 0; row < dataset->length; row++)
@@ -515,7 +517,8 @@ int DPTree::exponential_mechanism(vector<SplitCandidate> &candidates)
     // all values will be in [0,1]
     std::partial_sum(probabilities.begin(), probabilities.end(), partials.begin());
 
-    double rand01 = ((double)std::rand() / (RAND_MAX));
+    // std::uniform_real_distribution<double> random_unit_doubles(0.0, 1.0);
+    double rand01 = this->random_unit_doubles(this->params->rng);
 
     size_t result_index = 0;
     bool found = false;
@@ -532,7 +535,7 @@ void DPTree::
 {
     LOG_DEBUG("Adding Laplace noise to leaves (Scale {1:.2f})", laplace_scale);
 
-    Laplace lap(laplace_scale, rand());
+    Laplace lap(this->params->rng);
 
     // add noise from laplace distribution (to all nodes, for the hardened version)
     for (auto &node : leaves)

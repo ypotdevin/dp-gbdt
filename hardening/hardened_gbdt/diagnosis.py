@@ -1,10 +1,11 @@
 import contextlib
 import os
 import zipfile
+from itertools import zip_longest
 from pathlib import Path
 from typing import Any, Optional, Tuple
-import joblib
 
+import joblib
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import RepeatedKFold, cross_val_score, train_test_split
@@ -510,15 +511,45 @@ def repeat_crossvalidation_baseline(
     return df
 
 
+def diff_logs(log1, log2, ignore_timestamp: bool = True) -> Optional[Tuple[str, str]]:
+    """Compare two logs line by line, possibly ignoring the leading
+    timestamps.
+
+    Returns:
+        Optional[Tuple[str, str]]: If `log1` and `log2` differ, return the
+        first differing two lines (left from `log1`, right from `log2`).
+        Otherwise return `None`.
+    """
+    with open(log1, "r") as file1:
+        with open(log2, "r") as file2:
+            lines1 = file1.readlines()
+            lines2 = file2.readlines()
+            if ignore_timestamp:
+                lines1 = _remove_timestamps_from_lines(lines1)
+                lines2 = _remove_timestamps_from_lines(lines2)
+            for (line1, line2) in zip_longest(lines1, lines2, fillvalue=None):
+                if (line1 != line2) or (None in (line1, line2)):
+                    return (line1, line2)
+    return None
+
+
+def _remove_timestamps_from_lines(lines):
+    # Assume the timestamp is contained in [], followed by a space and
+    # at the beginning of the string. If so, it will be dropped
+    # completely.
+    return ["] ".join(line.split("] ")[1:]) for line in lines]
+
+
 if __name__ == "__main__":
-    df = pd.read_csv("baseline_gridspace_feature-grid_50rep_srand.csv")
-    repeat_crossvalidation_baseline(
-        setting=df.iloc[19],
-        additional_settings=dict(param_privacy_budget=1.0),
-        n_repetitions=100,
-        cv=RepeatedKFold(n_splits=5, n_repeats=2),
-    )
+    # df = pd.read_csv("baseline_gridspace_feature-grid_50rep_srand.csv")
+    # repeat_crossvalidation_baseline(
+    #     setting=df.iloc[19],
+    #     additional_settings=dict(param_privacy_budget=1.0),
+    #     n_repetitions=100,
+    #     cv=RepeatedKFold(n_splits=5, n_repeats=2),
+    # )
     # log_best_abalone_configurations()
     # dp_rmse_score_variation()
     # dp_rmse_score_variation_bun_steinke()
     # dp_rmse2_score_variation()
+    print(diff_logs("1.txt", "2.txt"))
