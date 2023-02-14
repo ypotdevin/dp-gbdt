@@ -90,7 +90,11 @@ void inverse_scale_y(ModelParams &params, Scaler &scaler, std::vector<double> &v
 //      https://arxiv.org/pdf/2001.02285.pdf
 // corresponding code:
 //  https://github.com/wxindu/dp-conf-int/blob/master/algorithms/alg5_EXPQ.R
-std::tuple<double, double> dp_confidence_interval(std::vector<double> &samples, double percentile, double budget)
+std::tuple<double, double> dp_confidence_interval(
+    std::vector<double> &samples,
+    double percentile,
+    double budget,
+    std::mt19937 rng)
 {
     // e.g.  95% -> {0.025, 0.975}
     std::vector<double> quantiles = {(1.0 - percentile / 100.) / 2., percentile / 100. + (1.0 - percentile / 100.) / 2.};
@@ -102,6 +106,7 @@ std::tuple<double, double> dp_confidence_interval(std::vector<double> &samples, 
     int n = samples.size();
     double e = budget / 2; // half budget since we're doing it twice
 
+    std::uniform_real_distribution<double> random_unit_doubles(0.0, 1.0);
     // run the dp quantile calculation twice (to get the lower & upper bound)
     for (auto quantile : quantiles)
     {
@@ -110,7 +115,7 @@ std::tuple<double, double> dp_confidence_interval(std::vector<double> &samples, 
         int m = std::floor((n - 1) * q + 1.5);
         std::vector<double> probs(n + 1);
         std::iota(probs.begin(), probs.end(), 1.0); // [1,2,...,n+1]
-        double r = ((double)std::rand() / (double)RAND_MAX);
+        double r = random_unit_doubles(rng);
         int priv_qi = 0;
 
         // exponential mechanism
@@ -172,7 +177,11 @@ void DataSet::scale_X_columns(ModelParams &params)
         }
 
         // compute percentile borders on our data
-        std::tuple<double, double> borders = dp_confidence_interval(column, params.scale_X_percentile, params.scale_X_privacy_budget);
+        std::tuple<double, double> borders = dp_confidence_interval(
+            column,
+            params.scale_X_percentile,
+            params.scale_X_privacy_budget,
+            params.rng);
         double lower = std::get<0>(borders);
         double upper = std::get<1>(borders);
 

@@ -311,11 +311,15 @@ def _ensure_float(X, y=None):
 
 
 def make_rng(seed: Optional[int] = None) -> pyestimator.PyMT19937:
+    rng_upper_bound = 2**30 - 1
     if seed is None:
         rng = default_rng()
         # Stay within the the bounds of mt19937's input seed (C++)
-        seed = rng.integers(2**30 - 1)
-    return pyestimator.PyMT19937(seed)
+        seed = rng.integers(rng_upper_bound)
+    else:
+        if not 0 <= seed <= rng_upper_bound:
+            raise ValueError(f"seed {seed} is out of range")
+        return pyestimator.PyMT19937(seed)
 
 
 def make_beta(which: str, **kwargs) -> pyestimator.PyBeta:

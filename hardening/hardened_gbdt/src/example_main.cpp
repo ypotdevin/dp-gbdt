@@ -230,7 +230,7 @@ void dp_rmse2()
     ModelParams parameters;
     DataSet *dataset = Parser::get_abalone(parameters, 5000);
 
-    std::mt19937 rng(std::random_device{}());
+    std::mt19937 rng(42);
     std::shared_ptr<tree_rejection::Beta> beta_ptr(
         std::shared_ptr<tree_rejection::ConstantBeta>(
             new tree_rejection::ConstantBeta(42.0)));
