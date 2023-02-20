@@ -578,6 +578,7 @@ def dp_quantile_ts_grid_20221109(args) -> pd.DataFrame:
 
 def abalone_bun_steinke(cli_args) -> pd.DataFrame:
     grid = abalone_parameter_grid()
+    grid["training_variant"] = ["dp_argmax_scoring"]
     grid["ensemble_rejector_budget_split"] = [0.6, 0.75, 0.9]
     grid["dp_argmax_privacy_budget"] = [0.001, 0.01]
     grid["dp_argmax_stopping_prob"] = [0.1, 0.2]
