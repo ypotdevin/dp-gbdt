@@ -1,33 +1,143 @@
 import argparse
-from typing import Any, Callable, Optional, Tuple
+import traceback
+from itertools import product
+from typing import Any, Callable, Optional
 
+import joblib
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import GridSearchCV, RepeatedKFold
+from sklearn import model_selection
+from sklearn.metrics import mean_squared_error
 
 import dpgbdt
+import pyestimator
 from example_main import abalone_fit_arguments
 
 
-def sklearn_grid(
-    regressor,
-    data_provider: Callable[[], dict[str, Any]],
+def manual_grid(
+    fit_args: dict[str, Any],
     parameter_grid: dict[str, Any],
     n_jobs: Optional[int] = None,
-    cv=None,
-) -> Tuple[pd.DataFrame, dict[str, Any]]:
-    if cv is None:
-        cv = RepeatedKFold(n_splits=5, n_repeats=10)
-    sklearn_search = GridSearchCV(
-        regressor,
-        parameter_grid,
-        n_jobs=n_jobs,
-        scoring="neg_root_mean_squared_error",
-        cv=cv,
+    n_repetitions: int = 30,
+    rng: np.random.Generator = None,
+) -> pd.DataFrame:
+    """Traverse the parameter grid manually to control the propagation
+    of random seeds.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the configurations and
+        their corresponding scores. Notice that, in contrast to
+        sklearn_grid, this DataFrame contains a new line for every
+        configuration split combination (tall format). The other
+        DataFrame contains only one line per configuration and holds
+        all split scores in its columns (wide format).
+    """
+    if rng is None:
+        rng = np.random.default_rng()
+    seeds = rng.integers(low=0, high=2**30 - 1, size=n_repetitions)
+    configs = model_selection.ParameterGrid(parameter_grid)
+    measurements = joblib.Parallel(n_jobs=n_jobs)(
+        joblib.delayed(_manual_worker_wrapper(fit_args))(config, seed)
+        for (config, seed) in product(configs, seeds)
     )
-    sklearn_search.fit(**data_provider())
-    df = pd.DataFrame(sklearn_search.cv_results_)
+    df = pd.DataFrame(measurements)
     return df
+
+
+def _manual_worker_wrapper(fit_data: dict[str, Any]):
+    _fit_data = fit_data.copy()
+    X = _fit_data.pop("X")
+    y = _fit_data.pop("y")
+
+    def _manual_worker(config: dict[str, Any], seed: int) -> dict[str, Any]:
+        """Create a DPGBDT ensemble and split fit_data, governed by `seed`,
+        and train the ensemble on that split.
+
+        Returns:
+            dict[str, Any]: The configuration used, prepended by "param_",
+            the seed and the resulting rMSE test score.
+        """
+        config_incl_seed = dict(**config, seed=seed)
+        config_check = check_config(config_incl_seed)
+        if config_check:
+            raise ValueError(
+                f"Some of these parameters {config_check} are missing "
+                f"in config {config_incl_seed}"
+            )
+
+        regressor = dpgbdt.DPGBDTRegressor(**config_incl_seed)
+        X_train, X_test, y_train, y_test = model_selection.train_test_split(
+            X, y, test_size=0.2, random_state=seed
+        )
+        try:
+            regressor.fit(X=X_train, y=y_train, **_fit_data)
+            y_pred = regressor.predict(X_test)
+            rmse = mean_squared_error(y_test, y_pred, squared=False)
+        except Exception:
+            traceback.print_exc()
+            rmse = float("nan")
+        params = {f"param_{key}": val for (key, val) in config_incl_seed.items()}
+        return dict(**params, test_score=rmse)
+
+    return _manual_worker
+
+
+def check_config(config: dict[str, Any]) -> list[str]:
+    """Check for missing parameters to `DPGBDTRegressor`.
+
+    Returns:
+        list[str]: If `[]`, no parameter is missing. Otherwise at least
+        one of the returned parameters is missing (but not necessarily
+        all of them).
+    """
+    keys = config.keys()
+    common_args = [
+        "seed",
+        "privacy_budget",
+        "training_variant",
+        "learning_rate",
+        "n_trees_to_accept",
+        "max_depth",
+        "l2_threshold",
+        "l2_lambda",
+    ]
+    common_args_present = all([arg in keys for arg in common_args])
+    if common_args_present:
+        if config["training_variant"] == "vanilla":
+            return []
+        elif config["training_variant"] == "dp_argmax_scoring":
+            argmax_scoring_args = [
+                "ensemble_rejector_budget_split",
+                "tree_scorer",
+                "dp_argmax_privacy_budget",
+                "dp_argmax_stopping_prob",
+            ]
+            argmax_scoring_args_present = all(
+                [arg in keys for arg in argmax_scoring_args]
+            )
+            if argmax_scoring_args_present:
+                t = type(config["tree_scorer"])
+                scorer_args = []
+                if t in [pyestimator.PyDPrMSEScorer, pyestimator.PyDPrMSEScorer2]:
+                    scorer_args = ["ts_upper_bound", "ts_gamma"]
+                elif t is pyestimator.PyDPQuantileScorer:
+                    scorer_args = ["ts_shift", "ts_scale", "ts_qs", "ts_upper_bound"]
+                elif t is pyestimator.PyBunSteinkeScorer:
+                    scorer_args = ["ts_upper_bound", "ts_beta", "ts_relaxation"]
+                elif t is str:
+                    # assume that the conversion from str to real
+                    # parameters works correctly
+                    return []
+                else:
+                    raise ValueError(f"Exhausted tree scorer options: {t}")
+                if all(scorer_args):
+                    return []
+                else:
+                    scorer_args
+            else:
+                return argmax_scoring_args
+    else:
+        return common_args
 
 
 def get_abalone() -> dict[str, Any]:
@@ -289,10 +399,9 @@ def baseline_template(
         parameter_grid["tree_rejector"] = [
             dpgbdt.make_tree_rejector("constant", decision=False)
         ]
-        df = sklearn_grid(
-            dpgbdt.DPGBDTRegressor(),
-            data_provider,
-            parameter_grid,
+        df = manual_grid(
+            fit_args=data_provider(),
+            parameter_grid=parameter_grid,
             n_jobs=args.num_cores,
         )
         dfs.append(df)
@@ -336,10 +445,9 @@ def dp_rmse_ts_template(
         parameter_grid["privacy_budget"] = [total_budget]
         parameter_grid["tree_scorer"] = ["dp_rmse"]
 
-        df = sklearn_grid(
-            dpgbdt.DPGBDTRegressor(),
-            data_provider,
-            parameter_grid,
+        df = manual_grid(
+            fit_args=data_provider(),
+            parameter_grid=parameter_grid,
             n_jobs=args.num_cores,
         )
         dfs.append(df)
@@ -357,10 +465,8 @@ def meta_template(
     for total_budget in total_budgets:
         parameter_grid = grid.copy()
         parameter_grid["privacy_budget"] = [total_budget]
-
-        df = sklearn_grid(
-            dpgbdt.DPGBDTRegressor(),
-            data_provider=lambda: fit_args,
+        df = manual_grid(
+            fit_args=fit_args,
             parameter_grid=parameter_grid,
             n_jobs=cli_args.num_cores,
         )
@@ -422,11 +528,11 @@ def dp_quantile_ts_template(
         parameter_grid = grid
         parameter_grid["privacy_budget"] = [total_budget]
         parameter_grid["tree_scorer"] = ["dp_quantile"]
+        parameter_grid["ts_qs"] = [ts_qs]
 
-        df = sklearn_grid(
-            dpgbdt.DPGBDTRegressor(ts_qs=ts_qs),
-            data_provider,
-            parameter_grid,
+        df = manual_grid(
+            fit_args=data_provider(),
+            parameter_grid=parameter_grid,
             n_jobs=args.num_cores,
         )
         dfs.append(df)
@@ -483,6 +589,7 @@ def abalone_bun_steinke(cli_args) -> pd.DataFrame:
 
 def abalone_bun_steinke_20221107(cli_args) -> pd.DataFrame:
     grid = abalone_parameter_grid_20221107()
+    grid["training_variant"] = ["dp_argmax_scoring"]
     grid["ensemble_rejector_budget_split"] = [0.2, 0.4, 0.6, 0.75, 0.9]
     grid["dp_argmax_privacy_budget"] = [0.0001, 0.001, 0.01]
     grid["dp_argmax_stopping_prob"] = [0.01, 0.1, 0.2, 0.4]

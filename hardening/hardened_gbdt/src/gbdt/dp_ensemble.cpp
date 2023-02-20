@@ -227,7 +227,8 @@ void DPEnsemble::train(DataSet &dataset)
     }
     else
     {
-        throw std::runtime_error("Training mode not recognized.");
+        std::string msg = "Training mode " + flavor + " not recognized";
+        throw std::runtime_error(msg);
     }
 }
 
