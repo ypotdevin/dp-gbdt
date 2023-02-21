@@ -17,8 +17,8 @@ from example_main import abalone_fit_arguments
 def manual_grid(
     fit_args: dict[str, Any],
     parameter_grid: dict[str, Any],
+    n_repetitions: int,
     n_jobs: Optional[int] = None,
-    n_repetitions: int = 30,
     rng: np.random.Generator = None,
 ) -> pd.DataFrame:
     """Traverse the parameter grid manually to control the propagation
@@ -402,6 +402,7 @@ def baseline_template(
         df = manual_grid(
             fit_args=data_provider(),
             parameter_grid=parameter_grid,
+            n_repetitions=50,
             n_jobs=args.num_cores,
         )
         dfs.append(df)
@@ -442,12 +443,14 @@ def dp_rmse_ts_template(
     total_budgets = args.privacy_budgets
     for total_budget in total_budgets:
         parameter_grid = grid
+        grid["training_variant"] = ["dp_argmax_scoring"]
         parameter_grid["privacy_budget"] = [total_budget]
         parameter_grid["tree_scorer"] = ["dp_rmse"]
 
         df = manual_grid(
             fit_args=data_provider(),
             parameter_grid=parameter_grid,
+            n_repetitions=50,
             n_jobs=args.num_cores,
         )
         dfs.append(df)
@@ -468,6 +471,7 @@ def meta_template(
         df = manual_grid(
             fit_args=fit_args,
             parameter_grid=parameter_grid,
+            n_repetitions=50,
             n_jobs=cli_args.num_cores,
         )
         dfs.append(df)
@@ -480,7 +484,8 @@ def bun_steinke_template(
     grid: dict[str, Any],
     fit_args: dict[str, Any],
 ):
-    grid = {**grid, **dict(tree_scorer=["bun_steinke"])}
+    grid["tree_scorer"] = ["bun_steinke"]
+    grid["training_variant"] = ["dp_argmax_scoring"]
     return meta_template(cli_args, grid, fit_args)
 
 
@@ -526,6 +531,7 @@ def dp_quantile_ts_template(
     total_budgets = args.privacy_budgets
     for total_budget in total_budgets:
         parameter_grid = grid
+        parameter_grid["training_variant"] = ["dp_argmax_scoring"]
         parameter_grid["privacy_budget"] = [total_budget]
         parameter_grid["tree_scorer"] = ["dp_quantile"]
         parameter_grid["ts_qs"] = [ts_qs]
@@ -533,6 +539,7 @@ def dp_quantile_ts_template(
         df = manual_grid(
             fit_args=data_provider(),
             parameter_grid=parameter_grid,
+            n_repetitions=50,
             n_jobs=args.num_cores,
         )
         dfs.append(df)
@@ -578,7 +585,6 @@ def dp_quantile_ts_grid_20221109(args) -> pd.DataFrame:
 
 def abalone_bun_steinke(cli_args) -> pd.DataFrame:
     grid = abalone_parameter_grid()
-    grid["training_variant"] = ["dp_argmax_scoring"]
     grid["ensemble_rejector_budget_split"] = [0.6, 0.75, 0.9]
     grid["dp_argmax_privacy_budget"] = [0.001, 0.01]
     grid["dp_argmax_stopping_prob"] = [0.1, 0.2]
@@ -590,7 +596,6 @@ def abalone_bun_steinke(cli_args) -> pd.DataFrame:
 
 def abalone_bun_steinke_20221107(cli_args) -> pd.DataFrame:
     grid = abalone_parameter_grid_20221107()
-    grid["training_variant"] = ["dp_argmax_scoring"]
     grid["ensemble_rejector_budget_split"] = [0.2, 0.4, 0.6, 0.75, 0.9]
     grid["dp_argmax_privacy_budget"] = [0.0001, 0.001, 0.01]
     grid["dp_argmax_stopping_prob"] = [0.01, 0.1, 0.2, 0.4]
