@@ -246,25 +246,29 @@ def bun_steinke(
 
 
 def best_scores(df: pd.DataFrame) -> pd.DataFrame:
-    if not "rank_test_score" in df.columns:
+    if "rank_test_score" in df.columns:
+        return df[df["rank_test_score"] == 1]
+    else:
         # we have to calculate the ranks first
         all_params_but_seed = [
             col
             for col in df.columns
             if col.startswith("param_") and col != "param_seed"
         ]
-        df = (
+        agg_df = (
             df.groupby(by=all_params_but_seed)
             .agg(
                 mean_test_score=pd.NamedAgg(column="test_score", aggfunc="mean"),
             )
             .reset_index()
         )
-        df["rank_test_score"] = df.groupby(by=["param_privacy_budget"])[
+        agg_df["rank_test_score"] = agg_df.groupby(by=["param_privacy_budget"])[
             "mean_test_score"
         ].rank(method="min")
-        df["rank_test_score"] = df["rank_test_score"].astype(int)
-    return df[df["rank_test_score"] == 1]
+        agg_df["rank_test_score"] = agg_df["rank_test_score"].astype(int)
+        agg_df = agg_df[agg_df["rank_test_score"] == 1]
+        merged = pd.merge(df, agg_df, on=all_params_but_seed, how="inner")
+        return merged
 
 
 def log_best_abalone_configurations(
@@ -273,17 +277,17 @@ def log_best_abalone_configurations(
     if experiments is None:
         experiments = [
             (
+                "~/share/dp-gbdt-evaluation/baseline_gridspace_feature-grid.csv",
+                None,
+                None,
+            ),
+            (
                 "~/share/dp-gbdt-evaluation/baseline_dense-gridspace_feature-grid.csv",
                 None,
                 None,
             ),
             (
                 "~/share/dp-gbdt-evaluation/baseline_dense-gridspace_20221107_feature-grid.csv",
-                None,
-                None,
-            ),
-            (
-                "~/share/dp-gbdt-evaluation/baseline_gridspace_20221107_feature-grid.csv",
                 None,
                 None,
             ),
