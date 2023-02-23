@@ -246,9 +246,7 @@ def bun_steinke(
 
 
 def best_scores(df: pd.DataFrame) -> pd.DataFrame:
-    if "rank_test_score" in df.columns:
-        return df[df["rank_test_score"] == 1]
-    else:
+    if not "rank_test_score" in df.columns:
         # we have to calculate the ranks first
         all_params_but_seed = [
             col
@@ -266,7 +264,7 @@ def best_scores(df: pd.DataFrame) -> pd.DataFrame:
             "mean_test_score"
         ].rank(method="min")
         df["rank_test_score"] = df["rank_test_score"].astype(int)
-        return None
+    return df[df["rank_test_score"] == 1]
 
 
 def log_best_abalone_configurations(
