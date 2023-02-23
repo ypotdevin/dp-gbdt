@@ -12,6 +12,7 @@ from sklearn.model_selection import RepeatedKFold, cross_val_score, train_test_s
 
 import dpgbdt
 from example_main import abalone_fit_arguments
+from hyperparameter_tuning import check_config
 from stdout_redirector import stdout_redirector
 
 COL_NAME_MAPPING: dict[str, str] = dict(
@@ -32,6 +33,7 @@ COL_NAME_MAPPING: dict[str, str] = dict(
     param_ts_beta="ts_beta",
     param_ts_relaxation="ts_relaxation",
     param_training_variant="training_variant",
+    param_seed="seed",
 )
 
 
@@ -55,38 +57,6 @@ def _rmse(x, y) -> float:
     return np.sqrt(np.mean(np.square(x - y)))
 
 
-def baseline_sanity_check():
-    fit_args = abalone_fit_arguments()
-    X = fit_args.pop("X")
-    y = fit_args.pop("y")
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
-    df = pd.read_csv("baseline.csv")
-    paramss = param_seq_from_df(
-        df[(df["mean_test_score"] > -2.6) & (df["param_privacy_budget"] == 1.0)].sample(
-            30
-        )
-    )
-
-    for (i, params) in enumerate(paramss):
-        print(f"{10 * '#'} Trial {i} {10 * '#'}")
-        extended_params = extend_params(
-            params,
-            training_variant="vanilla",
-            tree_scorer=None,
-        )
-
-        print(f"Parameters: {params}")
-        estimator = dpgbdt.DPGBDTRegressor(**extended_params)
-        estimator.fit(X_train, y_train, **fit_args)
-        print(f"fitted estimator: {estimator}")
-        score = _rmse(estimator.predict(X_test), y_test)
-        if score <= 2.6:
-            print(f"{20 * '>'} SUCCESS: score of {score} {20 * '<'}")
-        else:
-            print(f"score of just {score}")
-
-
 def single_configuration(
     row: pd.Series,
     additional_parameters: dict[str, Any],
@@ -98,7 +68,7 @@ def single_configuration(
     obtaining parameters from a single row of the result DataFrame.
 
     Args:
-        row (pd.row): the row containing the parameters of the
+        row (pd.Series): the row containing the parameters of the
             configuration.
         additional_parameters (dict[str, Any]): further parameters not
             contained in the row
@@ -114,6 +84,12 @@ def single_configuration(
 
     params = params_from_series(row)
     params = {**params, **additional_parameters}
+    config_check = check_config(params)
+    if config_check:
+        raise ValueError(
+            f"Some of these parameters {config_check} are missing "
+            f"in config {params}"
+        )
 
     if logfilename is not None:
         maybe_redirecting = contextlib.ExitStack()
@@ -129,7 +105,9 @@ def single_configuration(
         print(f"Parameters: {params}")
         estimator = dpgbdt.DPGBDTRegressor(**params)
         if cv is None:
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.2, random_state=params["seed"]
+            )
             estimator.fit(X_train, y_train, **_fit_args)
             print(f"fitted estimator: {estimator}")
             score = _rmse(estimator.predict(X_test), y_test)
@@ -268,9 +246,27 @@ def bun_steinke(
 
 
 def best_scores(df: pd.DataFrame) -> pd.DataFrame:
-    # df2 = (df[df["rank_test_score"] == 1]).copy()
-    # return df2
-    return df[df["rank_test_score"] == 1]
+    if "rank_test_score" in df.columns:
+        return df[df["rank_test_score"] == 1]
+    else:
+        # we have to calculate the ranks first
+        all_params_but_seed = [
+            col
+            for col in df.columns
+            if col.startswith("param_") and col != "param_seed"
+        ]
+        df = (
+            df.groupby(by=all_params_but_seed)
+            .agg(
+                mean_test_score=pd.NamedAgg(column="test_score", aggfunc="mean"),
+            )
+            .reset_index()
+        )
+        df["rank_test_score"] = df.groupby(by=["param_privacy_budget"])[
+            "mean_test_score"
+        ].rank(method="min")
+        df["rank_test_score"] = df["rank_test_score"].astype(int)
+        return None
 
 
 def log_best_abalone_configurations(
@@ -278,6 +274,11 @@ def log_best_abalone_configurations(
 ):
     if experiments is None:
         experiments = [
+            (
+                "~/share/dp-gbdt-evaluation/baseline_dense-gridspace_feature-grid.csv",
+                None,
+                None,
+            ),
             (
                 "~/share/dp-gbdt-evaluation/baseline_dense-gridspace_20221107_feature-grid.csv",
                 None,
@@ -293,31 +294,31 @@ def log_best_abalone_configurations(
                 "dp_rmse",
                 None,
             ),
-            (
-                "~/share/dp-gbdt-evaluation/dp_rmse_ts_gridspace_20221107_feature-grid.csv",
-                "dp_rmse",
-                None,
-            ),
-            (
-                "~/share/dp-gbdt-evaluation/dp_quantile_ts_gridspace_feature-grid.csv",
-                "dp_quantile",
-                [0.5, 0.90, 0.95],
-            ),
-            (
-                "~/share/dp-gbdt-evaluation/dp_quantile_ts_gridspace_20221107_feature-grid.csv",
-                "dp_quantile",
-                [0.5, 0.90, 0.95],
-            ),
-            (
-                "~/share/dp-gbdt-evaluation/abalone_bun_steinke_feature-grid.csv",
-                "bun_steinke",
-                None,
-            ),
-            (
-                "~/share/dp-gbdt-evaluation/abalone_bun_steinke_20221107_feature-grid.csv",
-                "bun_steinke",
-                None,
-            ),
+            # (
+            #     "~/share/dp-gbdt-evaluation/dp_rmse_ts_gridspace_20221107_feature-grid.csv",
+            #     "dp_rmse",
+            #     None,
+            # ),
+            # (
+            #     "~/share/dp-gbdt-evaluation/dp_quantile_ts_gridspace_feature-grid.csv",
+            #     "dp_quantile",
+            #     [0.5, 0.90, 0.95],
+            # ),
+            # (
+            #     "~/share/dp-gbdt-evaluation/dp_quantile_ts_gridspace_20221107_feature-grid.csv",
+            #     "dp_quantile",
+            #     [0.5, 0.90, 0.95],
+            # ),
+            # (
+            #     "~/share/dp-gbdt-evaluation/abalone_bun_steinke_feature-grid.csv",
+            #     "bun_steinke",
+            #     None,
+            # ),
+            # (
+            #     "~/share/dp-gbdt-evaluation/abalone_bun_steinke_20221107_feature-grid.csv",
+            #     "bun_steinke",
+            #     None,
+            # ),
         ]
     for (experiment, tree_scorer, ts_qs) in experiments:
         p = Path(experiment)
@@ -548,8 +549,8 @@ if __name__ == "__main__":
     #     n_repetitions=100,
     #     cv=RepeatedKFold(n_splits=5, n_repeats=2),
     # )
-    # log_best_abalone_configurations()
+    log_best_abalone_configurations()
     # dp_rmse_score_variation()
     # dp_rmse_score_variation_bun_steinke()
     # dp_rmse2_score_variation()
-    print(diff_logs("1.txt", "2.txt"))
+    # print(diff_logs("1.txt", "2.txt"))
