@@ -1,4 +1,5 @@
 import contextlib
+import json
 import os
 import zipfile
 from itertools import zip_longest
@@ -271,73 +272,27 @@ def best_scores(df: pd.DataFrame) -> pd.DataFrame:
         return merged
 
 
-def log_best_abalone_configurations(
-    experiments: Optional[list[Tuple[str, str, Any]]] = None
-):
+def log_best_abalone_configurations(experiments: list[str] = None):
     if experiments is None:
-        experiments = [
-            (
-                "~/share/dp-gbdt-evaluation/baseline_gridspace_feature-grid.csv",
-                None,
-                None,
-            ),
-            (
-                "~/share/dp-gbdt-evaluation/baseline_dense-gridspace_feature-grid.csv",
-                None,
-                None,
-            ),
-            (
-                "~/share/dp-gbdt-evaluation/baseline_dense-gridspace_20221107_feature-grid.csv",
-                None,
-                None,
-            ),
-            (
-                "~/share/dp-gbdt-evaluation/dp_rmse_ts_gridspace_feature-grid.csv",
-                "dp_rmse",
-                None,
-            ),
-            # (
-            #     "~/share/dp-gbdt-evaluation/dp_rmse_ts_gridspace_20221107_feature-grid.csv",
-            #     "dp_rmse",
-            #     None,
-            # ),
-            # (
-            #     "~/share/dp-gbdt-evaluation/dp_quantile_ts_gridspace_feature-grid.csv",
-            #     "dp_quantile",
-            #     [0.5, 0.90, 0.95],
-            # ),
-            # (
-            #     "~/share/dp-gbdt-evaluation/dp_quantile_ts_gridspace_20221107_feature-grid.csv",
-            #     "dp_quantile",
-            #     [0.5, 0.90, 0.95],
-            # ),
-            # (
-            #     "~/share/dp-gbdt-evaluation/abalone_bun_steinke_feature-grid.csv",
-            #     "bun_steinke",
-            #     None,
-            # ),
-            # (
-            #     "~/share/dp-gbdt-evaluation/abalone_bun_steinke_20221107_feature-grid.csv",
-            #     "bun_steinke",
-            #     None,
-            # ),
-        ]
-    for (experiment, tree_scorer, ts_qs) in experiments:
-        p = Path(experiment)
+        experiments_path = Path(
+            "~/share/dp-gbdt-evaluation/abalone_experiments.json"
+        ).expanduser()
+        with open(experiments_path, "r") as f:
+            experiments = json.load(f)
+    for experiment in experiments:
+        p = Path(experiment).expanduser()
         df = pd.read_csv(experiment)
         df = best_scores(df)
         additional_params = dict(
-            tree_scorer=tree_scorer,
-            ts_qs=ts_qs,
             verbosity="debug",
         )
         all_configurations(
             df=df,
             additional_parameters=additional_params,
             fit_args=abalone_fit_arguments(),
-            # needs to be a str, not a path
-            logfilename_template=f"{p.expanduser().parent}/{p.stem}" + ".{index}.log",
-            zipfilename=p.with_suffix(".zip").expanduser(),
+            # needs to be a (format) string, not a path
+            logfilename_template=f"{p.parent}/{p.stem}" + ".{index}.log",
+            zipfilename=p.with_suffix(".zip"),
         )
 
 
