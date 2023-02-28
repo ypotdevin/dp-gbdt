@@ -1,6 +1,8 @@
 import argparse
+import math
 import traceback
 from itertools import product
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 import joblib
@@ -35,13 +37,28 @@ def manual_grid(
     if rng is None:
         rng = np.random.default_rng()
     seeds = rng.integers(low=0, high=2**30 - 1, size=n_repetitions)
-    configs = model_selection.ParameterGrid(parameter_grid)
-    measurements = joblib.Parallel(n_jobs=n_jobs)(
-        joblib.delayed(_manual_worker_wrapper(fit_args))(config, seed)
-        for (config, seed) in product(configs, seeds)
-    )
-    df = pd.DataFrame(measurements)
-    return df
+    configs = list(model_selection.ParameterGrid(parameter_grid))
+    chunk_size = 1024
+    chunked_configs = [
+        configs[chunk_size * i : chunk_size * (i + 1)]
+        for i in range(math.ceil(len(configs) / chunk_size))
+    ]
+    intermediate_df = pd.DataFrame()
+    for (i, configs_chunk) in enumerate(chunked_configs):
+        intermediate_measurements = joblib.Parallel(n_jobs=n_jobs)(
+            joblib.delayed(_manual_worker_wrapper(fit_args))(config, seed)
+            for (config, seed) in product(configs_chunk, seeds)
+        )
+        df = pd.DataFrame(intermediate_measurements)
+        intermediate_df = pd.concat([intermediate_df, df])
+        intermediate_df.to_csv(
+            Path("~/share/dp-gbdt-evaluation/").expanduser()
+            / "intermediate_results"
+            / f"intermediate_result_chunk={i}.csv",
+            mode="w",
+        )
+    # at this point, it is final
+    return intermediate_df
 
 
 def _manual_worker_wrapper(fit_data: dict[str, Any]):
@@ -463,7 +480,8 @@ def meta_template(
     grid: dict[str, Any],
     fit_args: dict[str, Any],
 ) -> pd.DataFrame:
-    dfs = []
+    cli_args.intermediate_results_dir.mkdir(parents=True, exist_ok=True)
+    intermediate_df = pd.DataFrame()
     total_budgets = cli_args.privacy_budgets
     for total_budget in total_budgets:
         parameter_grid = grid.copy()
@@ -474,9 +492,15 @@ def meta_template(
             n_repetitions=50,
             n_jobs=cli_args.num_cores,
         )
-        dfs.append(df)
-    df = pd.concat(dfs)
-    return df
+        intermediate_df = pd.concat([intermediate_df, df])
+        path = (
+            cli_args.intermediate_results_dir
+            / f"{cli_args.csvfilename.stem}.eps={total_budget}.csv"
+        )
+        print(path)
+        intermediate_df.to_csv(path)
+    # at this point it is final
+    return intermediate_df
 
 
 def bun_steinke_template(
@@ -714,7 +738,10 @@ if __name__ == "__main__":
     if args.local_dir is None:
         args.local_dir = f"~/share/dp-gbdt-evaluation/"
     if args.csvfilename is None:
-        args.csvfilename = f"{args.local_dir}/{args.label}.csv"
+        args.csvfilename = Path(args.local_dir).expanduser() / f"{args.label}.csv"
+    args.intermediate_results_dir = (
+        Path(args.local_dir) / "intermediate_results"
+    ).expanduser()
     experiment = select_experiment(args.experiment)
     df = experiment(args)
     df.to_csv(args.csvfilename)
