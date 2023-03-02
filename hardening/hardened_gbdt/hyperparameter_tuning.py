@@ -3,7 +3,7 @@ import math
 import traceback
 from itertools import product
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Iterable, Optional
 
 import joblib
 import numpy as np
@@ -20,8 +20,10 @@ def manual_grid(
     fit_args: dict[str, Any],
     parameter_grid: dict[str, Any],
     n_repetitions: int,
+    cli_args,
+    config_processor: Optional[Callable[[dict[str, Any]], dict[str, Any]]] = None,
     n_jobs: Optional[int] = None,
-    rng: np.random.Generator = None,
+    rng: Optional[np.random.Generator] = None,
 ) -> pd.DataFrame:
     """Traverse the parameter grid manually to control the propagation
     of random seeds.
@@ -36,29 +38,40 @@ def manual_grid(
     """
     if rng is None:
         rng = np.random.default_rng()
+    if config_processor is None:
+        config_processor = lambda x: x
     seeds = rng.integers(low=0, high=2**30 - 1, size=n_repetitions)
-    configs = list(model_selection.ParameterGrid(parameter_grid))
-    chunk_size = 1024
-    chunked_configs = [
-        configs[chunk_size * i : chunk_size * (i + 1)]
-        for i in range(math.ceil(len(configs) / chunk_size))
-    ]
-    intermediate_df = pd.DataFrame()
-    for (i, configs_chunk) in enumerate(chunked_configs):
-        intermediate_measurements = joblib.Parallel(n_jobs=n_jobs)(
+
+    scores_df = pd.DataFrame()
+    for (i, configs_chunk) in enumerate(
+        _configs_chunks(model_selection.ParameterGrid(parameter_grid))
+    ):
+        seeded_configs_chunk = product(configs_chunk, seeds)
+        scores_chunk = joblib.Parallel(n_jobs=n_jobs)(
             joblib.delayed(_manual_worker_wrapper(fit_args))(config, seed)
-            for (config, seed) in product(configs_chunk, seeds)
+            for (config, seed) in seeded_configs_chunk
         )
-        df = pd.DataFrame(intermediate_measurements)
-        intermediate_df = pd.concat([intermediate_df, df])
-        intermediate_df.to_csv(
-            Path("~/share/dp-gbdt-evaluation/").expanduser()
-            / "intermediate_results"
-            / f"intermediate_result_chunk={i}.csv",
-            mode="w",
+        scores_df = pd.concat([scores_df, pd.DataFrame(scores_chunk)])
+        _write_intermediate_scores_to_disk(
+            df=scores_df, suffix=f".chunk={i}", cli_args=cli_args
         )
-    # at this point, it is final
-    return intermediate_df
+    return scores_df
+
+
+def _configs_chunks(
+    configs: model_selection.ParameterGrid, chunk_size: int = 1024
+) -> Iterable[dict[str, Any]]:
+    configs = list(configs)  # type: ignore
+    n = len(configs)
+    return (
+        configs[chunk_size * i : chunk_size * (i + 1)]
+        for i in range(math.ceil(n / chunk_size))
+    )
+
+
+def _write_intermediate_scores_to_disk(df: pd.DataFrame, suffix: str, cli_args):
+    p = cli_args.intermediate_results_dir / cli_args.csvfilename.stem / f"{suffix}.csv"
+    df.to_csv(p, mode="w")
 
 
 def _manual_worker_wrapper(fit_data: dict[str, Any]):
@@ -147,12 +160,14 @@ def check_config(config: dict[str, Any]) -> list[str]:
                     return []
                 else:
                     raise ValueError(f"Exhausted tree scorer options: {t}")
-                if all(scorer_args):
+                if all([arg in keys for arg in scorer_args]):
                     return []
                 else:
-                    scorer_args
+                    return scorer_args
             else:
                 return argmax_scoring_args
+        else:
+            raise ValueError(f"Unknown training variant {config['training_variant']}")
     else:
         return common_args
 
@@ -402,7 +417,7 @@ def wine_parameter_grid_20221121():
 def baseline_template(
     args,
     grid: dict[str, Any],
-    data_provider: Callable[[], dict[str, Any]] = None,
+    data_provider: Optional[Callable[[], dict[str, Any]]] = None,
 ) -> pd.DataFrame:
     if data_provider is None:
         data_provider = get_abalone
@@ -419,6 +434,7 @@ def baseline_template(
         df = manual_grid(
             fit_args=data_provider(),
             parameter_grid=parameter_grid,
+            cli_args=args,
             n_repetitions=50,
             n_jobs=args.num_cores,
         )
@@ -452,7 +468,7 @@ def baseline_grid_20221109(args) -> pd.DataFrame:
 def dp_rmse_ts_template(
     args,
     grid: dict[str, Any],
-    data_provider: Callable[[], dict[str, Any]] = None,
+    data_provider: Optional[Callable[[], dict[str, Any]]] = None,
 ) -> pd.DataFrame:
     if data_provider is None:
         data_provider = get_abalone
@@ -467,6 +483,7 @@ def dp_rmse_ts_template(
         df = manual_grid(
             fit_args=data_provider(),
             parameter_grid=parameter_grid,
+            cli_args=args,
             n_repetitions=50,
             n_jobs=args.num_cores,
         )
@@ -481,7 +498,7 @@ def meta_template(
     fit_args: dict[str, Any],
 ) -> pd.DataFrame:
     cli_args.intermediate_results_dir.mkdir(parents=True, exist_ok=True)
-    intermediate_df = pd.DataFrame()
+    scores_df = pd.DataFrame()
     total_budgets = cli_args.privacy_budgets
     for total_budget in total_budgets:
         parameter_grid = grid.copy()
@@ -489,18 +506,15 @@ def meta_template(
         df = manual_grid(
             fit_args=fit_args,
             parameter_grid=parameter_grid,
+            cli_args=args,
             n_repetitions=50,
             n_jobs=cli_args.num_cores,
         )
-        intermediate_df = pd.concat([intermediate_df, df])
-        path = (
-            cli_args.intermediate_results_dir
-            / f"{cli_args.csvfilename.stem}.eps={total_budget}.csv"
+        scores_df = pd.concat([scores_df, df])
+        _write_intermediate_scores_to_disk(
+            scores_df, suffix=f".eps={total_budget}", cli_args=cli_args
         )
-        print(path)
-        intermediate_df.to_csv(path)
-    # at this point it is final
-    return intermediate_df
+    return scores_df
 
 
 def bun_steinke_template(
@@ -547,7 +561,7 @@ def dp_quantile_ts_template(
     args,
     grid: dict[str, Any],
     ts_qs: list[float],
-    data_provider: Callable[[], dict[str, Any]] = None,
+    data_provider: Optional[Callable[[], dict[str, Any]]] = None,
 ) -> pd.DataFrame:
     if data_provider is None:
         data_provider = get_abalone
@@ -563,6 +577,7 @@ def dp_quantile_ts_template(
         df = manual_grid(
             fit_args=data_provider(),
             parameter_grid=parameter_grid,
+            cli_args=args,
             n_repetitions=50,
             n_jobs=args.num_cores,
         )
@@ -669,20 +684,7 @@ def abalone_eps_delta_beta_combinations() -> pd.DataFrame:
 
     df = _scaling_factors(pbs, rels, bs, abs_errors, 20.0)
     df.to_csv("abalone_scaling_factors.csv")
-
-
-def wine_eps_delta_beta_combinations() -> pd.DataFrame:
-    pbs = np.linspace(1e-3, 1.0, 100)
-    rels = np.array([1e-7, 1e-6, 1e-5, 1e-4])
-    bs = np.logspace(-6, -1, 600)
-
-    y = abalone_fit_arguments().pop("y")
-    y_pred = np.full_like(y, y.mean())
-    abs_errors = np.abs(y - y_pred)
-    abs_errors.sort()
-
-    df = _scaling_factors(pbs, rels, bs, abs_errors, 20.0)
-    df.to_csv("abalone_scaling_factors.csv")
+    return df
 
 
 def _scaling_factors(
@@ -740,8 +742,8 @@ if __name__ == "__main__":
     if args.csvfilename is None:
         args.csvfilename = Path(args.local_dir).expanduser() / f"{args.label}.csv"
     args.intermediate_results_dir = (
-        Path(args.local_dir) / "intermediate_results"
-    ).expanduser()
+        Path(args.local_dir).expanduser() / "intermediate_results"
+    )
     experiment = select_experiment(args.experiment)
     df = experiment(args)
     df.to_csv(args.csvfilename)

@@ -62,7 +62,7 @@ def single_configuration(
     row: pd.Series,
     additional_parameters: dict[str, Any],
     fit_args: dict[str, Any],
-    logfilename: str = None,
+    logfilename: Optional[str] = None,
     cv=None,
 ) -> Tuple[dpgbdt.DPGBDTRegressor, np.ndarray]:
     """Relaunch a single configuration of the DP-GBDT regressor,
@@ -154,7 +154,6 @@ def multiple_configurations(
             zipfilename, mode="w", compression=zipfile.ZIP_DEFLATED
         ) as zfile:
             for (_, logfile) in indices_and_logfiles:
-                # print(f"Zipping and removing logfile {logfile}")
                 zfile.write(logfile)
                 os.remove(logfile)
     return estimators
@@ -169,7 +168,7 @@ def all_configurations(
 ):
     return multiple_configurations(
         df=df,
-        indices=df.index.values,
+        indices=df.index.values,  # type: ignore
         additional_parameters=additional_parameters,
         fit_args=fit_args,
         logfilename_template=logfilename_template,
@@ -179,9 +178,9 @@ def all_configurations(
 
 def baseline(
     series: pd.Series,
-    fit_args: dict[str, Any] = None,
+    fit_args: Optional[dict[str, Any]] = None,
     verbosity: str = "debug",
-    logfilename: str = None,
+    logfilename: Optional[str] = None,
     cv=None,
 ) -> dpgbdt.DPGBDTRegressor:
     if fit_args is None:
@@ -197,14 +196,14 @@ def baseline(
         additional_parameters=additional_params,
         logfilename=logfilename,
         cv=cv,
-    )
+    )[0]
 
 
 def dp_rmse(
     series: pd.Series,
     fit_args: dict[str, Any],
     verbosity: str = "debug",
-    logfilename: str = None,
+    logfilename: Optional[str] = None,
     cv=None,
 ) -> dpgbdt.DPGBDTRegressor:
     additional_params = dict(
@@ -218,7 +217,7 @@ def dp_rmse(
         additional_parameters=additional_params,
         logfilename=logfilename,
         cv=cv,
-    )
+    )[0]
 
 
 def dp_quantile():
@@ -229,7 +228,7 @@ def bun_steinke(
     series: pd.Series,
     fit_args: dict[str, Any],
     verbosity: str = "debug",
-    logfilename: str = None,
+    logfilename: Optional[str] = None,
     cv=None,
 ) -> dpgbdt.DPGBDTRegressor:
     additional_params = dict(
@@ -243,7 +242,7 @@ def bun_steinke(
         additional_parameters=additional_params,
         logfilename=logfilename,
         cv=cv,
-    )
+    )[0]
 
 
 def best_scores(df: pd.DataFrame) -> pd.DataFrame:
@@ -272,14 +271,14 @@ def best_scores(df: pd.DataFrame) -> pd.DataFrame:
         return merged
 
 
-def log_best_abalone_configurations(experiments: list[str] = None):
+def log_best_abalone_configurations(experiments: Optional[list[str]] = None):
     if experiments is None:
         experiments_path = Path(
             "~/share/dp-gbdt-evaluation/abalone_experiments.json"
         ).expanduser()
         with open(experiments_path, "r") as f:
             experiments = json.load(f)
-    for experiment in experiments:
+    for experiment in experiments:  # type: ignore
         p = Path(experiment).expanduser()
         df = pd.read_csv(experiment)
         df = best_scores(df)
@@ -292,7 +291,7 @@ def log_best_abalone_configurations(experiments: list[str] = None):
             fit_args=abalone_fit_arguments(),
             # needs to be a (format) string, not a path
             logfilename_template=f"{p.parent}/{p.stem}" + ".{index}.log",
-            zipfilename=p.with_suffix(".zip"),
+            zipfilename=str(p.with_suffix(".zip")),
         )
 
 
@@ -463,7 +462,7 @@ def repeat_crossvalidation_baseline(
     scoress = joblib.Parallel(n_jobs=n_jobs)(
         joblib.delayed(baseline)(series=_setting, cv=cv) for _ in range(n_repetitions)
     )
-    scores = [score for (_, scores) in scoress for score in scores]
+    scores = [score for (_, scores) in scoress for score in scores]  # type: ignore
     df = pd.DataFrame(scores, columns=["rmse"])
     df["rmse"] = df["rmse"] * -1.0
     return df
@@ -487,7 +486,7 @@ def diff_logs(log1, log2, ignore_timestamp: bool = True) -> Optional[Tuple[str, 
                 lines2 = _remove_timestamps_from_lines(lines2)
             for (line1, line2) in zip_longest(lines1, lines2, fillvalue=None):
                 if (line1 != line2) or (None in (line1, line2)):
-                    return (line1, line2)
+                    return (line1, line2)  #  type: ignore
     return None
 
 
