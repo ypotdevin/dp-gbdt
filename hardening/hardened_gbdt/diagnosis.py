@@ -247,7 +247,7 @@ def bun_steinke(
 
 def best_scores(df: pd.DataFrame) -> pd.DataFrame:
     if "rank_test_score" in df.columns:
-        return df[df["rank_test_score"] == 1]
+        return df[df["rank_test_score"] == 1.0]
     else:
         # we have to calculate the ranks first
         all_params_but_seed = [
@@ -265,8 +265,7 @@ def best_scores(df: pd.DataFrame) -> pd.DataFrame:
         agg_df["rank_test_score"] = agg_df.groupby(by=["param_privacy_budget"])[
             "mean_test_score"
         ].rank(method="min")
-        agg_df["rank_test_score"] = agg_df["rank_test_score"].astype(int)
-        agg_df = agg_df[agg_df["rank_test_score"] == 1]
+        agg_df = agg_df[agg_df["rank_test_score"] == 1.0]
         merged = pd.merge(df, agg_df, on=all_params_but_seed, how="inner")
         return merged
 
@@ -289,7 +288,7 @@ def log_best_abalone_configurations(experiments: Optional[list[str]] = None):
             df=df,
             additional_parameters=additional_params,
             fit_args=abalone_fit_arguments(),
-            # needs to be a (format) string, not a path
+            # needs to be a (format) string, not a Path
             logfilename_template=f"{p.parent}/{p.stem}" + ".{index}.log",
             zipfilename=str(p.with_suffix(".zip")),
         )
