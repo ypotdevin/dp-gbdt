@@ -3,7 +3,7 @@
 #include <numeric>
 #include <mutex>
 #include <random>
-#include "utils.h"
+#include "gbdt/utils.h"
 #include "constant_time.h"
 
 /** Methods */
@@ -60,7 +60,7 @@ double compute_mean(std::vector<double> &vec)
     return sum / vec.size();
 }
 
-double compute_stdev(std::vector<double> &vec, double mean)
+double compute_stddev(std::vector<double> &vec, double mean)
 {
     double sq_sum = std::inner_product(vec.begin(), vec.end(), vec.begin(), 0.0);
     return std::sqrt(sq_sum / vec.size() - mean * mean);

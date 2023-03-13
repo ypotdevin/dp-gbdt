@@ -4,9 +4,9 @@
 #include <memory>
 #include <random>
 #include <vector>
-#include "loss.h"
-#include "utils.h"
-#include "tree_rejection.h"
+#include "gbdt/loss.h"
+#include "gbdt/utils.h"
+#include "gbdt/tree_rejection.h"
 
 struct ModelParams
 {

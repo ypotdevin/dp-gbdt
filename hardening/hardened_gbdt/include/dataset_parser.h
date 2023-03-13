@@ -1,7 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "utils.h"
+#include "gbdt/utils.h"
 #include "parameters.h"
 #include "data.h"
 

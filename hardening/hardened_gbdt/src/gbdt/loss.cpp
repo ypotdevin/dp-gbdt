@@ -10,8 +10,8 @@
 #include "constant_time.h"
 #include "logging.h"
 #include "spdlog/spdlog.h"
-#include "loss.h"
-#include "utils.h"
+#include "gbdt/loss.h"
+#include "gbdt/utils.h"
 
 namespace
 {

@@ -1,13 +1,13 @@
 #include <numeric>
 #include <algorithm>
 #include <iostream>
-#include "dp_ensemble.h"
+#include "gbdt/dp_ensemble.h"
 #include "constant_time.h"
 #include "logging.h"
 #include "spdlog/spdlog.h"
-#include "tree_rejection.h"
-#include "utils.h"
-#include "loss.h"
+#include "gbdt/tree_rejection.h"
+#include "gbdt/utils.h"
+#include "gbdt/loss.h"
 #include "data.h"
 
 namespace

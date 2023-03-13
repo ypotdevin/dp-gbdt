@@ -4,8 +4,8 @@
 #include <functional>
 #include <vector>
 #include <set>
-//#include "parameters.h"
-#include "utils.h"
+// #include "parameters.h"
+#include "gbdt/utils.h"
 
 struct ModelParams;
 
