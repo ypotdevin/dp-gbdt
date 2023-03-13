@@ -71,6 +71,24 @@ def parse_maximizer_k(lines: Lines) -> pd.DataFrame:
     return _parse_diag_lines2("### diagnosis value 06 ###", lines)
 
 
+def parse_error_vectors(lines: Lines):
+    lines = filter_lines("### diagnosis value 18 ###", lines)
+    tree_indices_and_error_vectors = parse_lines(
+        lines, log_parser.diagnosis_parser2(), log_parser.DiagnosisToDict2()
+    )
+    arr = np.zeros(
+        shape=(
+            len(tree_indices_and_error_vectors),  # type: ignore
+            len(tree_indices_and_error_vectors[0]["absolute_errors"]),  # type: ignore
+        )
+    )
+    for tree_idx_and_error_vector in tree_indices_and_error_vectors:
+        arr[int(tree_idx_and_error_vector["tree_index"])] = tree_idx_and_error_vector[
+            "absolute_errors"
+        ]
+    return arr
+
+
 def parse_tree_idx(lines: Lines) -> pd.DataFrame:
     lines = filter_lines("[ info] [            train] Building dp-tree-", lines)
     tree_indices_and_sample_nums = parse_lines(
@@ -140,4 +158,4 @@ def aggregate_logs(
         return df
 
     dfs = Parallel(n_jobs=num_worker)(delayed(job)(file) for file in files)
-    return pd.concat(dfs)
+    return pd.concat(dfs)  # type: ignore
