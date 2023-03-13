@@ -20,7 +20,7 @@ void string_pad(std::string &str, const size_t num, const char paddingChar = ' '
  */
 std::vector<double> absolute_differences(const std::vector<double> &source, const std::vector<double> &target);
 double compute_mean(std::vector<double> &vec);
-double compute_stdev(std::vector<double> &vec, double mean);
+double compute_stddev(std::vector<double> &vec, double mean);
 double compute_rmse(std::vector<double> differences);
 double compute_rmse(const std::vector<double> &source, const std::vector<double> &target);
 std::string get_time_string();

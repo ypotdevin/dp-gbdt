@@ -2,7 +2,7 @@
 #include "parameters.h"
 #include "logging.h"
 #include "spdlog/spdlog.h"
-#include "tree_rejection.h"
+#include "gbdt/tree_rejection.h"
 
 std::ostream &operator<<(std::ostream &os, const ModelParams &mp)
 {

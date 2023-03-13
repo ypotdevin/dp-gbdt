@@ -1,8 +1,8 @@
 #ifndef ESTIMATOR_H
 #define ESTIMATOR_H
 
-#include "dp_ensemble.h"
-#include "tree_rejection.h"
+#include "gbdt/dp_ensemble.h"
+#include "gbdt/tree_rejection.h"
 
 namespace dpgbdt
 {

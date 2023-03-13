@@ -1,6 +1,6 @@
 #include <ostream>
 
-#include "custom_cauchy.h"
+#include "gbdt/custom_cauchy.h"
 
 namespace custom_cauchy
 {

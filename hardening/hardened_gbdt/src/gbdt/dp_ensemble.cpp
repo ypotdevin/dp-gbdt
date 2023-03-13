@@ -1,13 +1,13 @@
 #include <numeric>
 #include <algorithm>
 #include <iostream>
-#include "dp_ensemble.h"
+#include "gbdt/dp_ensemble.h"
 #include "constant_time.h"
 #include "logging.h"
 #include "spdlog/spdlog.h"
-#include "tree_rejection.h"
-#include "utils.h"
-#include "loss.h"
+#include "gbdt/tree_rejection.h"
+#include "gbdt/utils.h"
+#include "gbdt/loss.h"
 #include "data.h"
 
 namespace
@@ -342,6 +342,7 @@ void DPEnsemble::dp_argmax_scoring_training_loop(DataSet &dataset)
         this->trees.size());
 }
 
+#include "spdlog/fmt/ranges.h"
 void DPEnsemble::dp_argmax(
     DataSet &initial_dataset,
     ModelParams &mp,
@@ -389,8 +390,8 @@ void DPEnsemble::dp_argmax(
             "### diagnosis value 01 ### - rmse of absolute differences rmse={1}",
             compute_rmse(abs_diffs));
         LOG_INFO(
-            "### diagnosis value 11 ### - stdev of absolute differences std={1}",
-            compute_stdev(abs_diffs, compute_mean(abs_diffs)));
+            "### diagnosis value 11 ### - stddev of absolute differences std={1}",
+            compute_stddev(abs_diffs, compute_mean(abs_diffs)));
         /**********************************************************************/
         if (std::isnan(score_including_tree))
         {
@@ -398,6 +399,7 @@ void DPEnsemble::dp_argmax(
         }
         if (score_including_tree < ensemble_score)
         {
+            LOG_INFO("### diagnosis value 18 ### - tree_index={1}, absolute_errors={2}", tree_index, abs_diffs);
             LOG_INFO("generalized_dp_argmax: successful exit");
             ensemble_prediction = prediction_including_tree;
             ensemble_score = score_including_tree;

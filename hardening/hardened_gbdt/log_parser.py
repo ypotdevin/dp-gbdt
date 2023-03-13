@@ -27,13 +27,52 @@ class DiagnosisToDict(Transformer):
         return args[-1]  # ignore everything but the `equation` part
 
     def equation(self, eq):
-        ident, val = eq
+        (ident, val) = eq
         return {ident[:]: val}
 
     def NUMBER(self, n):
         return float(n)
 
     list = list
+
+
+def diagnosis_parser2():
+    # `clutter` matches everything up to (and including) the first
+    # occasion of ###.
+    grammar = r"""
+        ?line: clutter "diagnosis" "value" NUMBER "###" "-" equations
+        ?clutter: /^(.*?)###/
+        ?equations: [equation ("," equation)*]
+        ?equation: IDENTIFIER "=" value
+        ?value: val_list
+            | NUMBER
+
+        ?val_list: "[" [value ("," value)*] "]"
+
+        %import common.CNAME -> IDENTIFIER
+        %import common.SIGNED_NUMBER -> NUMBER
+        %import common.WS
+        %ignore WS
+    """
+    diag_parser = Lark(grammar, start="line")
+    return diag_parser
+
+
+class DiagnosisToDict2(Transformer):
+    def line(self, args):
+        return args[-1]  # ignore everything but the `equation` part
+
+    def equations(self, eqs):
+        return {lhs: rhs for eq in eqs for lhs, rhs in eq.items()}
+
+    def equation(self, eq):
+        (ident, val) = eq
+        return {ident[:]: val}
+
+    def NUMBER(self, n):
+        return float(n)
+
+    val_list = list
 
 
 def tree_idx_parser():

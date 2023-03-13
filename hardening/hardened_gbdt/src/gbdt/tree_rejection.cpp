@@ -7,11 +7,11 @@
 #include <random>
 #include <sstream>
 
-#include "tree_rejection.h"
-#include "loss.h"
+#include "gbdt/tree_rejection.h"
+#include "gbdt/loss.h"
 #include "logging.h"
 #include "spdlog/spdlog.h"
-#include "utils.h"
+#include "gbdt/utils.h"
 
 // Some "private" helpers
 namespace

@@ -2,7 +2,7 @@
 
 #include "estimator.h"
 #include "spdlog/spdlog.h"
-#include "utils.h"
+#include "gbdt/utils.h"
 
 // only for diagnosis
 #include "dataset_parser.h"

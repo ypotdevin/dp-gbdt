@@ -2,8 +2,8 @@
 #include <iostream>
 #include <iomanip>
 #include <cmath>
-#include "dp_tree.h"
-#include "laplace.h"
+#include "gbdt/dp_tree.h"
+#include "gbdt/laplace.h"
 #include "logging.h"
 #include "constant_time.h"
 #include "spdlog/spdlog.h"
