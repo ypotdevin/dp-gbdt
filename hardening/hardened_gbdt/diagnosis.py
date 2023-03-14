@@ -1,10 +1,11 @@
+import argparse
 import contextlib
 import json
 import os
 import zipfile
 from itertools import zip_longest
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import Any, Iterable, Optional, Tuple
 
 import joblib
 import numpy as np
@@ -270,14 +271,8 @@ def best_scores(df: pd.DataFrame) -> pd.DataFrame:
         return merged
 
 
-def log_best_abalone_configurations(experiments: Optional[list[str]] = None):
-    if experiments is None:
-        experiments_path = Path(
-            "~/share/dp-gbdt-evaluation/abalone_experiments.json"
-        ).expanduser()
-        with open(experiments_path, "r") as f:
-            experiments = json.load(f)
-    for experiment in experiments:  # type: ignore
+def log_best_configurations(experiments: Iterable[str]):
+    for experiment in experiments:
         p = Path(experiment).expanduser()
         df = pd.read_csv(experiment)
         df = best_scores(df)
@@ -496,16 +491,62 @@ def _remove_timestamps_from_lines(lines):
     return ["] ".join(line.split("] ")[1:]) for line in lines]
 
 
+def setup_arg_parser():
+    parser = argparse.ArgumentParser(prog="diagnosis")
+    subparsers = parser.add_subparsers()
+    log_subparser = subparsers.add_parser("log", help="logging functionality")
+    logging_subsubparsers = log_subparser.add_subparsers()
+    best_logger = logging_subsubparsers.add_parser(
+        "best", help="log rank 1 configurations"
+    )
+    best_logger.add_argument(
+        "experiments",
+        type=str,
+        nargs="+",
+        metavar="experiment",
+        help="the .csv files of which the rank 1 configurations should be determined and logged",
+    )
+    best_logger.set_defaults(dispatch_func=log_best_dispatch)
+    id_logger = logging_subsubparsers.add_parser(
+        "by-id", help="log provided configurations"
+    )
+    id_logger.add_argument(
+        "experiment",
+        type=str,
+        help="the .csv-file of which the selected configurations should be logged",
+    )
+    id_logger.add_argument(
+        "dataset",
+        type=str,
+        choices=["abalone", "wine", "concrete"],
+    )
+    id_logger.add_argument(
+        "ids", type=int, nargs="+", metavar="ID", help="the configurations to log"
+    )
+    id_logger.set_defaults(dispatch_func=log_id_dispatch)
+    args = parser.parse_args()
+    return args
+
+
+def log_best_dispatch(args):
+    return log_best_configurations(experiments=args.experiments)
+
+
+def log_id_dispatch(args):
+    p = Path(args.experiment)
+    df = pd.read_csv(p)
+    fit_args = dict(
+        abalone=abalone_fit_arguments(),
+    )[args.dataset]
+    return multiple_configurations(
+        df=df,
+        indices=args.ids,
+        additional_parameters=dict(verbosity="debug"),
+        fit_args=fit_args,
+        logfilename_template=f"{p.parent}/{p.stem}" + ".{index}.log",
+    )
+
+
 if __name__ == "__main__":
-    # df = pd.read_csv("baseline_gridspace_feature-grid_50rep_srand.csv")
-    # repeat_crossvalidation_baseline(
-    #     setting=df.iloc[19],
-    #     additional_settings=dict(param_privacy_budget=1.0),
-    #     n_repetitions=100,
-    #     cv=RepeatedKFold(n_splits=5, n_repeats=2),
-    # )
-    log_best_abalone_configurations()
-    # dp_rmse_score_variation()
-    # dp_rmse_score_variation_bun_steinke()
-    # dp_rmse2_score_variation()
-    # print(diff_logs("1.txt", "2.txt"))
+    args = setup_arg_parser()
+    args.dispatch_func(args)
