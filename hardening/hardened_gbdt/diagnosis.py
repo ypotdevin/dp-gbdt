@@ -494,42 +494,52 @@ def setup_arg_parser():
     subparsers = parser.add_subparsers()
     log_subparser = subparsers.add_parser("log", help="logging functionality")
     logging_subsubparsers = log_subparser.add_subparsers()
-    best_logger = logging_subsubparsers.add_parser(
+    _setup_log_best_parser(logging_subsubparsers)
+    _setup_log_id_parser(logging_subsubparsers)
+    args = parser.parse_args()
+    return args
+
+
+def _setup_log_best_parser(logging_parsers) -> argparse.ArgumentParser:
+    log_best_parser = logging_parsers.add_parser(
         "best", help="log rank 1 configurations"
     )
-    best_logger.add_argument(
+    log_best_parser.add_argument(
         "experiments",
         type=str,
         nargs="+",
         metavar="experiment",
         help="the .csv files of which the rank 1 configurations should be determined and logged",
     )
-    best_logger.add_argument(
+    log_best_parser.add_argument(
         "--n-jobs",
         type=int,
         default=1,
         help="how many experiments to handle in parallel",
     )
-    best_logger.set_defaults(dispatch_func=log_best_dispatch)
-    id_logger = logging_subsubparsers.add_parser(
+    log_best_parser.set_defaults(dispatch_func=log_best_dispatch)
+    return log_best_parser
+
+
+def _setup_log_id_parser(logging_parsers) -> argparse.ArgumentParser:
+    log_id_parser = logging_parsers.add_parser(
         "by-id", help="log provided configurations"
     )
-    id_logger.add_argument(
+    log_id_parser.add_argument(
         "experiment",
         type=str,
         help="the .csv-file of which the selected configurations should be logged",
     )
-    id_logger.add_argument(
+    log_id_parser.add_argument(
         "dataset",
         type=str,
         choices=["abalone", "wine", "concrete"],
     )
-    id_logger.add_argument(
+    log_id_parser.add_argument(
         "ids", type=int, nargs="+", metavar="ID", help="the configurations to log"
     )
-    id_logger.set_defaults(dispatch_func=log_id_dispatch)
-    args = parser.parse_args()
-    return args
+    log_id_parser.set_defaults(dispatch_func=log_id_dispatch)
+    return log_id_parser
 
 
 def log_best_dispatch(args):
