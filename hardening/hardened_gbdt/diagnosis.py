@@ -502,7 +502,7 @@ def setup_arg_parser():
 
 def _setup_log_best_parser(logging_parsers) -> argparse.ArgumentParser:
     log_best_parser = logging_parsers.add_parser(
-        "best", help="log rank 1 configurations"
+        "best", help='log "rank 1" configurations'
     )
     log_best_parser.add_argument(
         "experiments",
@@ -542,14 +542,14 @@ def _setup_log_id_parser(logging_parsers) -> argparse.ArgumentParser:
     return log_id_parser
 
 
-def log_best_dispatch(args):
+def log_best_dispatch(args: argparse.Namespace):
     return joblib.Parallel(n_jobs=args.n_jobs)(
         joblib.delayed(log_best_configurations)(experiment)
         for experiment in args.experiments
     )
 
 
-def log_id_dispatch(args):
+def log_id_dispatch(args: argparse.Namespace):
     p = Path(args.experiment)
     df = pd.read_csv(p)
     fit_args = dict(
