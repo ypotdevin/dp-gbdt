@@ -207,8 +207,8 @@ std::tuple<double, double> rMS_smooth_sensitivity(std::vector<double> errors, co
     auto smooth_sens = -std::numeric_limits<double>::infinity();
     auto prefix_sum = sqe_sum, suffix_sum = sqe_sum;
     // for diagnostics
-    double maximizer_local_sens;
-    size_t maximizer_k;
+    double maximizer_local_sens = -std::numeric_limits<double>::infinity();
+    size_t maximizer_k = std::numeric_limits<size_t>::min();
 
     auto local_sens = local_sensitivity_at_k(errors.at(n - 1),
                                              errors.at(0),
