@@ -1,11 +1,10 @@
 import argparse
 import contextlib
-import json
 import os
 import zipfile
 from itertools import zip_longest
 from pathlib import Path
-from typing import Any, Iterable, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 import joblib
 import numpy as np
@@ -271,22 +270,21 @@ def best_scores(df: pd.DataFrame) -> pd.DataFrame:
         return merged
 
 
-def log_best_configurations(experiments: Iterable[str]):
-    for experiment in experiments:
-        p = Path(experiment).expanduser()
-        df = pd.read_csv(experiment)
-        df = best_scores(df)
-        additional_params = dict(
-            verbosity="debug",
-        )
-        all_configurations(
-            df=df,
-            additional_parameters=additional_params,
-            fit_args=abalone_fit_arguments(),
-            # needs to be a (format) string, not a Path
-            logfilename_template=f"{p.parent}/{p.stem}" + ".{index}.log",
-            zipfilename=str(p.with_suffix(".zip")),
-        )
+def log_best_configurations(experiment: str):
+    p = Path(experiment).expanduser()
+    df = pd.read_csv(experiment)
+    df = best_scores(df)
+    additional_params = dict(
+        verbosity="debug",
+    )
+    return all_configurations(
+        df=df,
+        additional_parameters=additional_params,
+        fit_args=abalone_fit_arguments(),
+        # needs to be a (format) string, not a Path
+        logfilename_template=f"{p.parent}/{p.stem}" + ".{index}.log",
+        zipfilename=str(p.with_suffix(".zip")),
+    )
 
 
 def log_best_wine_configurations():
@@ -506,6 +504,12 @@ def setup_arg_parser():
         metavar="experiment",
         help="the .csv files of which the rank 1 configurations should be determined and logged",
     )
+    best_logger.add_argument(
+        "--n-jobs",
+        type=int,
+        default=1,
+        help="how many experiments to handle in parallel",
+    )
     best_logger.set_defaults(dispatch_func=log_best_dispatch)
     id_logger = logging_subsubparsers.add_parser(
         "by-id", help="log provided configurations"
@@ -529,7 +533,10 @@ def setup_arg_parser():
 
 
 def log_best_dispatch(args):
-    return log_best_configurations(experiments=args.experiments)
+    return joblib.Parallel(n_jobs=args.n_jobs)(
+        joblib.delayed(log_best_configurations)(experiment)
+        for experiment in args.experiments
+    )
 
 
 def log_id_dispatch(args):
