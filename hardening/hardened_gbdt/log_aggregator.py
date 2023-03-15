@@ -1,11 +1,14 @@
 # ypo@informatik.uni-kiel.de
 
-from joblib import Parallel, delayed
+import argparse
 import pathlib
+import sys
+import zipfile
 from typing import Any, Callable, Iterable
 
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 
 import log_parser
 
@@ -71,7 +74,7 @@ def parse_maximizer_k(lines: Lines) -> pd.DataFrame:
     return _parse_diag_lines2("### diagnosis value 06 ###", lines)
 
 
-def parse_error_vectors(lines: Lines):
+def parse_error_vectors(lines: Lines) -> np.ndarray:
     lines = filter_lines("### diagnosis value 18 ###", lines)
     tree_indices_and_error_vectors = parse_lines(
         lines, log_parser.diagnosis_parser2(), log_parser.DiagnosisToDict2()
@@ -82,10 +85,11 @@ def parse_error_vectors(lines: Lines):
             len(tree_indices_and_error_vectors[0]["absolute_errors"]),  # type: ignore
         )
     )
-    for tree_idx_and_error_vector in tree_indices_and_error_vectors:
-        arr[int(tree_idx_and_error_vector["tree_index"])] = tree_idx_and_error_vector[
-            "absolute_errors"
-        ]
+    for (i, tree_idx_and_error_vector) in enumerate(tree_indices_and_error_vectors):
+        # The tree indices may not be strictly consecutive, as DP argmax
+        # may fail for same trees. Therefore the tree index is not a
+        # suitable array index.
+        arr[i] = tree_idx_and_error_vector["absolute_errors"]
     return arr
 
 
@@ -159,3 +163,51 @@ def aggregate_logs(
 
     dfs = Parallel(n_jobs=num_worker)(delayed(job)(file) for file in files)
     return pd.concat(dfs)  # type: ignore
+
+
+def error_vector_dispatch(args: argparse.Namespace) -> None:
+    arrays = {}
+    if args.zipped:
+        with zipfile.ZipFile(args.log_files[0], "r") as zfile:
+            for log in zfile.namelist():
+                with zfile.open(log, "r") as logfile:
+                    stripped_lines = (line.decode().lstrip() for line in logfile)
+                    name = pathlib.Path(log).name
+                    arrays[name] = parse_error_vectors(stripped_lines)
+    else:
+        for log in args.log_files:
+            with open(log, "r") as logfile:
+                stripped_lines = (line.lstrip() for line in logfile)
+                name = pathlib.Path(log).name
+                arrays[name] = parse_error_vectors(stripped_lines)
+    np.savez(args.out_path, **arrays)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(prog="log aggregator")
+    subparsers = parser.add_subparsers()
+    error_vector_parser = subparsers.add_parser(
+        "error-vectors", help="extract error vectors + tree index from log files"
+    )
+    error_vector_parser.add_argument(
+        "out_path",
+        type=str,
+        metavar="OUT_PATH",
+        help="the path of the output file (containing the error vector arrays)",
+    )
+    error_vector_parser.add_argument(
+        "log_files",
+        type=str,
+        nargs="+",
+        metavar="LOG_FILE",
+        help="the log file to extract tree indices and error vectors from",
+    )
+    error_vector_parser.add_argument(
+        "--zipped",
+        help="if set, provide only a single .zip file instead of one, or more, log files",
+        action="store_true",
+    )
+    error_vector_parser.set_defaults(dispatch_func=error_vector_dispatch)
+    args = parser.parse_args(args=None if sys.argv[1:] else ["--help"])
+    if hasattr(args, "dispatch_func"):
+        args.dispatch_func(args)
