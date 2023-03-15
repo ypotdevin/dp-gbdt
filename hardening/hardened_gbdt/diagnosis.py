@@ -1,6 +1,7 @@
 import argparse
 import contextlib
 import os
+import sys
 import zipfile
 from itertools import zip_longest
 from pathlib import Path
@@ -489,15 +490,14 @@ def _remove_timestamps_from_lines(lines):
     return ["] ".join(line.split("] ")[1:]) for line in lines]
 
 
-def setup_arg_parser():
+def setup_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="diagnosis")
     subparsers = parser.add_subparsers()
     log_subparser = subparsers.add_parser("log", help="logging functionality")
     logging_subsubparsers = log_subparser.add_subparsers()
     _setup_log_best_parser(logging_subsubparsers)
     _setup_log_id_parser(logging_subsubparsers)
-    args = parser.parse_args()
-    return args
+    return parser
 
 
 def _setup_log_best_parser(logging_parsers) -> argparse.ArgumentParser:
@@ -565,5 +565,7 @@ def log_id_dispatch(args: argparse.Namespace):
 
 
 if __name__ == "__main__":
-    args = setup_arg_parser()
-    args.dispatch_func(args)
+    parser = setup_arg_parser()
+    args = parser.parse_args(args=None if sys.argv[1:] else ["--help"])
+    if hasattr(args, "dispatch_func"):
+        args.dispatch_func(args)
