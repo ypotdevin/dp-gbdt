@@ -155,7 +155,7 @@ def multiple_configurations(
             zipfilename, mode="w", compression=zipfile.ZIP_DEFLATED
         ) as zfile:
             for (_, logfile) in indices_and_logfiles:
-                zfile.write(logfile)
+                zfile.write(logfile, arcname=Path(logfile).name)
                 os.remove(logfile)
     return estimators
 
@@ -266,8 +266,14 @@ def best_scores(df: pd.DataFrame) -> pd.DataFrame:
         agg_df["rank_test_score"] = agg_df.groupby(by=["param_privacy_budget"])[
             "mean_test_score"
         ].rank(method="min")
-        agg_df = agg_df[agg_df["rank_test_score"] == 1.0]
-        merged = pd.merge(df, agg_df, on=all_params_but_seed, how="inner")
+        merged = pd.merge(
+            df,
+            agg_df,
+            on=all_params_but_seed,
+            how="left",
+        )
+        merged = merged[merged["rank_test_score"] == 1.0]
+        print(merged)
         return merged
 
 
@@ -509,7 +515,7 @@ def _setup_log_best_parser(logging_parsers) -> argparse.ArgumentParser:
         type=str,
         nargs="+",
         metavar="experiment",
-        help="the .csv files of which the rank 1 configurations should be determined and logged",
+        help="the .csv file of which the rank 1 configurations should be determined and logged",
     )
     log_best_parser.add_argument(
         "--n-jobs",
