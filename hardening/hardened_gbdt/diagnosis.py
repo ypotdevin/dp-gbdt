@@ -273,7 +273,6 @@ def best_scores(df: pd.DataFrame) -> pd.DataFrame:
             how="left",
         )
         merged = merged[merged["rank_test_score"] == 1.0]
-        print(merged)
         return merged
 
 
