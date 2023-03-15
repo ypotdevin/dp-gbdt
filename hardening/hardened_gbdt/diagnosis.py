@@ -276,14 +276,14 @@ def best_scores(df: pd.DataFrame) -> pd.DataFrame:
         return merged
 
 
-def log_best_configurations(experiment: str):
+def log_best_configurations(experiment: str) -> None:
     p = Path(experiment).expanduser()
     df = pd.read_csv(experiment)
     df = best_scores(df)
     additional_params = dict(
         verbosity="debug",
     )
-    return all_configurations(
+    all_configurations(
         df=df,
         additional_parameters=additional_params,
         fit_args=abalone_fit_arguments(),
