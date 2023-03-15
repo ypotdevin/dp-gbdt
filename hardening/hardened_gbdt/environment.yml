@@ -5,6 +5,7 @@ dependencies:
   - python=3.9
   - cython=0.29.*
   - hyperopt=0.2.*
+  - lark=1.1.*
   - numpy=1.21.*
   - pandas=1.4.*
   - ray-tune=1.6.*
