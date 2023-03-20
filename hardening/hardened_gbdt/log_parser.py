@@ -1,7 +1,7 @@
 from lark import Lark, Transformer
 
 
-def diagnosis_parser():
+def diagnosis_parser() -> Lark:
     # `clutter` matches everything up to (and including) the first
     # occasion of ###.
     grammar = r"""
@@ -36,46 +36,52 @@ class DiagnosisToDict(Transformer):
     list = list
 
 
-def diagnosis_parser2():
-    # `clutter` matches everything up to (and including) the first
-    # occasion of ###.
+def fast_diagnosis_parser() -> Lark:
     grammar = r"""
-        ?line: clutter "diagnosis" "value" NUMBER "###" "-" equations
-        ?clutter: /^(.*?)###/
-        ?equations: [equation ("," equation)*]
-        ?equation: IDENTIFIER "=" value
-        ?value: val_list
-            | NUMBER
+        equations: [equation ("," equation)*]
+        equation: identifier "=" rhs
+        identifier: CNAME
+        rhs: number
+           | vector
+        number: SIGNED_NUMBER
+        vector: "[" [number ("," number)*] "]"
 
-        ?val_list: "[" [value ("," value)*] "]"
-
-        %import common.CNAME -> IDENTIFIER
-        %import common.SIGNED_NUMBER -> NUMBER
+        %import common.CNAME
+        %import common.SIGNED_NUMBER
         %import common.WS
         %ignore WS
     """
-    diag_parser = Lark(grammar, start="line")
+    diag_parser = Lark(
+        grammar, start="equations", parser="lalr", transformer=FastDiagnosisToDict()
+    )
     return diag_parser
 
 
-class DiagnosisToDict2(Transformer):
-    def line(self, args):
-        return args[-1]  # ignore everything but the `equation` part
-
+class FastDiagnosisToDict(Transformer):
     def equations(self, eqs):
         return {lhs: rhs for eq in eqs for lhs, rhs in eq.items()}
 
     def equation(self, eq):
-        (ident, val) = eq
-        return {ident[:]: val}
+        (ident, rhs) = eq
+        return {ident: rhs}
 
-    def NUMBER(self, n):
+    def rhs(self, num_vec):
+        (num_vec,) = num_vec
+        return num_vec
+
+    def identifier(self, ident):
+        (ident,) = ident
+        return str(ident)
+
+    def number(self, n):
+        (n,) = n
         return float(n)
 
-    val_list = list
+    def vector(self, vec):
+        return list(vec)
 
 
-def tree_idx_parser():
+def tree_idx_parser() -> Lark:
     # `clutter` matches everything up to (and including) the first
     # occasion of `Building`.
     grammar = r"""
@@ -101,7 +107,7 @@ class TreeIdxToDict(Transformer):
     list = list
 
 
-def tree_acceptence_parser():
+def tree_acceptence_parser() -> Lark:
     grammar = r"""
         ?line: clutter1 WORD "decision" "tree" NUMBER clutter1 ":" NUMBER clutter2 ":" NUMBER
         ?clutter1: /(.*?)ensemble/

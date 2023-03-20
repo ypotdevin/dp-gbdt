@@ -9,6 +9,7 @@ from typing import Any, Callable, Iterable
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
+from lark import Lark, Transformer
 
 import log_parser
 
@@ -26,8 +27,12 @@ def filter_lines(substring: str, lines: Lines) -> Lines:
     return [line for line in lines if substring in line]
 
 
-def parse_lines(lines: Lines, parser, transformer) -> Iterable[Any]:
+def parse_lines(lines: Lines, parser: Lark, transformer: Transformer) -> Iterable[Any]:
     return [transformer.transform(parser.parse(line)) for line in lines]
+
+
+def fast_parse(lines: Lines, parser: Lark) -> Iterable[Any]:
+    return [parser.parse(line) for line in lines]
 
 
 def _parse_diag_lines(lines: Lines) -> Iterable[Any]:
@@ -76,8 +81,9 @@ def parse_maximizer_k(lines: Lines) -> pd.DataFrame:
 
 def parse_error_vectors(lines: Lines) -> np.ndarray:
     lines = filter_lines("### diagnosis value 18 ###", lines)
-    tree_indices_and_error_vectors = parse_lines(
-        lines, log_parser.diagnosis_parser2(), log_parser.DiagnosisToDict2()
+    lines = [line.split("### - ")[1] for line in lines]
+    tree_indices_and_error_vectors = fast_parse(
+        lines, log_parser.fast_diagnosis_parser()
     )
     arr = np.zeros(
         shape=(
