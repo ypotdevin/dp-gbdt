@@ -6,8 +6,8 @@ import dpgbdt
 from typing import ItemsView
 
 
-def abalone_scaling_factors(items: ItemsView) -> pd.DataFrame:
-    scaling_factorss = joblib.Parallel(n_jobs=16)(
+def abalone_scaling_factors(items: ItemsView, n_jobs: int = 32) -> pd.DataFrame:
+    scaling_factorss = joblib.Parallel(n_jobs=n_jobs)(
         joblib.delayed(_worker)(error_vectors, 20.0) for (_, error_vectors) in items
     )
     scaling_factors = np.array(scaling_factorss).max(axis=0)
@@ -63,7 +63,5 @@ def _scaling_factors(
 
 if __name__ == "__main__":
     with np.load("abalone_bun_steinke_20221107_error_vectors.npz") as arrays:
-        # arr = arrays["abalone_bun_steinke_20221107_feature-grid.17610799.log"]
-        # d = {"abalone_bun_steinke_20221107_feature-grid.17610799.log": arr}
-        df = abalone_scaling_factors(arrays.items())
+        df = abalone_scaling_factors(arrays.items(), 120)
         df.to_csv("scaling_factors.csv")
