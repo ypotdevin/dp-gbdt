@@ -672,46 +672,6 @@ def wine_dp_quantile_ts_grid_20221121(args) -> pd.DataFrame:
     )
 
 
-def abalone_eps_delta_beta_combinations() -> pd.DataFrame:
-    pbs = np.linspace(1e-3, 1.0, 100)
-    rels = np.array([1e-7, 1e-6, 1e-5, 1e-4])
-    bs = np.logspace(-6, -1, 600)
-
-    y = abalone_fit_arguments().pop("y")
-    y_pred = np.full_like(y, y.mean())
-    abs_errors = np.abs(y - y_pred)
-    abs_errors.sort()
-
-    df = _scaling_factors(pbs, rels, bs, abs_errors, 20.0)
-    df.to_csv("abalone_scaling_factors.csv")
-    return df
-
-
-def _scaling_factors(
-    privacy_budgets: np.ndarray,
-    relaxations: np.ndarray,
-    betas: np.ndarray,
-    errors: np.ndarray,
-    upper_bound: float,
-) -> pd.DataFrame:
-    beta_smooth_sensitivities = np.array(
-        [dpgbdt.py_beta_smooth_sensitivity(errors, beta, upper_bound) for beta in betas]
-    )
-    pbs, rels, bs = np.meshgrid(privacy_budgets, relaxations, betas, indexing="ij")
-    alphas = pbs + bs - (np.exp(bs) - 1.0) * np.log(1.0 / rels)
-    alphas = np.where(alphas <= 0.0, np.nan, alphas)
-    scaling_factors = beta_smooth_sensitivities[np.newaxis, np.newaxis, :] / alphas
-    df = pd.DataFrame(
-        dict(
-            privacy_budget=pbs.reshape(-1),
-            relaxation=rels.reshape(-1),
-            beta=bs.reshape(-1),
-            scaling_factor=scaling_factors.reshape(-1),
-        )
-    )
-    return df
-
-
 def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
     return dict(
         baseline_grid=baseline_grid,
