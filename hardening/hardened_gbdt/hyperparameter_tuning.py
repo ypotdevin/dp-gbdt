@@ -70,7 +70,7 @@ def _configs_chunks(
 
 
 def _write_intermediate_scores_to_disk(df: pd.DataFrame, suffix: str, cli_args):
-    p = cli_args.intermediate_results_dir / cli_args.csvfilename.stem / f"{suffix}.csv"
+    p = cli_args.intermediate_results_dir / f"{cli_args.csvfilename.stem}{suffix}.csv"
     df.to_csv(p, mode="w")
 
 
