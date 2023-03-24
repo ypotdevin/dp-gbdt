@@ -17,5 +17,4 @@
 
 # generated output
 **/evaluation/*
-**/include/spdlog
 hardening/hardened_gbdt/py_estimator.cpp
