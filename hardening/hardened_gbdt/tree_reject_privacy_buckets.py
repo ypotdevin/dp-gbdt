@@ -167,7 +167,6 @@ def _worker(beta, relaxations, n_trees_to_accept, scaling_factor_component):
 def evaluate_search_space(
     search_space: model_selection.ParameterGrid, n_jobs: int
 ) -> pd.DataFrame:
-    search_space = list(search_space)[:10]
     lines_list = Parallel(n_jobs=n_jobs)(
         delayed(_worker)(**kwargs) for kwargs in search_space
     )
