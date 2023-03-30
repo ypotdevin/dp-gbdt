@@ -50,7 +50,7 @@ def privacy_bucket_score_budget(
     standard_gaussian_tail_cufoff = 40.0
     tail_cutoff = standard_gaussian_tail_cufoff * sigma
     epsilon_arrays = []
-    for factor in [1 + 5e-5, 1 + 5e-5, 1 + 5e-6, 1 + 5e-7]:
+    for factor in [1 + 5e-4, 1 + 5e-5, 1 + 5e-6, 1 + 5e-7]:
         try:
             epsilon_arrays.append(
                 _privacy_bucket_score_budget(
