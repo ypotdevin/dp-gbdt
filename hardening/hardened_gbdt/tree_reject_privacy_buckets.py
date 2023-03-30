@@ -100,30 +100,37 @@ def _privacy_bucket_score_budget(
     dilated_distribution = norm.pdf(support, loc=1, scale=dilated_sigma)
     dilated_distribution = dilated_distribution / np.sum(dilated_distribution)
 
-    privacybuckets = ProbabilityBuckets(
-        number_of_buckets=number_of_buckets,
-        factor=factor,
-        dist1_array=dilated_distribution,
-        dist2_array=reference_distribution,
-        # caching makes re-evaluations faster. Can be turned off for some cases.
-        caching_directory="./pb-cache",
-        # how much we can put in the infty bucket before first squaring
-        free_infty_budget=10 ** (-20),
-        error_correction=True,
-        logging_level=log_level,
-    )
-    privacybuckets_composed = privacybuckets.compose(n_trees_to_accept)
+    privacybuckets = None
+    try:
+        privacybuckets = ProbabilityBuckets(
+            number_of_buckets=number_of_buckets,
+            factor=factor,
+            dist1_array=dilated_distribution,
+            dist2_array=reference_distribution,
+            # caching makes re-evaluations faster. Can be turned off for some cases.
+            caching_directory="./pb-cache",
+            # how much we can put in the infty bucket before first squaring
+            free_infty_budget=10 ** (-20),
+            error_correction=True,
+            logging_level=log_level,
+        )
+        privacybuckets_composed = privacybuckets.compose(n_trees_to_accept)
 
-    # Print status summary
-    privacybuckets_composed.print_state()
+        # Print status summary
+        privacybuckets_composed.print_state()
 
-    epsilons = np.array(
-        [
-            privacybuckets_composed.eps_ADP_upper_bound(relaxation)
-            for relaxation in relaxations
-        ]
-    )
-    return epsilons
+        epsilons = np.array(
+            [
+                privacybuckets_composed.eps_ADP_upper_bound(relaxation)
+                for relaxation in relaxations
+            ]
+        )
+        return epsilons
+    except Exception as e:
+        raise e
+    finally:
+        if privacybuckets is not None:
+            privacybuckets.cache_teardown()
 
 
 def _to_lines(
@@ -160,6 +167,7 @@ def _worker(beta, relaxations, n_trees_to_accept, scaling_factor_component):
 def evaluate_search_space(
     search_space: model_selection.ParameterGrid, n_jobs: int
 ) -> pd.DataFrame:
+    search_space = list(search_space)[:10]
     lines_list = Parallel(n_jobs=n_jobs)(
         delayed(_worker)(**kwargs) for kwargs in search_space
     )
@@ -176,7 +184,7 @@ def search_space_20230329() -> model_selection.ParameterGrid:
             scaling_factor_component=np.logspace(
                 start=0, stop=2, num=(2 - 0) * 10, base=10.0
             ),
-        )
+        )  # type: ignore
     )
     return parameter_grid
 
@@ -188,7 +196,7 @@ def search_space_20230330() -> model_selection.ParameterGrid:
             relaxations=[[1e-4, 1e-5, 1e-6, 1e-7]],
             n_trees_to_accept=[1, 2, 3, 5, 8, 10, 20, 50],
             scaling_factor_component=np.linspace(start=1e-6, stop=10, num=100),
-        )
+        )  # type: ignore
     )
     return parameter_grid
 

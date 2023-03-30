@@ -10,6 +10,7 @@ import gc
 import logging
 import os
 import pickle
+import shutil
 from typing import Optional
 
 import numpy as np
@@ -78,6 +79,9 @@ class ProbabilityBuckets:
                 self.caching_super_directory, array_name
             )
             self.logger.info("Caching directory: {}".format(self.caching_directory))
+
+    def cache_teardown(self) -> None:
+        shutil.rmtree(self.caching_directory, ignore_errors=True)  # type: ignore
 
     def logger_setup(self, level) -> None:
         # all instances use the same logger. Randomize the name if not
