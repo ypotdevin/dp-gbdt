@@ -218,6 +218,7 @@ if __name__ == "__main__":
 
     dispatcher = dict(
         search_space_20230329=search_space_20230329(),
+        search_space_20230330=search_space_20230330(),
     )
     df = evaluate_search_space(dispatcher[args.search_space], args.num_cores)
     df.to_csv(args.csv_filename)
