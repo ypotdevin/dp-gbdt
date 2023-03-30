@@ -187,7 +187,7 @@ def search_space_20230330() -> model_selection.ParameterGrid:
             beta=np.linspace(start=1e-4, stop=1e-3, num=20),
             relaxations=[[1e-4, 1e-5, 1e-6, 1e-7]],
             n_trees_to_accept=[1, 2, 3, 5, 8, 10, 20, 50],
-            scaling_factor_component=np.linspace(start=0, stop=10, num=100),
+            scaling_factor_component=np.linspace(start=1e-6, stop=10, num=100),
         )
     )
     return parameter_grid
