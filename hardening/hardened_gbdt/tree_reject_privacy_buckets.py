@@ -159,7 +159,10 @@ def _worker(beta, relaxations, n_trees_to_accept, scaling_factor_component):
         relaxations,
         n_trees_to_accept,
         privacy_bucket_score_budget(
-            scaling_factor_component, beta, relaxations, n_trees_to_accept
+            scaling_factor_component,
+            beta,
+            relaxations,
+            n_trees_to_accept,
         ),
     )
 

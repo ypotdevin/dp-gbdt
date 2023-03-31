@@ -10,11 +10,10 @@ import gc
 import logging
 import os
 import pickle
-import shutil
+import tempfile
 from typing import Optional
 
 import numpy as np
-import xxhash
 from scipy import optimize
 
 _infty_bucket_warning_bound = 1e-5
@@ -67,21 +66,19 @@ class ProbabilityBuckets:
             self.caching_setup()
 
     def caching_setup(self) -> None:
-        # setting up caching. Hashing beginning bucket_distribution to
-        # avoid name collisions
-        if self.caching_super_directory:
-            hasher = xxhash.xxh64(self.bucket_distribution, seed=0)  # type: ignore
-            hasher.update(str(self.error_correction))
-            hasher.update(str(self.free_infty_budget))
-            array_name = hasher.hexdigest()
-
-            self.caching_directory = os.path.join(
-                self.caching_super_directory, array_name
-            )
-            self.logger.info("Caching directory: {}".format(self.caching_directory))
+        self.caching_tmp_dir = tempfile.TemporaryDirectory(
+            dir=self.caching_super_directory
+        )
+        # keep this redundant attribute for compatibility reasons
+        self.caching_directory = self.caching_tmp_dir.name
+        self.logger.info("Caching directory: {}".format(self.caching_directory))
 
     def cache_teardown(self) -> None:
-        shutil.rmtree(self.caching_directory, ignore_errors=True)  # type: ignore
+        try:
+            self.caching_tmp_dir.cleanup()
+        except Exception:
+            logging.exception("Failed to cleanup temporary directory")
+        self.caching_directory = None
 
     def logger_setup(self, level) -> None:
         # all instances use the same logger. Randomize the name if not
