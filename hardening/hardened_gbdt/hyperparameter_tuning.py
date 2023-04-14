@@ -677,6 +677,18 @@ def abalone_privacy_buckets(cli_args) -> pd.DataFrame:
     return privacy_bucket_template(cli_args, grid, get_abalone())
 
 
+def abalone_privacy_buckets_20221107(cli_args) -> pd.DataFrame:
+    grid = abalone_parameter_grid_20221107()
+    grid["ensemble_rejector_budget_split"] = [0.2, 0.4, 0.6, 0.75, 0.9]
+    grid["dp_argmax_privacy_budget"] = [0.0001, 0.001, 0.01]
+    grid["dp_argmax_stopping_prob"] = [0.01, 0.1, 0.2, 0.4]
+    grid["ts_upper_bound"] = grid["l2_threshold"]
+    grid["ts_beta"] = [729 * 1e-6]
+    grid["ts_relaxation"] = [1e-6]
+    grid["ts_coefficients"] = [[0.0, 1.25, -0.0361, 0.0, 0.0, -2.10, 0.0, 0.0, 0.0]]  # type: ignore
+    return privacy_bucket_template(cli_args, grid, get_abalone())
+
+
 def wine_baseline_grid_20221121(args) -> pd.DataFrame:
     grid = wine_parameter_grid_20221121()
     return baseline_template(args, grid, data_provider=get_wine)
