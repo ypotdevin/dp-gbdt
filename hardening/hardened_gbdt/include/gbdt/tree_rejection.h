@@ -124,6 +124,26 @@ namespace tree_rejection
                           const std::vector<double> &y_pred);
     };
 
+    class PrivacyBucketScorer : public TreeScorer
+    {
+    private:
+        double upper_bound, beta;
+        int n_trees_to_accept;
+        std::vector<double> coefficients;
+        std::mt19937 rng;
+        std::unique_ptr<std::normal_distribution<double>> std_gaussian;
+
+    public:
+        PrivacyBucketScorer(double upper_bound,
+                            double beta,
+                            int n_trees_to_accept,
+                            const std::vector<double> &coefficients,
+                            std::mt19937 &rng);
+        double score_tree(double privacy_budget,
+                          const std::vector<double> &y,
+                          const std::vector<double> &y_pred);
+    };
+
     class TreeRejector
     {
     public:
