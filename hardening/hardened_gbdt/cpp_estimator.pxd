@@ -86,6 +86,15 @@ cdef extern from "gbdt/tree_rejection.h" namespace "tree_rejection":
             mt19937 rng
         ) except +
 
+    cdef cppclass PrivacyBucketScorer(TreeScorer):
+        PrivacyBucketScorer(
+            double upper_bound,
+            double beta,
+            int n_trees_to_accept,
+            vector[double] coefficients,
+            mt19937 &rng
+        ) except +
+
     cdef cppclass TreeRejector:
         pass
 

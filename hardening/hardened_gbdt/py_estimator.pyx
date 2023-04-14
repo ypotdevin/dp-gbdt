@@ -7,6 +7,7 @@ from cpp_estimator cimport (Estimator,
                             beta_smooth_sensitivity,
                             TreeScorer, DPrMSEScorer, DPrMSEScorer2,
                             DPQuantileScorer, BunSteinkeScorer,
+                            PrivacyBucketScorer,
                             TreeRejector, ConstantRejector,
                             QuantileLinearCombinationRejector,
                             DPrMSERejector, ApproxDPrMSERejector,
@@ -187,6 +188,55 @@ cdef class PyBunSteinkeScorer(PyTreeScorer):
         return f"PyBunSteinkeScorer(upper_bound={self.upper_bound},"\
                f"beta={self.beta},"\
                f"relaxation={self.relaxation},"\
+               f"rng={self.rng})"
+
+cdef class PyPrivacyBucketScorer(PyTreeScorer):
+    cdef double upper_bound, beta
+    cdef int n_trees_to_accept
+    cdef list coefficients
+    cdef PyMT19937 rng
+
+    def __cinit__(
+        self,
+        double upper_bound,
+        double beta,
+        int n_trees_to_accept,
+        list coefficients,
+        PyMT19937 rng
+    ):
+        self.upper_bound = upper_bound
+        self.beta = beta
+        self.n_trees_to_accept = n_trees_to_accept
+        self.coefficients = coefficients
+        cdef vector[double] coefficients_vec = coefficients
+        self.rng = rng
+        self.sptr_ts = shared_ptr[TreeScorer](
+            new PrivacyBucketScorer(
+                upper_bound,
+                beta,
+                n_trees_to_accept,
+                coefficients_vec,
+                rng.c_rng
+            )
+        )
+
+    def __reduce__(self):
+        return (
+            self.__class__,
+            (
+                self.upper_bound,
+                self.beta,
+                self.n_trees_to_accept,
+                self.coefficients,
+                self.rng
+            )
+        )
+
+    def __repr__(self):
+        return f"PyPrivacyBucketScorer(uppen_bound={self.upper_bound},"\
+               f"beta={self.beta},"\
+               f"n_trees_to_accept={self.n_trees_to_accept},"\
+               f"coefficients={self.coefficients},"\
                f"rng={self.rng})"
 
 cdef class PyTreeRejector:
