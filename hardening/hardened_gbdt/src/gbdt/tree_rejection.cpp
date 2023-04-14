@@ -257,6 +257,48 @@ namespace tree_rejection
         return score;
     }
 
+    PrivacyBucketScorer::PrivacyBucketScorer(double upper_bound,
+                                             double beta,
+                                             int n_trees_to_accept,
+                                             const std::vector<double> &coefficients,
+                                             std::mt19937 &rng)
+    {
+        this->upper_bound = upper_bound;
+        if (beta < 0.0)
+        {
+            throw std::runtime_error("Parameter beta must be not negative!");
+        }
+        this->beta = beta;
+        this->n_trees_to_accept = n_trees_to_accept;
+        this->coefficients = coefficients;
+        this->rng = rng;
+        this->std_gaussian = std::unique_ptr<std::normal_distribution<double>>(
+            new std::normal_distribution<double>());
+    }
+
+    double PrivacyBucketScorer::score_tree(double privacy_budget,
+                                           const std::vector<double> &y,
+                                           const std::vector<double> &y_pred)
+    {
+        auto total_score_budget = privacy_budget * this->n_trees_to_accept;
+        auto sfc = poly2d(total_score_budget, this->beta, this->coefficients);
+        LOG_INFO("### diagnosis value 19 ### sfc={1}, total_score_budget={2}, beta={3}", sfc, total_score_budget, this->beta);
+        std::vector<double> abs_errors(y.size());
+        std::transform(y.begin(), y.end(),
+                       y_pred.begin(), abs_errors.begin(), [](double _y, double _y_pred)
+                       { return std::abs(_y - _y_pred); });
+        std::sort(abs_errors.begin(), abs_errors.end());
+        double smooth_sens, rmse;
+        std::tie(smooth_sens, rmse) = rMS_smooth_sensitivity(abs_errors,
+                                                             this->beta,
+                                                             this->upper_bound);
+        auto noise = this->std_gaussian->operator()(this->rng);
+        auto loose_gaussian_bound = 5.3;
+        auto scaling_factor = loose_gaussian_bound * std::sqrt(this->n_trees_to_accept) / sfc;
+        auto score = rmse + smooth_sens * scaling_factor * noise;
+        return score;
+    }
+
     ConstantRejector::ConstantRejector(bool decision)
     {
         this->decision = decision;

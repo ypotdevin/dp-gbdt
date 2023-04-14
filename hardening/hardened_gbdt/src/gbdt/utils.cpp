@@ -97,6 +97,22 @@ void normalize(std::vector<double> &values)
                    { return value / normalization_factor; });
 }
 
+double poly2d(double x, double y, const std::vector<double> &coefficients)
+{
+    int degree = std::sqrt(coefficients.size());
+    size_t idx = 0;
+    double sum = 0.0;
+    for (int j = 0; j < degree; ++j)
+    {
+        for (int i = 0; i < degree; i++)
+        {
+            sum += coefficients[idx] * std::pow(x, i) * std::pow(y, j);
+            idx++;
+        }
+    }
+    return sum;
+}
+
 namespace numpy
 {
     std::size_t choice(const std::vector<double> &probabilities, std::mt19937 &rng)

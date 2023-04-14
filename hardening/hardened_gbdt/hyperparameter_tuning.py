@@ -60,11 +60,11 @@ def manual_grid(
 
 def _configs_chunks(
     configs: model_selection.ParameterGrid, chunk_size: int = 1024
-) -> Iterable[dict[str, Any]]:
-    configs = list(configs)  # type: ignore
-    n = len(configs)
+) -> Iterable[list[dict[str, Any]]]:
+    configs_list = list(configs)
+    n = len(configs_list)
     return (
-        configs[chunk_size * i : chunk_size * (i + 1)]
+        configs_list[chunk_size * i : chunk_size * (i + 1)]
         for i in range(math.ceil(n / chunk_size))
     )
 
@@ -527,6 +527,16 @@ def bun_steinke_template(
     return meta_template(cli_args, grid, fit_args)
 
 
+def privacy_bucket_template(
+    cli_args,
+    grid: dict[str, Any],
+    fit_args: dict[str, Any],
+):
+    grid["tree_scorer"] = ["privacy_buckets"]
+    grid["training_variant"] = ["dp_argmax_scoring"]
+    return meta_template(cli_args, grid, fit_args)
+
+
 def dp_rmse_ts_grid(args) -> pd.DataFrame:
     grid = abalone_parameter_grid()
     grid["ensemble_rejector_budget_split"] = [0.6, 0.75, 0.9]
@@ -655,6 +665,18 @@ def abalone_bun_steinke_20230321(cli_args) -> pd.DataFrame:
     return bun_steinke_template(cli_args, grid, get_abalone())
 
 
+def abalone_privacy_buckets(cli_args) -> pd.DataFrame:
+    grid = abalone_parameter_grid()
+    grid["ensemble_rejector_budget_split"] = [0.6, 0.75, 0.9]
+    grid["dp_argmax_privacy_budget"] = [0.001, 0.01]
+    grid["dp_argmax_stopping_prob"] = [0.1, 0.2]
+    grid["ts_upper_bound"] = grid["l2_threshold"]
+    grid["ts_beta"] = [729 * 1e-6]
+    grid["ts_relaxation"] = [1e-6]
+    grid["ts_coefficients"] = [[0.0, 1.25, -0.0361, 0.0, 0.0, -2.10, 0.0, 0.0, 0.0]]  # type: ignore
+    return privacy_bucket_template(cli_args, grid, get_abalone())
+
+
 def wine_baseline_grid_20221121(args) -> pd.DataFrame:
     grid = wine_parameter_grid_20221121()
     return baseline_template(args, grid, data_provider=get_wine)
@@ -702,6 +724,7 @@ def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
         abalone_bun_steinke=abalone_bun_steinke,
         abalone_bun_steinke_20221107=abalone_bun_steinke_20221107,
         abalone_bun_steinke_20230321=abalone_bun_steinke_20230321,
+        abalone_privacy_buckets=abalone_privacy_buckets,
     )[which]
 
 
