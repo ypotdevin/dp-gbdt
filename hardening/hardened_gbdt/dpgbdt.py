@@ -33,16 +33,17 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         # prototype arguments
         tr_qs=None,
         tr_coefficients=None,
-        tr_U: float = None,
-        tr_gamma: float = None,
-        tr_delta: float = None,
+        tr_U: Optional[float] = None,
+        tr_gamma: Optional[float] = None,
+        tr_delta: Optional[float] = None,
         ts_upper_bound: float = 100,
         ts_gamma: float = 2.0,
         ts_shift: float = 0.0,
         ts_scale: float = 1.0,
-        ts_qs: list[float] = None,
-        ts_beta: float = None,
-        ts_relaxation: float = None,
+        ts_qs: Optional[list[float]] = None,
+        ts_beta: Optional[float] = None,
+        ts_relaxation: Optional[float] = None,
+        ts_coefficients: Optional[list[float]] = None,
     ):
         """Create a new regressor object.
 
@@ -112,8 +113,8 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
             use_decay (bool, optional): Whether to assign each internal
                 node a decaying factor. Defaults to False.
             verbosity (str, optional): How verbose the training should
-            be. Defaults to "warning", which only shows warnings or
-            errors messages, but no info/debug messages.
+                be. Defaults to "warning", which only shows warnings or
+                errors messages, but no info/debug messages.
         """
         self.seed = seed
         self.privacy_budget = privacy_budget
@@ -146,6 +147,7 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         self.ts_qs = ts_qs
         self.ts_beta = ts_beta
         self.ts_relaxation = ts_relaxation
+        self.ts_coefficients = ts_coefficients
 
     def fit(
         self,
@@ -335,6 +337,7 @@ def make_tree_scorer(which: str, **kwargs) -> pyestimator.PyTreeScorer:
         dp_rmse2=pyestimator.PyDPrMSEScorer2,
         dp_quantile=pyestimator.PyDPQuantileScorer,
         bun_steinke=pyestimator.PyBunSteinkeScorer,
+        privacy_buckets=pyestimator.PyPrivacyBucketScorer,
     )
     return selector[which](**kwargs)
 
@@ -370,6 +373,15 @@ def _make_tree_scorer_from_self(self) -> pyestimator.PyTreeScorer:
             upper_bound=self.ts_upper_bound,
             beta=self.ts_beta,
             relaxation=self.ts_relaxation,
+            rng=self.rng_,
+        )
+    elif self.tree_scorer == "privacy_buckets":
+        return make_tree_scorer(
+            "privacy_buckets",
+            upper_bound=self.ts_upper_bound,
+            beta=self.ts_beta,
+            n_trees_to_accept=self.n_trees_to_accept,
+            coefficients=self.ts_coefficients,
             rng=self.rng_,
         )
     else:
