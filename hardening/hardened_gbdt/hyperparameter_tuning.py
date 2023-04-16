@@ -43,7 +43,7 @@ def manual_grid(
     seeds = rng.integers(low=0, high=2**30 - 1, size=n_repetitions)
 
     scores_df = pd.DataFrame()
-    for (i, configs_chunk) in enumerate(
+    for i, configs_chunk in enumerate(
         _configs_chunks(model_selection.ParameterGrid(parameter_grid))
     ):
         seeded_configs_chunk = product(configs_chunk, seeds)
@@ -737,6 +737,7 @@ def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
         abalone_bun_steinke_20221107=abalone_bun_steinke_20221107,
         abalone_bun_steinke_20230321=abalone_bun_steinke_20230321,
         abalone_privacy_buckets=abalone_privacy_buckets,
+        abalone_privacy_buckets_20221107=abalone_privacy_buckets_20221107,
     )[which]
 
 
