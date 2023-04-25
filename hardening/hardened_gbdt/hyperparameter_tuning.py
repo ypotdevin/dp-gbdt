@@ -9,7 +9,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn import model_selection
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, r2_score
 
 import dpgbdt
 import pyestimator
@@ -103,11 +103,13 @@ def _manual_worker_wrapper(fit_data: dict[str, Any]):
             regressor.fit(X=X_train, y=y_train, **_fit_data)
             y_pred = regressor.predict(X_test)
             rmse = mean_squared_error(y_test, y_pred, squared=False)
+            r2 = r2_score(y_test, y_pred)
         except Exception:
             traceback.print_exc()
             rmse = float("nan")
+            r2 = float("nan")
         params = {f"param_{key}": val for (key, val) in config_incl_seed.items()}
-        return dict(**params, test_score=rmse)
+        return dict(**params, test_score=rmse, test_r2_score=r2)
 
     return _manual_worker
 
