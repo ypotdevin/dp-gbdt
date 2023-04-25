@@ -13,7 +13,7 @@ from sklearn.metrics import mean_squared_error
 
 import dpgbdt
 import pyestimator
-from example_main import abalone_fit_arguments
+from datasets.real import data_reader
 
 
 def manual_grid(
@@ -47,7 +47,7 @@ def manual_grid(
         _configs_chunks(model_selection.ParameterGrid(parameter_grid))
     ):
         seeded_configs_chunk = product(configs_chunk, seeds)
-        scores_chunk = joblib.Parallel(n_jobs=n_jobs)(
+        scores_chunk = joblib.Parallel(n_jobs=n_jobs, verbose=50)(
             joblib.delayed(_manual_worker_wrapper(fit_args))(config, seed)
             for (config, seed) in seeded_configs_chunk
         )
@@ -154,6 +154,8 @@ def check_config(config: dict[str, Any]) -> list[str]:
                     scorer_args = ["ts_shift", "ts_scale", "ts_qs", "ts_upper_bound"]
                 elif t is pyestimator.PyBunSteinkeScorer:
                     scorer_args = ["ts_upper_bound", "ts_beta", "ts_relaxation"]
+                elif t is pyestimator.PyPrivacyBucketScorer:
+                    scorer_args = ["ts_upper_bound", "ts_beta", "ts_relaxation"]
                 elif t is str:
                     # assume that the conversion from str to real
                     # parameters works correctly
@@ -170,112 +172,6 @@ def check_config(config: dict[str, Any]) -> list[str]:
             raise ValueError(f"Unknown training variant {config['training_variant']}")
     else:
         return common_args
-
-
-def get_abalone() -> dict[str, Any]:
-    """Parse the abalone dataset and return parameters suitable for
-    `fit`.
-
-    Returns:
-      dict[str, Any]: An assignment to `fit`'s arguments.
-    """
-    data = pd.read_csv(
-        "./datasets/real/abalone.data",
-        names=[
-            "sex",
-            "length",
-            "diameter",
-            "height",
-            "whole weight",
-            "shucked weight",
-            "viscera weight",
-            "shell weight",
-            "rings",
-        ],
-    )
-    data["sex"], _ = pd.factorize(data["sex"])
-    args = dict(y=data.rings.values.astype(float))
-    del data["rings"]
-    args["X"] = data.values.astype(float)
-    args["cat_idx"] = [0]  # Sex
-    args["num_idx"] = list(range(1, args["X"].shape[1]))  # Other attributes
-    args["grid_lower_bounds"] = np.array(args["X"].shape[1] * [0.0])
-    args["grid_upper_bounds"] = np.array([2.0, 1.0, 1.0, 1.5, 3.0, 2.0, 1.0, 1.5])
-    args["grid_step_sizes"] = np.array([1.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01])
-    return args
-
-
-def get_wine() -> dict[str, Any]:
-    """Parse the wine dataset.
-
-    Returns:
-      dict[str, Any]: An assignment to `fit`'s arguments.
-    """
-    data = pd.read_csv(
-        "./datasets/real/winequality-red.csv",
-        names=[
-            "fixed acidity",
-            "volatile acidity",
-            "citric acid",
-            "residual sugar",
-            "chlorides",
-            "free sulfur dioxide",
-            "total sulfur dioxide",
-            "density",
-            "pH",
-            "sulphates",
-            "alcohol",
-            "quality",
-        ],
-    )
-    args = dict(y=data.quality.values.astype(float))
-    del data["quality"]
-    args["X"] = data.values.astype(float)
-    args["cat_idx"] = []
-    args["num_idx"] = list(range(1, args["X"].shape[1]))
-    args["grid_lower_bounds"] = np.array(
-        [4.0, 0.0, 0.0, 0.0, 0.0, 1.0, 6.0, 0.99, 2.5, 0.0, 7.0]
-    )
-    args["grid_upper_bounds"] = np.array(
-        [16.0, 2.0, 1.0, 15.0, 1.0, 80.0, 300.0, 1.0, 5.0, 2, 18]
-    )
-    args["grid_step_sizes"] = np.array(
-        [0.1, 0.01, 0.01, 0.1, 0.001, 1.0, 1.0, 0.0001, 0.01, 0.01, 0.1]
-    )
-    return args
-
-
-def get_concrete() -> dict[str, Any]:
-    """Parse the concrete dataset.
-
-    Returns:
-      dict[str, Any]: An assignment to `fit`'s arguments.
-    """
-    data = pd.read_csv(
-        "./datasets/real/Concrete_Data_Yeh.csv",
-        names=[
-            "cement",
-            "blast furnace slag",
-            "fly ash",
-            "water",
-            "superplasticizer",
-            "coarse aggregate",
-            "fine aggregate",
-            "age",
-            "compressive_strength",
-        ],
-    )
-    args = dict(y=data.age.values.astype(float))
-    del data["quality"]
-    args["X"] = data.values.astype(float)
-    args["cat_idx"] = []
-    args["num_idx"] = list(range(1, args["X"].shape[1]))
-    args["grid_lower_bounds"] = np.array(args["X"].shape[1] * [0.0])
-    args["grid_upper_bounds"] = np.array(
-        [1000.0, 500.0, 500.0, 500.0, 100.0, 1500, 1500.0, 365.0]
-    )
-    args["grid_step_sizes"] = np.array([1.0, 1.0, 1.0, 1.0, 0.1, 1.0, 1.0, 1.0])
-    return args
 
 
 def parse_args():
@@ -420,7 +316,7 @@ def baseline_template(
     data_provider: Optional[Callable[[], dict[str, Any]]] = None,
 ) -> pd.DataFrame:
     if data_provider is None:
-        data_provider = get_abalone
+        data_provider = data_reader.abalone_fit_arguments
     dfs = []
     total_budgets = args.privacy_budgets
     for ensemble_budget in total_budgets:
@@ -471,7 +367,7 @@ def dp_rmse_ts_template(
     data_provider: Optional[Callable[[], dict[str, Any]]] = None,
 ) -> pd.DataFrame:
     if data_provider is None:
-        data_provider = get_abalone
+        data_provider = data_reader.abalone_fit_arguments
     dfs = []
     total_budgets = args.privacy_budgets
     for total_budget in total_budgets:
@@ -495,7 +391,7 @@ def dp_rmse_ts_template(
 def meta_template(
     cli_args,
     grid: dict[str, Any],
-    fit_args: dict[str, Any],
+    **kwargs,
 ) -> pd.DataFrame:
     cli_args.intermediate_results_dir.mkdir(parents=True, exist_ok=True)
     scores_df = pd.DataFrame()
@@ -504,11 +400,10 @@ def meta_template(
         parameter_grid = grid.copy()
         parameter_grid["privacy_budget"] = [total_budget]
         df = manual_grid(
-            fit_args=fit_args,
             parameter_grid=parameter_grid,
-            cli_args=args,
-            n_repetitions=50,
+            cli_args=cli_args,
             n_jobs=cli_args.num_cores,
+            **kwargs,
         )
         scores_df = pd.concat([scores_df, df])
         _write_intermediate_scores_to_disk(
@@ -524,7 +419,7 @@ def bun_steinke_template(
 ):
     grid["tree_scorer"] = ["bun_steinke"]
     grid["training_variant"] = ["dp_argmax_scoring"]
-    return meta_template(cli_args, grid, fit_args)
+    return meta_template(cli_args, grid, fig_args=fit_args)
 
 
 def privacy_bucket_template(
@@ -534,7 +429,7 @@ def privacy_bucket_template(
 ):
     grid["tree_scorer"] = ["privacy_buckets"]
     grid["training_variant"] = ["dp_argmax_scoring"]
-    return meta_template(cli_args, grid, fit_args)
+    return meta_template(cli_args, grid, fig_args=fit_args)
 
 
 def dp_rmse_ts_grid(args) -> pd.DataFrame:
@@ -574,7 +469,7 @@ def dp_quantile_ts_template(
     data_provider: Optional[Callable[[], dict[str, Any]]] = None,
 ) -> pd.DataFrame:
     if data_provider is None:
-        data_provider = get_abalone
+        data_provider = data_reader.abalone_fit_arguments
     dfs = []
     total_budgets = args.privacy_budgets
     for total_budget in total_budgets:
@@ -640,7 +535,7 @@ def abalone_bun_steinke(cli_args) -> pd.DataFrame:
     grid["ts_upper_bound"] = grid["l2_threshold"]
     grid["ts_beta"] = [729 * 1e-6]
     grid["ts_relaxation"] = [1e-6]
-    return bun_steinke_template(cli_args, grid, get_abalone())
+    return bun_steinke_template(cli_args, grid, data_reader.abalone_fit_arguments())
 
 
 def abalone_bun_steinke_20221107(cli_args) -> pd.DataFrame:
@@ -651,7 +546,7 @@ def abalone_bun_steinke_20221107(cli_args) -> pd.DataFrame:
     grid["ts_upper_bound"] = grid["l2_threshold"]
     grid["ts_beta"] = [729 * 1e-6]
     grid["ts_relaxation"] = [1e-6]
-    return bun_steinke_template(cli_args, grid, get_abalone())
+    return bun_steinke_template(cli_args, grid, data_reader.abalone_fit_arguments())
 
 
 def abalone_bun_steinke_20230321(cli_args) -> pd.DataFrame:
@@ -662,7 +557,7 @@ def abalone_bun_steinke_20230321(cli_args) -> pd.DataFrame:
     grid["ts_upper_bound"] = grid["l2_threshold"]
     grid["ts_beta"] = [818 * 1e-6]
     grid["ts_relaxation"] = [1e-6]
-    return bun_steinke_template(cli_args, grid, get_abalone())
+    return bun_steinke_template(cli_args, grid, data_reader.abalone_fit_arguments())
 
 
 def abalone_privacy_buckets(cli_args) -> pd.DataFrame:
@@ -674,7 +569,7 @@ def abalone_privacy_buckets(cli_args) -> pd.DataFrame:
     grid["ts_beta"] = [729 * 1e-6]
     grid["ts_relaxation"] = [1e-6]
     grid["ts_coefficients"] = [[0.0, 1.25, -0.0361, 0.0, 0.0, -2.10, 0.0, 0.0, 0.0]]  # type: ignore
-    return privacy_bucket_template(cli_args, grid, get_abalone())
+    return privacy_bucket_template(cli_args, grid, data_reader.abalone_fit_arguments())
 
 
 def abalone_privacy_buckets_20221107(cli_args) -> pd.DataFrame:
@@ -686,12 +581,12 @@ def abalone_privacy_buckets_20221107(cli_args) -> pd.DataFrame:
     grid["ts_beta"] = [729 * 1e-6]
     grid["ts_relaxation"] = [1e-6]
     grid["ts_coefficients"] = [[0.0, 1.25, -0.0361, 0.0, 0.0, -2.10, 0.0, 0.0, 0.0]]  # type: ignore
-    return privacy_bucket_template(cli_args, grid, get_abalone())
+    return privacy_bucket_template(cli_args, grid, data_reader.abalone_fit_arguments())
 
 
 def wine_baseline_grid_20221121(args) -> pd.DataFrame:
     grid = wine_parameter_grid_20221121()
-    return baseline_template(args, grid, data_provider=get_wine)
+    return baseline_template(args, grid, data_provider=data_reader.wine_fit_arguments)
 
 
 def wine_dp_rmse_ts_grid_20221121(args) -> pd.DataFrame:
@@ -701,7 +596,7 @@ def wine_dp_rmse_ts_grid_20221121(args) -> pd.DataFrame:
     grid["dp_argmax_stopping_prob"] = [0.1, 0.2]
     grid["ts_upper_bound"] = grid["l2_threshold"]
     grid["ts_gamma"] = [2]
-    return dp_rmse_ts_template(args, grid, data_provider=get_wine)
+    return dp_rmse_ts_template(args, grid, data_provider=data_reader.wine_fit_arguments)
 
 
 def wine_dp_quantile_ts_grid_20221121(args) -> pd.DataFrame:
@@ -713,7 +608,60 @@ def wine_dp_quantile_ts_grid_20221121(args) -> pd.DataFrame:
     grid["ts_scale"] = [0.79]
     grid["ts_upper_bound"] = grid["l2_threshold"]
     return dp_quantile_ts_template(
-        args, grid, ts_qs=[0.5, 0.90, 0.95], data_provider=get_wine
+        args,
+        grid,
+        ts_qs=[0.5, 0.90, 0.95],
+        data_provider=data_reader.wine_fit_arguments,
+    )
+
+
+def metro_baseline_grid_20230425(args) -> pd.DataFrame:
+    params = dict(
+        learning_rate=[0.1],
+        max_depth=[1, 5, 10],
+        # 4500 is roughly the value of
+        #     | traffic_volume.mean() - traffic_volume.max() |
+        l2_threshold=np.linspace(10.0, 4500.0, 10),
+        l2_lambda=[0.1, 1.0, 10.0],
+        n_trees_to_accept=[5, 10, 50, 100],
+        training_variant=["vanilla"],
+    )
+    return meta_template(
+        args,
+        params,
+        fit_args=data_reader.metro_fit_arguments(),
+        n_repetitions=5,
+    )
+
+
+def metro_bunsteinke_grid_20230425(args) -> pd.DataFrame:
+    params = dict(
+        learning_rate=[0.1],
+        max_depth=[1, 6],
+        # 4500 is roughly the value of
+        #     | traffic_volume.mean() - traffic_volume.max() |
+        l2_threshold=np.linspace(10.0, 4500.0, 10),
+        l2_lambda=[0.1, 1.0, 5.0, 10.0],
+        n_trees_to_accept=[5, 10, 20],
+        tree_scorer=["bun_steinke"],
+        training_variant=["dp_argmax_scoring"],
+        ensemble_rejector_budget_split=[0.2, 0.5, 0.8],
+        dp_argmax_privacy_budget=[0.001, 0.01],
+        dp_argmax_stopping_prob=[0.01, 0.1],
+        ts_beta=[729 * 1e-6],
+        ts_relaxation=[1e-6],
+    )
+    # coupling of ts_upper_bound to l2_threshold
+    cp = lambda config: {
+        "ts_upper_bound": config["l2_threshold"],
+        **config,
+    }  # good idea?
+    return meta_template(
+        args,
+        params,
+        fit_args=data_reader.metro_fit_arguments(),
+        n_repetitions=5,
+        config_processor=cp,
     )
 
 
@@ -738,6 +686,8 @@ def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
         abalone_bun_steinke_20230321=abalone_bun_steinke_20230321,
         abalone_privacy_buckets=abalone_privacy_buckets,
         abalone_privacy_buckets_20221107=abalone_privacy_buckets_20221107,
+        metro_baseline_grid_20230425=metro_baseline_grid_20230425,
+        metro_bunsteinke_grid_20230425=metro_bunsteinke_grid_20230425,
     )[which]
 
 
