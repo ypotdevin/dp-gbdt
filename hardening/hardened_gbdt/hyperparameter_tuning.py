@@ -680,21 +680,47 @@ def metro_leaky_baseline_grid_20230426(args) -> pd.DataFrame:
     )
 
 
-def metro_bunsteinke_grid_20230426(args) -> pd.DataFrame:
+def metro_dp_rmse_grid_20230426(args) -> pd.DataFrame:
     params = dict(
-        learning_rate=[0.01, 0.1],
-        max_depth=[1, 5, 10],
+        learning_rate=[0.1],
+        max_depth=[1, 5],
         # 4500 is roughly the value of
         #     | traffic_volume.mean() - traffic_volume.max() |
-        l2_threshold=np.linspace(2500.0, 3500.0, 10),
-        l2_lambda=np.linspace(5.0, 40.0, 16),
-        n_trees_to_accept=[10, 20, 50, 100],
+        l2_threshold=[2944.44, 3166.66],
+        l2_lambda=[7.33, 9.66, 16.66],
+        n_trees_to_accept=[10, 20],
+        training_variant=["dp_argmax_scoring"],
+        tree_scorer=["leaky_rmse"],
+        ensemble_rejector_budget_split=[0.2, 0.5, 0.8],
+        dp_argmax_privacy_budget=[0.001, 0.01],
+        dp_argmax_stopping_prob=[0.01, 0.1],
+        ts_upper_bound=np.linspace(1000.0, 4500.0, 7),
+        ts_gamma=[2],
+    )
+    return meta_template(
+        args,
+        params,
+        fit_args=data_reader.metro_fit_arguments(),
+        n_repetitions=5,
+    )
+
+
+def metro_bunsteinke_grid_20230426(args) -> pd.DataFrame:
+    params = dict(
+        learning_rate=[0.1],
+        max_depth=[1, 5],
+        # 4500 is roughly the value of
+        #     | traffic_volume.mean() - traffic_volume.max() |
+        l2_threshold=[2944.44, 3166.66],
+        l2_lambda=[7.33, 9.66, 16.66],
+        n_trees_to_accept=[10, 20],
         training_variant=["dp_argmax_scoring"],
         tree_scorer=["bun_steinke"],
         ensemble_rejector_budget_split=[0.2, 0.5, 0.8],
         dp_argmax_privacy_budget=[0.001, 0.01],
         dp_argmax_stopping_prob=[0.01, 0.1],
-        ts_beta=[729 * 1e-6],
+        ts_beta=[],  # TODO
+        ts_upper_bound=[],  # TODO
         ts_relaxation=[1e-6],
     )
     # coupling of ts_upper_bound to l2_threshold
@@ -735,6 +761,7 @@ def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
         metro_baseline_grid_20230425=metro_baseline_grid_20230425,
         metro_baseline_grid_20230426=metro_baseline_grid_20230426,
         metro_leaky_baseline_grid_20230426=metro_leaky_baseline_grid_20230426,
+        metro_dp_rmse_grid_20230426=metro_dp_rmse_grid_20230426,
         metro_bunsteinke_grid_20230426=metro_bunsteinke_grid_20230426,
     )[which]
 
