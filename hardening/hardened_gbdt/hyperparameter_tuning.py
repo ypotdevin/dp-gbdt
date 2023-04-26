@@ -638,13 +638,13 @@ def metro_baseline_grid_20230425(args) -> pd.DataFrame:
 
 def metro_baseline_grid_20230426(args) -> pd.DataFrame:
     params = dict(
-        learning_rate=[0.1],
-        max_depth=[1, 5],
+        learning_rate=[0.01, 0.1],
+        max_depth=[1, 5, 10],
         # 4500 is roughly the value of
         #     | traffic_volume.mean() - traffic_volume.max() |
-        l2_threshold=np.linspace(2000.0, 4500.0, 6),
-        l2_lambda=np.linspace(5.0, 50.0, 10),
-        n_trees_to_accept=[10, 20],
+        l2_threshold=np.linspace(2500.0, 3500.0, 10),
+        l2_lambda=np.linspace(5.0, 40.0, 16),
+        n_trees_to_accept=[10, 20, 50, 100],
         training_variant=["vanilla"],
     )
     return meta_template(
