@@ -7,7 +7,7 @@ from cpp_estimator cimport (Estimator,
                             beta_smooth_sensitivity,
                             TreeScorer, DPrMSEScorer, DPrMSEScorer2,
                             DPQuantileScorer, BunSteinkeScorer,
-                            PrivacyBucketScorer,
+                            PrivacyBucketScorer, LeakyRmseScorer,
                             TreeRejector, ConstantRejector,
                             QuantileLinearCombinationRejector,
                             DPrMSERejector, ApproxDPrMSERejector,
@@ -67,6 +67,17 @@ cdef class PyTreeScorer:
         cdef vector[double] y_vec = y
         cdef vector[double] y_pred_vec = y_pred
         return self.sptr_ts.get().score_tree(privacy_budget, y_vec, y_pred_vec)
+
+cdef class PyLeakyRmseScorer(PyTreeScorer):
+
+    def __cinit__(self):
+        self.sptr_ts = shared_ptr[TreeScorer](new LeakyRmseScorer())
+
+    def __reduce__(self):
+        return (self.__class__,)
+
+    def __repr__(self):
+        return f"PyLeakyRmseScorer()"
 
 cdef class PyDPrMSEScorer(PyTreeScorer):
     cdef double upper_bound, gamma

@@ -58,6 +58,9 @@ cdef extern from "gbdt/tree_rejection.h" namespace "tree_rejection":
     cdef cppclass TreeScorer:
         double score_tree(double privacy_budget, vector[double] y, vector[double] y_pred)
 
+    cdef cppclass LeakyRmseScorer(TreeScorer):
+        LeakyRmseScorer() except +
+
     cdef cppclass DPrMSEScorer(TreeScorer):
         DPrMSEScorer(double upper_bound, double gamma, mt19937 rng) except +
 

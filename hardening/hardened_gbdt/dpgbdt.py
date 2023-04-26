@@ -333,6 +333,7 @@ def make_beta(which: str, **kwargs) -> pyestimator.PyBeta:
 
 def make_tree_scorer(which: str, **kwargs) -> pyestimator.PyTreeScorer:
     selector = dict(
+        leaky_rmse=pyestimator.PyLeakyRmseScorer,
         dp_rmse=pyestimator.PyDPrMSEScorer,
         dp_rmse2=pyestimator.PyDPrMSEScorer2,
         dp_quantile=pyestimator.PyDPQuantileScorer,
@@ -343,7 +344,9 @@ def make_tree_scorer(which: str, **kwargs) -> pyestimator.PyTreeScorer:
 
 
 def _make_tree_scorer_from_self(self) -> pyestimator.PyTreeScorer:
-    if self.tree_scorer == "dp_rmse":
+    if self.tree_scorer == "leaky_rmse":
+        return make_tree_scorer("leaky_rmse")
+    elif self.tree_scorer == "dp_rmse":
         return make_tree_scorer(
             "dp_rmse",
             upper_bound=self.ts_upper_bound,

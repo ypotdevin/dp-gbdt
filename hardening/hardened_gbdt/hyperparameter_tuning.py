@@ -150,7 +150,9 @@ def check_config(config: dict[str, Any]) -> list[str]:
             if argmax_scoring_args_present:
                 t = type(config["tree_scorer"])
                 scorer_args = []
-                if t in [pyestimator.PyDPrMSEScorer, pyestimator.PyDPrMSEScorer2]:
+                if t in [pyestimator.PyLeakyRmseScorer]:
+                    return []
+                elif t in [pyestimator.PyDPrMSEScorer, pyestimator.PyDPrMSEScorer2]:
                     scorer_args = ["ts_upper_bound", "ts_gamma"]
                 elif t is pyestimator.PyDPQuantileScorer:
                     scorer_args = ["ts_shift", "ts_scale", "ts_qs", "ts_upper_bound"]
@@ -655,17 +657,40 @@ def metro_baseline_grid_20230426(args) -> pd.DataFrame:
     )
 
 
-def metro_bunsteinke_grid_20230425(args) -> pd.DataFrame:
+def metro_leaky_baseline_grid_20230426(args) -> pd.DataFrame:
     params = dict(
         learning_rate=[0.1],
-        max_depth=[1, 6],
+        max_depth=[1, 5],
         # 4500 is roughly the value of
         #     | traffic_volume.mean() - traffic_volume.max() |
-        l2_threshold=np.linspace(10.0, 4500.0, 10),
-        l2_lambda=[0.1, 1.0, 5.0, 10.0],
-        n_trees_to_accept=[5, 10, 20],
-        tree_scorer=["bun_steinke"],
+        l2_threshold=[2944.44, 3166.66],
+        l2_lambda=[7.33, 9.66, 16.66],
+        n_trees_to_accept=[10, 20],
         training_variant=["dp_argmax_scoring"],
+        tree_scorer=["leaky_rmse"],
+        ensemble_rejector_budget_split=[0.999],
+        dp_argmax_privacy_budget=[0.001],
+        dp_argmax_stopping_prob=[0.001],
+    )
+    return meta_template(
+        args,
+        params,
+        fit_args=data_reader.metro_fit_arguments(),
+        n_repetitions=5,
+    )
+
+
+def metro_bunsteinke_grid_20230426(args) -> pd.DataFrame:
+    params = dict(
+        learning_rate=[0.01, 0.1],
+        max_depth=[1, 5, 10],
+        # 4500 is roughly the value of
+        #     | traffic_volume.mean() - traffic_volume.max() |
+        l2_threshold=np.linspace(2500.0, 3500.0, 10),
+        l2_lambda=np.linspace(5.0, 40.0, 16),
+        n_trees_to_accept=[10, 20, 50, 100],
+        training_variant=["dp_argmax_scoring"],
+        tree_scorer=["bun_steinke"],
         ensemble_rejector_budget_split=[0.2, 0.5, 0.8],
         dp_argmax_privacy_budget=[0.001, 0.01],
         dp_argmax_stopping_prob=[0.01, 0.1],
@@ -708,8 +733,9 @@ def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
         abalone_privacy_buckets=abalone_privacy_buckets,
         abalone_privacy_buckets_20221107=abalone_privacy_buckets_20221107,
         metro_baseline_grid_20230425=metro_baseline_grid_20230425,
-        metro_bunsteinke_grid_20230425=metro_bunsteinke_grid_20230425,
         metro_baseline_grid_20230426=metro_baseline_grid_20230426,
+        metro_leaky_baseline_grid_20230426=metro_leaky_baseline_grid_20230426,
+        metro_bunsteinke_grid_20230426=metro_bunsteinke_grid_20230426,
     )[which]
 
 

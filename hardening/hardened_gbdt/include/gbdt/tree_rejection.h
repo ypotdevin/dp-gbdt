@@ -49,6 +49,15 @@ namespace tree_rejection
                                   const std::vector<double> &y_pred) = 0;
     };
 
+    class LeakyRmseScorer : public TreeScorer
+    {
+    public:
+        LeakyRmseScorer();
+        double score_tree(double privacy_budget,
+                          const std::vector<double> &y,
+                          const std::vector<double> &y_pred);
+    };
+
     class DPrMSEScorer2 : public TreeScorer
     {
     private:

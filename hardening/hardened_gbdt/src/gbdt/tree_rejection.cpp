@@ -129,6 +129,15 @@ namespace tree_rejection
         return privacy_budget / (2 * (this->gamma + 1.0));
     }
 
+    LeakyRmseScorer::LeakyRmseScorer() {}
+
+    double LeakyRmseScorer::score_tree(double privacy_budget,
+                                       const std::vector<double> &y,
+                                       const std::vector<double> &y_pred)
+    {
+        return compute_rmse(absolute_differences(y, y_pred));
+    }
+
     DPrMSEScorer::DPrMSEScorer(
         double upper_bound,
         double gamma,

@@ -314,6 +314,49 @@ void privacy_buckets()
     delete dataset;
 }
 
+void leaky_rmse()
+{
+    ModelParams parameters;
+    DataSet *dataset = Parser::get_abalone(parameters, 5000);
+
+    std::mt19937 rng(42);
+    std::shared_ptr<tree_rejection::Beta> beta_ptr(
+        std::shared_ptr<tree_rejection::ConstantBeta>(
+            new tree_rejection::ConstantBeta(42.0)));
+
+    dpgbdt::Estimator regressor(
+        rng,
+        1.0,   // privacy_budget
+        0.999, // ensemble_rejector_budget_split
+        "dp_argmax_scoring",
+        std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(5, 100.0, 2.0, rng)), // this will be ignored
+        std::shared_ptr<tree_rejection::LeakyRmseScorer>(new tree_rejection::LeakyRmseScorer()),
+        0.001,   // dp_argmax_privacy_budget
+        0.001,   // dp_argmax_stopping_prob
+        0.1,     // learning_rate
+        10,      // n_trees_to_accept
+        1,       // max_depth
+        2,       // min_samples_split
+        2944.44, // l2_threshold
+        7.33,    // l2_lambda
+        true,
+        true,
+        true,
+        false,
+        "debug");
+    regressor.fit(dataset->X,
+                  dataset->y,
+                  parameters.cat_idx,
+                  parameters.num_idx,
+                  parameters.grid_lower_bounds,
+                  parameters.grid_upper_bounds,
+                  parameters.grid_step_sizes);
+    auto y_pred = regressor.predict(dataset->X);
+    auto rmse = compute_rmse(dataset->y, y_pred);
+    std::cout << rmse << std::endl;
+    delete dataset;
+}
+
 int main(int argc, char **argv)
 {
     // good_dp_argmax_rmse_scoring_setting();
