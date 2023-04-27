@@ -659,18 +659,18 @@ def metro_baseline_grid_20230426(args) -> pd.DataFrame:
 
 def metro_leaky_baseline_grid_20230426(args) -> pd.DataFrame:
     params = dict(
-        learning_rate=[0.1],
-        max_depth=[1, 5],
+        learning_rate=[0.01, 0.1],
+        max_depth=[1, 5, 10],
         # 4500 is roughly the value of
         #     | traffic_volume.mean() - traffic_volume.max() |
-        l2_threshold=[2944.44, 3166.66],
-        l2_lambda=[7.33, 9.66, 16.66],
-        n_trees_to_accept=[10, 20],
+        l2_threshold=np.linspace(2500.0, 3500.0, 10),
+        l2_lambda=np.linspace(5.0, 40.0, 16),
+        n_trees_to_accept=[10, 20, 50, 100],
         training_variant=["dp_argmax_scoring"],
         tree_scorer=["leaky_rmse"],
-        ensemble_rejector_budget_split=[0.999],
-        dp_argmax_privacy_budget=[0.001],
-        dp_argmax_stopping_prob=[0.001],
+        ensemble_rejector_budget_split=[1.0],
+        dp_argmax_privacy_budget=[1e-3],
+        dp_argmax_stopping_prob=[1e-3],
     )
     return meta_template(
         args,
