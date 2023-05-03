@@ -345,6 +345,7 @@ if __name__ == "__main__":
     df_parser.add_argument(
         "df_extractor",
         type=str,
+        choices=["acceptance_matching"],
         metavar="DF_EXTRACTOR",
         help="which Dataframe extracting function to apply to the log file",
     )
