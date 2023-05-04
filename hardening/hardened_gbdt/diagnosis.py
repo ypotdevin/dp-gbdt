@@ -41,7 +41,7 @@ COL_NAME_MAPPING: dict[str, str] = dict(
 
 def params_from_series(series: pd.Series) -> dict[str, Any]:
     extracted_hyperparams = {}
-    for (col_name, hyperparam) in COL_NAME_MAPPING.items():
+    for col_name, hyperparam in COL_NAME_MAPPING.items():
         if col_name in series:
             extracted_hyperparams[hyperparam] = series[col_name]
     return extracted_hyperparams
@@ -142,7 +142,7 @@ def multiple_configurations(
         (index, logfilename_template.format(index=index)) for index in indices
     ]
     estimators = []
-    for (index, logfile) in indices_and_logfiles:
+    for index, logfile in indices_and_logfiles:
         estimator = single_configuration(
             df.loc[index],
             additional_parameters=additional_parameters,
@@ -154,7 +154,7 @@ def multiple_configurations(
         with zipfile.ZipFile(
             zipfilename, mode="w", compression=zipfile.ZIP_DEFLATED
         ) as zfile:
-            for (_, logfile) in indices_and_logfiles:
+            for _, logfile in indices_and_logfiles:
                 zfile.write(logfile, arcname=Path(logfile).name)
                 os.remove(logfile)
     return estimators
@@ -289,7 +289,7 @@ def log_best_configurations(experiment: str) -> None:
         fit_args=abalone_fit_arguments(),
         # needs to be a (format) string, not a Path
         logfilename_template=f"{p.parent}/{p.stem}" + ".{index}.log",
-        zipfilename=str(p.with_suffix(".zip")),
+        zipfilename=str(p.with_suffix(".logs.zip")),
     )
 
 
@@ -455,7 +455,7 @@ def repeat_crossvalidation_baseline(
 ) -> pd.DataFrame:
     scores = []
     _setting = setting.copy()
-    for (param, value) in additional_settings.items():
+    for param, value in additional_settings.items():
         _setting[param] = value
     scoress = joblib.Parallel(n_jobs=n_jobs)(
         joblib.delayed(baseline)(series=_setting, cv=cv) for _ in range(n_repetitions)
@@ -482,7 +482,7 @@ def diff_logs(log1, log2, ignore_timestamp: bool = True) -> Optional[Tuple[str, 
             if ignore_timestamp:
                 lines1 = _remove_timestamps_from_lines(lines1)
                 lines2 = _remove_timestamps_from_lines(lines2)
-            for (line1, line2) in zip_longest(lines1, lines2, fillvalue=None):
+            for line1, line2 in zip_longest(lines1, lines2, fillvalue=None):
                 if (line1 != line2) or (None in (line1, line2)):
                     return (line1, line2)  #  type: ignore
     return None
