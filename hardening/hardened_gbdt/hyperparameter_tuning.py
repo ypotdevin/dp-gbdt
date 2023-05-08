@@ -3,11 +3,12 @@ import math
 import traceback
 from itertools import product
 from pathlib import Path
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Iterable, Optional, Union
 
 import joblib
 import numpy as np
 import pandas as pd
+from scipy import stats
 from sklearn import model_selection
 from sklearn.metrics import mean_squared_error, r2_score
 
@@ -16,7 +17,7 @@ import pyestimator
 from datasets.real import data_reader
 
 
-def manual_grid(
+def grid_search(
     fit_args: dict[str, Any],
     parameter_grid: dict[str, Any],
     n_repetitions: int,
@@ -36,6 +37,52 @@ def manual_grid(
         DataFrame contains only one line per configuration and holds
         all split scores in its columns (wide format).
     """
+    return _validate_configs_chunks(
+        fit_args,
+        _configs_chunks(model_selection.ParameterGrid(parameter_grid)),
+        n_repetitions,
+        cli_args,
+        config_processor,
+        n_jobs,
+        rng,
+    )
+
+
+def random_search(
+    fit_args: dict[str, Any],
+    parameter_distributions: dict[str, Any],
+    n_configs: int,
+    n_repetitions: int,
+    cli_args,
+    config_preprocessor: Optional[Callable[[dict[str, Any]], dict[str, Any]]] = None,
+    n_jobs: Optional[int] = None,
+    rng: Optional[np.random.Generator] = None,
+) -> pd.DataFrame:
+    """Like `grid_search`, but sampling a fixed number of configs from a
+    random distribution instead of traversing a fixed grid.
+    """
+    return _validate_configs_chunks(
+        fit_args,
+        _configs_chunks(
+            model_selection.ParameterSampler(parameter_distributions, n_iter=n_configs)
+        ),
+        n_repetitions,
+        cli_args,
+        config_preprocessor,
+        n_jobs,
+        rng,
+    )
+
+
+def _validate_configs_chunks(
+    fit_args: dict[str, Any],
+    configs_chunks: Iterable[list[dict[str, Any]]],
+    n_repetitions: int,
+    cli_args,
+    config_processor: Optional[Callable[[dict[str, Any]], dict[str, Any]]] = None,
+    n_jobs: Optional[int] = None,
+    rng: Optional[np.random.Generator] = None,
+) -> pd.DataFrame:
     if rng is None:
         rng = np.random.default_rng()
     if config_processor is None:
@@ -43,9 +90,7 @@ def manual_grid(
     seeds = rng.integers(low=0, high=2**30 - 1, size=n_repetitions)
 
     scores_df = pd.DataFrame()
-    for i, configs_chunk in enumerate(
-        _configs_chunks(model_selection.ParameterGrid(parameter_grid))
-    ):
+    for i, configs_chunk in enumerate(configs_chunks):
         seeded_configs_chunk = product(configs_chunk, seeds)
         scores_chunk = joblib.Parallel(n_jobs=n_jobs, verbose=50)(
             joblib.delayed(_manual_worker_wrapper(fit_args))(config, seed)
@@ -59,7 +104,8 @@ def manual_grid(
 
 
 def _configs_chunks(
-    configs: model_selection.ParameterGrid, chunk_size: int = 1024
+    configs: Union[model_selection.ParameterGrid, model_selection.ParameterSampler],
+    chunk_size: int = 1024,
 ) -> Iterable[list[dict[str, Any]]]:
     configs_list = list(configs)
     n = len(configs_list)
@@ -331,7 +377,7 @@ def baseline_template(
         parameter_grid["tree_rejector"] = [
             dpgbdt.make_tree_rejector("constant", decision=False)
         ]
-        df = manual_grid(
+        df = grid_search(
             fit_args=data_provider(),
             parameter_grid=parameter_grid,
             cli_args=args,
@@ -380,7 +426,7 @@ def dp_rmse_ts_template(
         parameter_grid["privacy_budget"] = [total_budget]
         parameter_grid["tree_scorer"] = ["dp_rmse"]
 
-        df = manual_grid(
+        df = grid_search(
             fit_args=data_provider(),
             parameter_grid=parameter_grid,
             cli_args=args,
@@ -403,7 +449,7 @@ def meta_template(
     for total_budget in total_budgets:
         parameter_grid = grid.copy()
         parameter_grid["privacy_budget"] = [total_budget]
-        df = manual_grid(
+        df = grid_search(
             parameter_grid=parameter_grid,
             cli_args=cli_args,
             n_jobs=cli_args.num_cores,
@@ -414,6 +460,27 @@ def meta_template(
             scores_df, suffix=f".eps={total_budget}", cli_args=cli_args
         )
     return scores_df
+
+
+def run_search_by_eps(
+    cli_args,
+    search_with_privacy_budget: Callable[[float], pd.DataFrame],
+) -> pd.DataFrame:
+    """Extend a collection of parameters by the provided privacy budgets,
+    respectively, run the search with each budget and store intermediate
+    results to disk.
+
+    Returns:
+        pd.DataFrame: The scores for all privacy budgets.
+    """
+    all_scores = []
+    for pb in cli_args.privacy_budgets:
+        scores = search_with_privacy_budget(pb)
+        _write_intermediate_scores_to_disk(
+            scores, suffix=f".eps={pb}", cli_args=cli_args
+        )
+        all_scores.append(scores)
+    return pd.concat(all_scores)
 
 
 def bun_steinke_template(
@@ -483,7 +550,7 @@ def dp_quantile_ts_template(
         parameter_grid["tree_scorer"] = ["dp_quantile"]
         parameter_grid["ts_qs"] = [ts_qs]
 
-        df = manual_grid(
+        df = grid_search(
             fit_args=data_provider(),
             parameter_grid=parameter_grid,
             cli_args=args,
@@ -680,6 +747,30 @@ def metro_leaky_baseline_grid_20230426(args) -> pd.DataFrame:
     )
 
 
+def metro_leaky_baseline_grid_20230508(args) -> pd.DataFrame:
+    params = dict(
+        learning_rate=stats.uniform(1e-2, 1e-1),
+        max_depth=stats.randint(1, 10),
+        # 4500 is roughly the value of
+        #     | traffic_volume.mean() - traffic_volume.max() |
+        l2_threshold=stats.uniform(2500.0, 3500.0),
+        l2_lambda=stats.uniform(5.0, 40.0),
+        n_trees_to_accept=stats.randint(10, 100),
+        training_variant=["dp_argmax_scoring"],
+        tree_scorer=["leaky_rmse"],
+        ensemble_rejector_budget_split=[1.0],
+        dp_argmax_privacy_budget=[1e-3],
+        dp_argmax_stopping_prob=[1e-3],
+    )
+
+    def searcher(pb: float):
+        _params = params.copy()
+        _params["privacy_budget"] = [pb]
+        return random_search(data_reader.metro_fit_arguments(), _params, 10000, 5, args)
+
+    return run_search_by_eps(args, searcher)
+
+
 def metro_dp_rmse_grid_20230426(args) -> pd.DataFrame:
     params = dict(
         learning_rate=[0.1],
@@ -761,6 +852,7 @@ def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
         metro_baseline_grid_20230425=metro_baseline_grid_20230425,
         metro_baseline_grid_20230426=metro_baseline_grid_20230426,
         metro_leaky_baseline_grid_20230426=metro_leaky_baseline_grid_20230426,
+        metro_leaky_baseline_grid_20230508=metro_leaky_baseline_grid_20230508,
         metro_dp_rmse_grid_20230426=metro_dp_rmse_grid_20230426,
         metro_bunsteinke_grid_20230426=metro_bunsteinke_grid_20230426,
     )[which]
