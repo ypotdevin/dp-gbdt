@@ -44,7 +44,12 @@ Include `estimator.h` and use the class `Estimator`. It offers the methods `fit`
 
 ## Limitations
 TODO: Update
-- the C++ implementations can only do **regression** (no classification).
 - There are still small DP problems, such as
   - init\_score is leaking information about what values are present in a dataset
   - the partial (and not complete) use of constant-time floating point operations
+
+## Repeating our evaluaiton
+TODO
+
+## Diagnosis
+TODO
