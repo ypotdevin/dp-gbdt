@@ -43,10 +43,9 @@ Import the `dpgbdt.py` module and use the `DPGBDTRegressor` class for regression
 Include `estimator.h` and use the class `Estimator`. It offers the methods `fit` and `predict`, similar to the API of the python extension.
 
 ## Limitations
-TODO: Update
-- There are still small DP problems, such as
-  - init\_score is leaking information about what values are present in a dataset
-  - the partial (and not complete) use of constant-time floating point operations
+- as mentioned above, currently only regression is supported and not classification
+- side channel hardening is work in progress (the vanilla DPBoost is mostly hardened, but the tree rejection is not)
+- the integration with Intel SGX is work in progress
 
 ## Repeating our evaluaiton
 TODO
