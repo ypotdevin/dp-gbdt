@@ -17,5 +17,5 @@
 
 # generated output
 **/evaluation/*
-hardening/hardened_gbdt/py_estimator.cpp
-hardening/hardened_gbdt/pb-cache/
+hardened_gbdt/py_estimator.cpp
+hardened_gbdt/pb-cache/
