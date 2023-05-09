@@ -42,7 +42,7 @@ Include `estimator.h` and use the class `Estimator`. It offers the methods `fit`
 - side channel hardening is work in progress (the vanilla DPBoost is mostly hardened, but the tree rejection is not)
 - the integration with Intel SGX is work in progress
 
-## Repeating our evaluaiton
+## Repeating our evaluation
 TODO
 
 ## Diagnosis
