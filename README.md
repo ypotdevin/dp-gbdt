@@ -21,7 +21,7 @@ We require `conda` to be present on the target system. Make sure to have the bui
 3. activate that environment: `conda activate dp_gbdt_evaluation`
 4. build the python extension:
    ```bash
-   cd hardening/hardened_gbdt
+   cd hardened_gbdt
    python setup.py build_ext --inplace
    ```
 
