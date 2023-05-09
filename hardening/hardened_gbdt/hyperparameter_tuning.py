@@ -54,23 +54,22 @@ def random_search(
     n_configs: int,
     n_repetitions: int,
     cli_args,
-    config_preprocessor: Optional[Callable[[dict[str, Any]], dict[str, Any]]] = None,
-    n_jobs: Optional[int] = None,
+    config_processor: Optional[Callable[[dict[str, Any]], dict[str, Any]]] = None,
     rng: Optional[np.random.Generator] = None,
 ) -> pd.DataFrame:
     """Like `grid_search`, but sampling a fixed number of configs from a
     random distribution instead of traversing a fixed grid.
     """
     return _validate_configs_chunks(
-        fit_args,
-        _configs_chunks(
+        fit_args=fit_args,
+        configs_chunks=_configs_chunks(
             model_selection.ParameterSampler(parameter_distributions, n_iter=n_configs)
         ),
-        n_repetitions,
-        cli_args,
-        config_preprocessor,
-        n_jobs,
-        rng,
+        n_repetitions=n_repetitions,
+        cli_args=cli_args,
+        config_processor=config_processor,
+        n_jobs=cli_args.num_cores,
+        rng=rng,
     )
 
 
@@ -766,7 +765,13 @@ def metro_leaky_baseline_grid_20230508(args) -> pd.DataFrame:
     def searcher(pb: float):
         _params = params.copy()
         _params["privacy_budget"] = [pb]
-        return random_search(data_reader.metro_fit_arguments(), _params, 10000, 5, args)
+        return random_search(
+            fit_args=data_reader.metro_fit_arguments(),
+            parameter_distributions=_params,
+            n_configs=10000,
+            n_repetitions=5,
+            cli_args=args,
+        )
 
     return run_search_by_eps(args, searcher)
 
