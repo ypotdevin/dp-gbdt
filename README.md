@@ -1,85 +1,54 @@
-# Enclave hardening for private ML
+# Differentially Private Gradient Boosted Decision Trees (DP-GBDTs)
 
-This in an optimized implementation of "DPBoost" (Li et al.).
+In this repository we implement differentially private Gradient Boosted Decision Trees, DP-GBDTs (technically, we only implemented *regression* trees to far, not decision trees).
+Our implementation is largely based on *DPBoost*, an algorithm by Li et al., mentioned in [Privacy-Preserving Gradient Boosting Decision Trees](http://arxiv.org/abs/1911.04209). Additionally to a »vanilla« implementation of DPBoost, our implementations offers a technique we call *tree rejection*. Basically, instead of building the tree ensemble the usual way (i.e. *accepting* each newly generated tree and adding it to the ensemble), we evaluate each newly created tree's contribution to the ensemble. If the contribution is positive, *accept* the tree, otherwise *reject* it.
 
-## Versions
+## Side channel leakage and trusted computing
+To further secure our implementation, we aim to make harden it against side channel attacks (work in progress) and enable Intel SGX (work in progress).
 To keep the code clean there exist 2 different versions:
 
 `hardened_gbdt`: the hardened version of cpp_gbdt. It reflects the minimum changes that are needed to achieve ε-differential privacy. The code does not run inside an SGX enclave.
 
 `hardened_sgx_gbdt`: the final combination of hardened_gbdt and enclave_gbdt.
 
-
 ## Requirements
-### System
-tested on a fresh Ubuntu 20.04.2 VM
-```bash
-sudo apt-get install libspdlog-dev
-sudo apt-get install icdiff
-```
-### Python (3.9)
-```bash
-conda install pandas numpy
-conda install -c conda-forge scikit-learn cython ray-tune tune-sklearn lark-parser
-```
+Our implementation is successfully tested on Ubuntu 20.04 and 22.04 systems (in principle it should also work on other Linuxes, Windows and MacOS).
+We require `conda` to be present on the target system. Make sure to have the build essentials (e.g. via `sudo apt install build-essential`).
 
+## Installation
+1. clone our repository
+2. create a conda environment using our `environment.ymv` file:
+   ```bash
+   cd dp-gbdt
+   conda env create -f hardering/hardened_gbdt/environment.yml
+   ```
+3. activate that environment: `conda activate dp_gbdt_evaluation`
+4. build the python extension:
+   ```bash
+   cd hardening/hardened_gbdt
+   python setup.py build_ext --inplace
+   ```
 
-### Running
-- **Running C++ gbdt**
-```bash
-cd hardening/hardened_gbdt/
-make
-./run --ensemble-privacy-budget 1.0 \
-      --dp-rmse-tree-rejection \
-      --rejection-budget 0.01 \
-      --error-upper-bound 13.8 \
-      --dp-rmse-gamma 1.3 \
-      --nb-trees 1 \
-      --max_depth 5 \
-      --learning-rate 5.01 \
-      --l2-lambda 7.7 \
-      --l2-threshold 0.3 \
-      --dataset abalone \
-      --num-samples 4177 \
-      --log-level debug \
-      --seed 42 \
-      --results-file out.csv
-```
+5. test the python extension via `python example_main.py`. The output should be
+   ```bash
+   Mean - RMSE: 3.248705
+   Depth first growth - RMSE: 17.326674
+   ```
 
-### Command Line Interface (CLI)
-| Group | Parameter                           | Type         | Meaning                                                               |
-| ----- | ----------------------------------- | ------------ | --------------------------------------------------------------------- |
-| 0     | --ensemble-privacy-budget           | float        | The privacy budget used for the ensemble (the boosted trees) creation |
-| 1a    | --dp-rmse-tree-rejection            | boolean flag | Perform DP-rMSE tree rejection (using Cauchy distribution)            |
-| 1a    | --rejection-budget                  | float        | The per-loop DP budget for the tree rejection mechanism               |
-| 1a    | --dp-rmse-gamma                     | float        | Gamma defines the custom distribution to sample from                  |
-| 1a    | --error-upper-bound                 | float        | An upper bound to the prediction errors, needed for sensitivity calculation (larger values will be clipped; large values will increase the sensitivity and require more noise, low values do not reflect the true prediction errors) |
-| 1b    | --no-tree-rejection                 | boolean flag | Perform no rejection (keep every tree)                                |
-| 1c    | --quantile-rejection                | boolean flag | Perform leaky tree rejection via quantiles                            |
-| 1c    | --quantile-rejection-q              | float        | The quantile to use (0 <= q <= 1)                                     |
-| 1d    | --quantile-combination-rejection    | boolean flag | Perform leaky tree rejection via a convex combination of quantiles    |
-| 1d    | --quantile-combination-rejection-q0 | float        | The *first* quantile to use (may be up to 5, depending on how many are provided) |
-| 1d    | --quantile-combination-rejection-w0 | float        | The relative weight of the *first* quantile (the weights will be normalized anyway, i.e. post processing will make them sum up to 1.0) |
-…
-| 1d    | --quantile-combination-rejection-q4 | float        | The *fifth* quantile to use                                            |
-| 1d    | --quantile-combination-rejection-w4 | float        | The relative weight of the *fifth* quantile                            |
-| 1e    | --dp-laplace-rmse-rejection         | boolean flag | Perform approx.-DP-rMSE tree rejection (using Laplace distribution)    |
-| 1e    | --rejection-budget                  | float        | The per-loop DP budget for the tree rejection mechanism                |
-| 1e    | --rejection-failure-prob            | float        | The delta from the definition of approximate DP                        |
-| 1e    | --error-upper-bound                 | float        | An upper bound to the prediction errors, needed for sensitivity calculation (larger values will be clipped; large values will increase the sensitivity and require more noise, low values do not reflect the true prediction errors) |
-| 1f    | --quantile-linear-combination-rejection    | boolean flag | Perform leaky tree rejection via a linear combination of quantiles    |
-| 1f    | --quantile-linear-combination-rejection-q0 | float        | The *first* quantile to use (may be up to 5, depending on how many are provided) |
-| 1f    | --quantile-linear-combination-rejection-c0 | float        | The coefficient of the *first* quantile |
-…
-| 1f    | --quantile-linear-combination-rejection-q4 | float        | The *fifth* quantile to use             |
-| 1f    | --quantile-linear-combination-rejection-c4 | float        | The coefficient of the *fifth* quantile |
-| 2     | --nb-trees                | int          | The (maximal) number of trees an ensemble may contain (is affected by tree rejection) |
-…
+## Usage
+### Option 1: Python extension
+Import the `dpgbdt.py` module and use the `DPGBDTRegressor` class for regression. Its interface matches the sklearn API. That means the main methods are `fit` and `predict`.
 
-Note: Groups with same number but different letter are mutually exclusive.
+### Option 2: C++ interface
+Include `estimator.h` and use the class `Estimator`. It offers the methods `fit` and `predict`, similar to the API of the python extension.
 
 ## Limitations
-- the C++ implementations can only do **regression** (no classification).
-- There are still small DP problems, such as
-  - init\_score is leaking information about what values are present in a dataset
-  - the partial (and not complete) use of constant-time floating point operations
+- as mentioned above, currently only regression is supported and not classification
+- side channel hardening is work in progress (the vanilla DPBoost is mostly hardened, but the tree rejection is not)
+- the integration with Intel SGX is work in progress
+
+## Repeating our evaluaiton
+TODO
+
+## Diagnosis
+TODO
