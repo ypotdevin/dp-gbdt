@@ -24,7 +24,7 @@ We require `conda` to be present on the target system. Make sure to have the bui
    python setup.py build_ext --inplace
    ```
 
-5. test the python extension via `python example_main.py`. The output should be
+5. test the python extension via `python example_main.py`. The output should be something similar to
    ```bash
    Mean - RMSE: 3.248705
    Depth first growth - RMSE: 17.326674
