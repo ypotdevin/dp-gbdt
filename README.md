@@ -13,7 +13,7 @@ To keep the code clean there exist 2 different versions:
 
 ## Requirements
 Our implementation is successfully tested on Ubuntu 20.04 and 22.04 systems (in principle it should also work on other Linuxes, Windows and MacOS).
-We require `conda` and `gcc` to be present on the target system. Make sure to have the build essentials (e.g. via `sudo apt install build-essential`).
+We require `conda` to be present on the target system. Make sure to have the build essentials (e.g. via `sudo apt install build-essential`).
 
 ## Installation
 1. clone our repository
