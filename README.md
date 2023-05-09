@@ -1,7 +1,7 @@
 # Differentially Private Gradient Boosted Decision Trees (DP-GBDTs)
 
 In this repository we implement differentially private Gradient Boosted Decision Trees, DP-GBDTs (technically, we only implemented *regression* trees to far, not decision trees).
-Our implementation is largely based on *DPBoost*, an algorithm by Li et al., mentioned in [Privacy-Preserving Gradient Boosting Decision Trees](http://arxiv.org/abs/1911.04209). Additionally to a »vanilla« implementation of DPBoost, our implementations offers a technique we call *tree rejection*. Basicly, instead of building the tree ensemble the usual way (i.e. *accepting* each newly generated tree and adding it to the ensemble), we evaluate each newly created tree's contribution to the ensmeble. If the contribution is positive, *accept* the tree, otherwise *reject* it.
+Our implementation is largely based on *DPBoost*, an algorithm by Li et al., mentioned in [Privacy-Preserving Gradient Boosting Decision Trees](http://arxiv.org/abs/1911.04209). Additionally to a »vanilla« implementation of DPBoost, our implementations offers a technique we call *tree rejection*. Basically, instead of building the tree ensemble the usual way (i.e. *accepting* each newly generated tree and adding it to the ensemble), we evaluate each newly created tree's contribution to the ensemble. If the contribution is positive, *accept* the tree, otherwise *reject* it.
 
 ## Side channel leakage and trusted computing
 To further secure our implementation, we aim to make harden it against side channel attacks (work in progress) and enable Intel SGX (work in progress).
@@ -27,7 +27,11 @@ We require `conda` to be present on the target system. Make sure to have the bui
    ```
 
 ## Usage
-TODO
+### Option 1: Python extension
+Import the `dpgbdt.py` module and use the `DPGBDTRegressor` class for regression. Its interface matches the sklearn API. That means the main methods are `fit` and `predict`.
+
+### Option 2: C++ interface
+Include `estimator.h` and use the class `Estimator`. It offers the methods `fit` and `predict`, similar to the API of the python extension.
 
 ## Limitations
 TODO: Update
