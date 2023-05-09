@@ -37,6 +37,9 @@ Import the `dpgbdt.py` module and use the `DPGBDTRegressor` class for regression
 ### Option 2: C++ interface
 Include `estimator.h` and use the class `Estimator`. It offers the methods `fit` and `predict`, similar to the API of the python extension.
 
+## Integrating new rejection mechanisms
+TODO
+
 ## Limitations
 - as mentioned above, currently only regression is supported and not classification
 - side channel hardening is work in progress (the vanilla DPBoost is mostly hardened, but the tree rejection is not)
