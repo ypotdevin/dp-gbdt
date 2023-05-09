@@ -15,13 +15,12 @@ We require `conda` to be present on the target system. Make sure to have the bui
 1. clone our repository
 2. create a conda environment using our `environment.ymv` file:
    ```bash
-   cd dp-gbdt
-   conda env create -f hardering/hardened_gbdt/environment.yml
+   cd dp-gbdt/hardened_gbdt
+   conda env create -f environment.yml
    ```
 3. activate that environment: `conda activate dp_gbdt_evaluation`
 4. build the python extension:
    ```bash
-   cd hardened_gbdt
    python setup.py build_ext --inplace
    ```
 
