@@ -5,11 +5,7 @@ Our implementation is largely based on *DPBoost*, an algorithm by Li et al., men
 
 ## Side channel leakage and trusted computing
 To further secure our implementation, we aim to make harden it against side channel attacks (work in progress) and enable Intel SGX (work in progress).
-To keep the code clean there exist 2 different versions:
-
-`hardened_gbdt`: the hardened version of cpp_gbdt. It reflects the minimum changes that are needed to achieve ε-differential privacy. The code does not run inside an SGX enclave.
-
-`hardened_sgx_gbdt`: the final combination of hardened_gbdt and enclave_gbdt.
+The directory `hardened_gbdt` contains the hardened code and the ditectory `hardened_sgx_gbdt` is supposed to contain a hardened and SGX compatible code.
 
 ## Requirements
 Our implementation is successfully tested on Ubuntu 20.04 and 22.04 systems (in principle it should also work on other Linuxes, Windows and MacOS).
