@@ -723,6 +723,32 @@ def metro_baseline_grid_20230426(args) -> pd.DataFrame:
     )
 
 
+def metro_baseline_grid_20230508(args) -> pd.DataFrame:
+    params = dict(
+        learning_rate=stats.uniform(1e-2, 1e-1),
+        max_depth=stats.randint(1, 10),
+        # 4500 is roughly the value of
+        #     | traffic_volume.mean() - traffic_volume.max() |
+        l2_threshold=stats.uniform(2500.0, 3500.0),
+        l2_lambda=stats.uniform(5.0, 40.0),
+        n_trees_to_accept=stats.randint(10, 100),
+        training_variant=["vanilla"],
+    )
+
+    def searcher(pb: float):
+        _params = params.copy()
+        _params["privacy_budget"] = [pb]
+        return random_search(
+            fit_args=data_reader.metro_fit_arguments(),
+            parameter_distributions=_params,
+            n_configs=20000,
+            n_repetitions=5,
+            cli_args=args,
+        )
+
+    return run_search_by_eps(args, searcher)
+
+
 def metro_leaky_baseline_grid_20230426(args) -> pd.DataFrame:
     params = dict(
         learning_rate=[0.01, 0.1],
@@ -856,6 +882,7 @@ def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
         abalone_privacy_buckets_20221107=abalone_privacy_buckets_20221107,
         metro_baseline_grid_20230425=metro_baseline_grid_20230425,
         metro_baseline_grid_20230426=metro_baseline_grid_20230426,
+        metro_baseline_grid_20230508=metro_baseline_grid_20230508,
         metro_leaky_baseline_grid_20230426=metro_leaky_baseline_grid_20230426,
         metro_leaky_baseline_grid_20230508=metro_leaky_baseline_grid_20230508,
         metro_dp_rmse_grid_20230426=metro_dp_rmse_grid_20230426,
