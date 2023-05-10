@@ -841,21 +841,15 @@ def metro_bunsteinke_grid_20230426(args) -> pd.DataFrame:
         ensemble_rejector_budget_split=[0.2, 0.5, 0.8],
         dp_argmax_privacy_budget=[0.001, 0.01],
         dp_argmax_stopping_prob=[0.01, 0.1],
-        ts_beta=[],  # TODO
-        ts_upper_bound=[],  # TODO
+        ts_beta=[113 * 1e-6],
+        ts_upper_bound=np.linspace(1000.0, 4500.0, 7),
         ts_relaxation=[1e-6],
     )
-    # coupling of ts_upper_bound to l2_threshold
-    cp = lambda config: {
-        "ts_upper_bound": config["l2_threshold"],
-        **config,
-    }  # good idea?
     return meta_template(
         args,
         params,
         fit_args=data_reader.metro_fit_arguments(),
         n_repetitions=5,
-        config_processor=cp,
     )
 
 
