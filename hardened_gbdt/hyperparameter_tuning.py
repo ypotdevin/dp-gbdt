@@ -998,10 +998,14 @@ def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
         metro_baseline_grid_20230425=metro_baseline_grid_20230425,
         metro_baseline_grid_20230426=metro_baseline_grid_20230426,
         metro_baseline_grid_20230508=metro_baseline_grid_20230508,
+        metro_baseline_grid_20230511=metro_baseline_grid_20230511,
         metro_leaky_baseline_grid_20230426=metro_leaky_baseline_grid_20230426,
         metro_leaky_baseline_grid_20230508=metro_leaky_baseline_grid_20230508,
+        metro_leaky_baseline_grid_20230511=metro_leaky_baseline_grid_20230511,
         metro_dp_rmse_grid_20230426=metro_dp_rmse_grid_20230426,
+        metro_dp_rmse_grid_20230511=metro_dp_rmse_grid_20230511,
         metro_bunsteinke_grid_20230426=metro_bunsteinke_grid_20230426,
+        metro_bunsteinke_grid_20230511=metro_bunsteinke_grid_20230511,
     )[which]
 
 
