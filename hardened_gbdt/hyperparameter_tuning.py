@@ -749,6 +749,32 @@ def metro_baseline_grid_20230508(args) -> pd.DataFrame:
     return run_search_by_eps(args, searcher)
 
 
+def metro_baseline_grid_20230511(args) -> pd.DataFrame:
+    params = dict(
+        learning_rate=stats.uniform(1e-2, 1e-1),
+        max_depth=stats.randint(1, 10),
+        # 4500 is roughly the value of
+        #     | traffic_volume.mean() - traffic_volume.max() |
+        l2_threshold=stats.uniform(2500.0, 3500.0),
+        l2_lambda=stats.uniform(5.0, 40.0),
+        n_trees_to_accept=stats.randint(10, 100),
+        training_variant=["vanilla"],
+    )
+
+    def searcher(pb: float):
+        _params = params.copy()
+        _params["privacy_budget"] = [pb]
+        return random_search(
+            fit_args=data_reader.metro_fit_arguments(),
+            parameter_distributions=_params,
+            n_configs=10000,
+            n_repetitions=30,
+            cli_args=args,
+        )
+
+    return run_search_by_eps(args, searcher)
+
+
 def metro_leaky_baseline_grid_20230426(args) -> pd.DataFrame:
     params = dict(
         learning_rate=[0.01, 0.1],
@@ -802,6 +828,36 @@ def metro_leaky_baseline_grid_20230508(args) -> pd.DataFrame:
     return run_search_by_eps(args, searcher)
 
 
+def metro_leaky_baseline_grid_20230511(args) -> pd.DataFrame:
+    params = dict(
+        learning_rate=stats.uniform(1e-2, 1e-1),
+        max_depth=stats.randint(1, 10),
+        # 4500 is roughly the value of
+        #     | traffic_volume.mean() - traffic_volume.max() |
+        l2_threshold=stats.uniform(2500.0, 3500.0),
+        l2_lambda=stats.uniform(5.0, 40.0),
+        n_trees_to_accept=stats.randint(10, 100),
+        training_variant=["dp_argmax_scoring"],
+        tree_scorer=["leaky_rmse"],
+        ensemble_rejector_budget_split=[1.0],
+        dp_argmax_privacy_budget=[1e-3],
+        dp_argmax_stopping_prob=[1e-3],
+    )
+
+    def searcher(pb: float):
+        _params = params.copy()
+        _params["privacy_budget"] = [pb]
+        return random_search(
+            fit_args=data_reader.metro_fit_arguments(),
+            parameter_distributions=_params,
+            n_configs=10000,
+            n_repetitions=30,
+            cli_args=args,
+        )
+
+    return run_search_by_eps(args, searcher)
+
+
 def metro_dp_rmse_grid_20230426(args) -> pd.DataFrame:
     params = dict(
         learning_rate=[0.1],
@@ -825,6 +881,38 @@ def metro_dp_rmse_grid_20230426(args) -> pd.DataFrame:
         fit_args=data_reader.metro_fit_arguments(),
         n_repetitions=5,
     )
+
+
+def metro_dp_rmse_grid_20230511(args) -> pd.DataFrame:
+    params = dict(
+        learning_rate=stats.uniform(1e-2, 1e-1),
+        max_depth=stats.randint(1, 10),
+        # 4500 is roughly the value of
+        #     | traffic_volume.mean() - traffic_volume.max() |
+        l2_threshold=stats.uniform(1e3, 4.5 * 1e-3),
+        l2_lambda=stats.uniform(5.0, 40.0),
+        n_trees_to_accept=stats.randint(10, 100),
+        training_variant=["dp_argmax_scoring"],
+        tree_scorer=["leaky_rmse"],
+        ensemble_rejector_budget_split=stats.uniform(1e-3, 1 - 1e-3),
+        dp_argmax_privacy_budget=[1e-3],
+        dp_argmax_stopping_prob=[1e-3],
+        ts_upper_bound=stats.uniform(1e3, 4.5 * 1e-3),
+        ts_gamma=[2],
+    )
+
+    def searcher(pb: float):
+        _params = params.copy()
+        _params["privacy_budget"] = [pb]
+        return random_search(
+            fit_args=data_reader.metro_fit_arguments(),
+            parameter_distributions=_params,
+            n_configs=10000,
+            n_repetitions=30,
+            cli_args=args,
+        )
+
+    return run_search_by_eps(args, searcher)
 
 
 def metro_bunsteinke_grid_20230426(args) -> pd.DataFrame:
@@ -851,6 +939,39 @@ def metro_bunsteinke_grid_20230426(args) -> pd.DataFrame:
         fit_args=data_reader.metro_fit_arguments(),
         n_repetitions=5,
     )
+
+
+def metro_bunsteinke_grid_20230511(args) -> pd.DataFrame:
+    params = dict(
+        learning_rate=stats.uniform(1e-2, 1e-1),
+        max_depth=stats.randint(1, 10),
+        # 4500 is roughly the value of
+        #     | traffic_volume.mean() - traffic_volume.max() |
+        l2_threshold=stats.uniform(1e3, 4.5 * 1e-3),
+        l2_lambda=stats.uniform(5.0, 40.0),
+        n_trees_to_accept=stats.randint(10, 100),
+        training_variant=["dp_argmax_scoring"],
+        tree_scorer=["bun_steinke"],
+        ensemble_rejector_budget_split=stats.uniform(1e-3, 1 - 1e-3),
+        dp_argmax_privacy_budget=[1e-3],
+        dp_argmax_stopping_prob=[1e-3],
+        ts_beta=[113 * 1e-6],
+        ts_upper_bound=stats.uniform(1e3, 4.5 * 1e-3),
+        ts_relaxation=[1e-6],
+    )
+
+    def searcher(pb: float):
+        _params = params.copy()
+        _params["privacy_budget"] = [pb]
+        return random_search(
+            fit_args=data_reader.metro_fit_arguments(),
+            parameter_distributions=_params,
+            n_configs=10000,
+            n_repetitions=30,
+            cli_args=args,
+        )
+
+    return run_search_by_eps(args, searcher)
 
 
 def select_experiment(which: str) -> Callable[..., pd.DataFrame]:
