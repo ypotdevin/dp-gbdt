@@ -14,7 +14,6 @@ cdef extern from "estimator.h" namespace "dpgbdt":
             double privacy_budget,
             double ensemble_rejector_budget_split,
             string training_variant,
-            shared_ptr[TreeRejector] tree_rejector,
             shared_ptr[TreeScorer] tree_scorer,
             double dp_argmax_privacy_budget,
             double dp_argmax_stopping_prob,
@@ -96,27 +95,6 @@ cdef extern from "gbdt/tree_rejection.h" namespace "tree_rejection":
             int n_trees_to_accept,
             vector[double] coefficients,
             mt19937 &rng
-        ) except +
-
-    cdef cppclass TreeRejector:
-        pass
-
-    cdef cppclass ConstantRejector(TreeRejector):
-        ConstantRejector(bool decision) except +
-
-    cdef cppclass DPrMSERejector(TreeRejector):
-        DPrMSERejector(
-            int n_trees_to_accept, double U, double gamma, mt19937 rng
-        ) except +
-
-    cdef cppclass QuantileLinearCombinationRejector(TreeRejector):
-        QuantileLinearCombinationRejector(
-            vector[double] qs, vector[double] coefficients
-        ) except +
-
-    cdef cppclass ApproxDPrMSERejector(TreeRejector):
-        ApproxDPrMSERejector(
-            int n_trees_to_accept, double delta, double U, mt19937 rng
         ) except +
 
 # see https://stackoverflow.com/a/40992452

@@ -21,14 +21,6 @@ if __name__ == "__main__":
     print("Mean - RMSE: {0:f}".format(np.sqrt(np.mean(np.square(y_pred - y_test)))))
 
     rng = dpgbdt.make_rng(42)
-    tr = dpgbdt.make_tree_rejector(
-        which="dp_rmse",
-        n_trees_to_accept=1,
-        U=100.0,
-        gamma=2.0,
-        rng=rng,
-    )
-
     ts = dpgbdt.make_tree_scorer(
         which="dp_rmse",
         upper_bound=100.0,
@@ -38,7 +30,6 @@ if __name__ == "__main__":
 
     # Train the model using a depth-first approach
     estimator = dpgbdt.DPGBDTRegressor(
-        tree_rejector=tr,
         tree_scorer=ts,
     )
     estimator.fit(X_train, y_train, **fit_args)

@@ -373,9 +373,6 @@ def baseline_template(
         parameter_grid["training_variant"] = ["vanilla"]
         parameter_grid["privacy_budget"] = [ensemble_budget]
         parameter_grid["ensemble_rejector_budget_split"] = [1.0]
-        parameter_grid["tree_rejector"] = [
-            dpgbdt.make_tree_rejector("constant", decision=False)
-        ]
         df = grid_search(
             fit_args=data_provider(),
             parameter_grid=parameter_grid,
