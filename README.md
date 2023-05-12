@@ -5,7 +5,7 @@ Our implementation is largely based on *DPBoost*, an algorithm by Li et al., men
 
 ## Side channel leakage and trusted computing
 To further secure our implementation, we aim to make harden it against side channel attacks (work in progress) and enable Intel SGX (work in progress).
-The directory `hardened_gbdt` contains the hardened code and the ditectory `hardened_sgx_gbdt` is supposed to contain a hardened and SGX compatible code.
+The directory [`hardened_gbdt`](hardened_gbdt) contains the hardened code and the ditectory [`hardened_sgx_gbdt`](hardened_sgx_gbdt) is supposed to contain a hardened and SGX compatible code.
 
 ## Requirements
 Our implementation is successfully tested on Ubuntu 20.04 and 22.04 systems (in principle it should also work on other Linuxes, Windows and MacOS).
@@ -52,4 +52,4 @@ To add a novel way of evaluating a newly created tree's contribution to the ense
 ## Repeating our evaluation
 We use the module [`hyperparameter_tuning.py`](hardened_gbdt/hyperparameter_tuning.py) to evaluate DP-GBDT on several datasets (located at [`datasets/real`](datasets/real)). Our approach is similar to sklearn's [GridSearchCV](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV) and [RandomizedSearchCV](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.RandomizedSearchCV.html#sklearn.model_selection.RandomizedSearchCV), but we implemented our own version, to have control over arrangement of the random seeds.
 
-All the evaluation experiments we performed are listed in that file. For an overview, have a look at the function `select_experiment`, where they are bundled. We've also implemented a command line interface. See `python hyperparameter_tuning -h` for how to use. Just make sure to have a directory set up at `~/shame/dp-gbdt-evaluation`, or provide a different path via the `--local-dir` argument.
+All the evaluation experiments we performed are listed in that file. For an overview, have a look at the function `select_experiment`, where they are bundled. We've also implemented a command line interface. See `python hyperparameter_tuning -h` for how to use. Just make sure to have a directory set up at `~/share/dp-gbdt-evaluation`, or provide a different path via the `--local-dir` argument.
