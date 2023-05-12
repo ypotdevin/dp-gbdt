@@ -38,7 +38,11 @@ Import the `dpgbdt.py` module and use the `DPGBDTRegressor` class for regression
 Include `estimator.h` and use the class `Estimator`. It offers the methods `fit` and `predict`, similar to the API of the python extension.
 
 ## Integrating new rejection mechanisms
-TODO
+To add a novel way of evaluating a newly created tree's contribution to the ensemble,
+1. extend the class `TreeScorer` located in `include/gbdt/tree_rejection.h` and implement the method `score_tree`
+2. (optional) declare that class in `cpp_estimator.pxd`
+3. (optional) wrap that class in cython code by extending the `PyTreeScorer` class in `py_estimator.pyx`
+4. (optional) extend the convenience functions `make_tree_scorer` and `_make_tree_scorer_from_self` in `dpgbdt.py` to include your new scorer
 
 ## Limitations
 - as mentioned above, currently only regression is supported and not classification
