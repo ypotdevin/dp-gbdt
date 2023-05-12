@@ -32,17 +32,17 @@ We require `conda` to be present on the target system. Make sure to have the bui
 
 ## Usage
 ### Option 1: Python extension
-Import the `dpgbdt.py` module and use the `DPGBDTRegressor` class for regression. Its interface matches the sklearn API. That means the main methods are `fit` and `predict`.
+Import the [`dpgbdt.py`](dpgbdt.py) module and use the `DPGBDTRegressor` class for regression. Its interface matches the sklearn API. That means the main methods are `fit` and `predict`.
 
 ### Option 2: C++ interface
 Include `estimator.h` and use the class `Estimator`. It offers the methods `fit` and `predict`, similar to the API of the python extension.
 
 ## Integrating new rejection mechanisms
 To add a novel way of evaluating a newly created tree's contribution to the ensemble,
-1. extend the class `TreeScorer` located in `include/gbdt/tree_rejection.h` and implement the method `score_tree`
-2. (optional) declare that class in `cpp_estimator.pxd`
-3. (optional) wrap that class in cython code by extending the `PyTreeScorer` class in `py_estimator.pyx`
-4. (optional) extend the convenience functions `make_tree_scorer` and `_make_tree_scorer_from_self` in `dpgbdt.py` to include your new scorer
+1. extend the class `TreeScorer` located in [`include/gbdt/tree_rejection.h`](include/gbdt/tree_rejection.h) and implement the method `score_tree`
+2. (optional) declare that class in [`cpp_estimator.pxd`](cpp_estimator.pxd)
+3. (optional) wrap that class in cython code by extending the `PyTreeScorer` class in [`py_estimator.pyx`](py_estimator.pyx)
+4. (optional) extend the convenience functions `make_tree_scorer` and `_make_tree_scorer_from_self` in [`dpgbdt.py`](dpgbdt.py) to include your new scorer
 
 ## Limitations
 - as mentioned above, currently only regression is supported and not classification
@@ -50,7 +50,6 @@ To add a novel way of evaluating a newly created tree's contribution to the ense
 - the integration with Intel SGX is work in progress
 
 ## Repeating our evaluation
-TODO
+We use the module [`hyperparameter_tuning.py`](hyperparameter_tuning.py) to evaluate DP-GBDT on several datasets (located at [`datasets/real`](datasets/real)). Our approach is similar to sklearn's [GridSearchCV](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV) and [RandomizedSearchCV](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.RandomizedSearchCV.html#sklearn.model_selection.RandomizedSearchCV), but we implemented our own version, to have control over arrangement of the random seeds.
 
-## Diagnosis
-TODO
+All the evaluation experiments we performed are listed in that file. For an overview, have a look at the function `select_experiment`, where they are bundled. We've also implemented a command line interface. See `python hyperparameter_tuning -h` for how to use. Just make sure to have a directory set up at `~/shame/dp-gbdt-evaluation`, or provide a different path via the `--local-dir` argument.
