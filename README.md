@@ -13,7 +13,7 @@ We require `conda` to be present on the target system. Make sure to have the bui
 
 ## Installation
 1. clone our repository
-2. create a conda environment using our `environment.ymv` file:
+2. create a conda environment using our [`environment.yml`](hardened_gbdt/environment.yml) file:
    ```bash
    cd dp-gbdt/hardened_gbdt
    conda env create -f environment.yml
