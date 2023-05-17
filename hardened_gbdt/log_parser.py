@@ -1,3 +1,5 @@
+"""Provide functionality to extract typed data from log files.
+"""
 from lark import Lark, Transformer
 
 

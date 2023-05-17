@@ -270,17 +270,6 @@ def parse_args():
     return args
 
 
-def abalone_parameter_distribution():
-    parameter_distr = dict(
-        learning_rate=(0.0, 10.0),
-        n_trees_to_accept=(1, 50),
-        max_depth=(1, 10),
-        l2_threshold=(0.01, 100.0),
-        l2_lambda=(0.01, 100.0),
-    )
-    return parameter_distr
-
-
 def abalone_parameter_grid():
     parameter_grid = dict(
         learning_rate=[0.1],
