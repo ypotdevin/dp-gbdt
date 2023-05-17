@@ -1,3 +1,8 @@
+"""This module provides functions to determine the relationship between
+the hyperparameters beta (smoothing), delta (relaxation), the number of
+trees to accept and the total consumed privacy budget, when using the
+privacy bucket tree rejection mechanism.
+"""
 import argparse
 import logging
 from itertools import chain
@@ -36,7 +41,7 @@ def privacy_bucket_score_budget(
 
     Returns:
         np.ndarray: an array of epsilons corresponding to the relaxations.
-        That means for a given `alpha`, `beta` `n_trees_to_accept` and
+        That means for a given `alpha`, `beta`, `n_trees_to_accept` and
         `relaxations[i]`, `epsilons[i]` is the privacy budget which will
         be spent in total, when scoring and accepting `n_trees_to_accept`
         trees (via the `score_tree(...)` method).
