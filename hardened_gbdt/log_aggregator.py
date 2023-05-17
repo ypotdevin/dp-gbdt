@@ -1,5 +1,6 @@
 # ypo@informatik.uni-kiel.de
-
+"""
+"""
 import argparse
 import itertools
 import pathlib
@@ -69,12 +70,15 @@ def _parse_diag_lines3(filter_str: str, lines: Lines) -> pd.DataFrame:
 
 
 def parse_rmses(lines: Lines) -> pd.DataFrame:
+    """parse the rmse values from a given log"""
     return _parse_diag_lines3(
         "### diagnosis value 01 ### - rmse of absolute differences ", lines
     )
 
 
 def parse_rmse_approximations(lines: Lines) -> pd.DataFrame:
+    """parse the approximated (by a tree scoring mechanism chosen at run
+    time) rmse from a given log"""
     return _parse_diag_lines3("### diagnosis value 02 ### - current ", lines)
 
 
@@ -208,62 +212,6 @@ def parse_acceptance_matching(lines: Lines) -> pd.DataFrame:
         ]
     ]
     return df
-
-
-def quantile_log_to_df(lines: Lines) -> pd.DataFrame:
-    df = pd.concat(
-        [
-            parse_rmses(lines),
-            parse_rmse_approximations(lines),
-            parse_quantiles(lines),
-            # parse_tree_idx(lines),
-            parse_tree_acceptance(lines),
-        ],
-        axis=1,
-    )
-    return df
-
-
-def approx_dp_rmse_log_to_df(lines: Lines) -> pd.DataFrame:
-    df = pd.concat(
-        [
-            parse_rmses(lines),
-            parse_rmse_approximations(lines),
-            parse_tree_idx(lines),
-            parse_smooth_sens(lines),
-            parse_maximizer_local_sens(lines),
-            parse_maximizer_k(lines),
-        ],
-        axis=1,
-    )
-    return df
-
-
-def add_job_id(filename: str, df: pd.DataFrame) -> pd.DataFrame:
-    "This expects `filename` to be like f'evaluation/{hostname}/{approximation_method}/{dataset}/{prefix}_{execution_number}.log'"
-    p = pathlib.Path(filename)
-    assert p.parts[0] == "evaluation"
-    hostname = p.parts[1]
-    assert "ignis" in hostname
-    filename = p.stem
-    execution_number = filename.split("_")[1]
-    job_id = f"{hostname}_{execution_number}"
-    return df.assign(job_id=job_id)
-
-
-def multiprocess_logs(
-    to_df: Callable[[Lines], pd.DataFrame],
-    log_filenames: Iterable[str],
-    n_jobs: int = 8,
-) -> pd.DataFrame:
-    def job(arg):
-        lines = list(stripped_lines_from_file(arg))
-        df = to_df(lines)
-        df = add_job_id(arg, df)
-        return df
-
-    dfs = Parallel(n_jobs=n_jobs)(delayed(job)(file) for file in log_filenames)
-    return pd.concat(dfs)  # type: ignore
 
 
 def extract_dataframes_from_zip(

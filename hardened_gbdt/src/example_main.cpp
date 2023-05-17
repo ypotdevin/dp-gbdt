@@ -77,11 +77,10 @@ void good_vanilla_setting()
         1.0,
         1.0, // this will be ignored
         "vanilla",
-        std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(5, 100.0, 2.0, rng)), // this will be ignored
-        std::shared_ptr<tree_rejection::DPrMSEScorer>(new tree_rejection::DPrMSEScorer(100.0, 2.0, rng)),        // this will be ignored
-        0.1,                                                                                                     // this will be ignored
-        0.05,                                                                                                    // this will be ignored
-        1.561,                                                                                                   // learning_rate
+        std::shared_ptr<tree_rejection::DPrMSEScorer>(new tree_rejection::DPrMSEScorer(100.0, 2.0, rng)), // this will be ignored
+        0.1,                                                                                              // this will be ignored
+        0.05,                                                                                             // this will be ignored
+        1.561,                                                                                            // learning_rate
         1,
         4,
         2,
@@ -117,7 +116,6 @@ void good_dp_argmax_rmse_scoring_setting()
         10.0, // privacy_budget
         0.90, // ensemble_rejector_budget_split
         "dp_argmax_scoring",
-        std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(5, 100.0, 2.0, rng)), // this will be ignored
         std::shared_ptr<tree_rejection::DPrMSEScorer>(new tree_rejection::DPrMSEScorer(20.0, 2.0, rng)),
         0.001, // dp_argmax_privacy_budget
         0.01,  // dp_argmax_stopping_prob
@@ -157,7 +155,6 @@ void long_dp_argmax_rmse_scoring_setting()
         10.0, // privacy_budget
         0.6,  // ensemble_rejector_budget_split
         "dp_argmax_scoring",
-        std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(5, 100.0, 2.0, rng)), // this will be ignored
         std::shared_ptr<tree_rejection::DPrMSEScorer>(new tree_rejection::DPrMSEScorer(20.0, 2.0, rng)),
         0.01, // dp_argmax_privacy_budget
         0.1,  // dp_argmax_stopping_prob
@@ -197,7 +194,6 @@ void bun_steinke()
         1.0,  // privacy_budget
         0.70, // ensemble_rejector_budget_split
         "dp_argmax_scoring",
-        std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(5, 100.0, 2.0, rng)), // this will be ignored
         std::shared_ptr<tree_rejection::BunSteinkeScorer>(new tree_rejection::BunSteinkeScorer(20.0, 3.14, 1e-6, rng)),
         0.001, // dp_argmax_privacy_budget
         0.05,  // dp_argmax_stopping_prob
@@ -240,7 +236,6 @@ void dp_rmse2()
         1.0,  // privacy_budget
         0.70, // ensemble_rejector_budget_split
         "dp_argmax_scoring",
-        std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(5, 100.0, 2.0, rng)), // this will be ignored
         std::shared_ptr<tree_rejection::DPrMSEScorer2>(new tree_rejection::DPrMSEScorer2(beta_ptr, 20.0, 2.0, rng)),
         0.001, // dp_argmax_privacy_budget
         0.05,  // dp_argmax_stopping_prob
@@ -280,7 +275,6 @@ void privacy_buckets()
         1.0,  // privacy_budget
         0.70, // ensemble_rejector_budget_split
         "dp_argmax_scoring",
-        std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(5, 100.0, 2.0, rng)), // this will be ignored
         std::shared_ptr<tree_rejection::PrivacyBucketScorer>(
             new tree_rejection::PrivacyBucketScorer(
                 20.0,
@@ -329,7 +323,6 @@ void leaky_rmse()
         1.0,   // privacy_budget
         0.999, // ensemble_rejector_budget_split
         "dp_argmax_scoring",
-        std::shared_ptr<tree_rejection::DPrMSERejector>(new tree_rejection::DPrMSERejector(5, 100.0, 2.0, rng)), // this will be ignored
         std::shared_ptr<tree_rejection::LeakyRmseScorer>(new tree_rejection::LeakyRmseScorer()),
         0.001,   // dp_argmax_privacy_budget
         0.001,   // dp_argmax_stopping_prob

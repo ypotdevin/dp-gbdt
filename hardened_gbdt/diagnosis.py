@@ -10,7 +10,7 @@ from typing import Any, Optional, Tuple
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import RepeatedKFold, cross_val_score, train_test_split
+from sklearn.model_selection import cross_val_score, train_test_split
 
 import dpgbdt
 from example_main import abalone_fit_arguments
@@ -221,10 +221,6 @@ def dp_rmse(
     )[0]
 
 
-def dp_quantile():
-    return None
-
-
 def bun_steinke(
     series: pd.Series,
     fit_args: dict[str, Any],
@@ -291,10 +287,6 @@ def log_best_configurations(experiment: str) -> None:
         logfilename_template=f"{p.parent}/{p.stem}" + ".{index}.log",
         zipfilename=str(p.with_suffix(".logs.zip")),
     )
-
-
-def log_best_wine_configurations():
-    pass
 
 
 def dp_rmse_score_variation():
@@ -444,26 +436,6 @@ def dp_rmse_score_variation_bun_steinke():
     )
     df["STD(dp-rmse)/rmse"] = df["STD(dp-rmse)"] / df["rmse"]
     df.to_csv("dp_rmse_score_variation_bun_steinke.csv", index=False)
-
-
-def repeat_crossvalidation_baseline(
-    setting: pd.Series,
-    additional_settings: dict[str, Any],
-    n_repetitions: int,
-    cv,
-    n_jobs=32,
-) -> pd.DataFrame:
-    scores = []
-    _setting = setting.copy()
-    for param, value in additional_settings.items():
-        _setting[param] = value
-    scoress = joblib.Parallel(n_jobs=n_jobs)(
-        joblib.delayed(baseline)(series=_setting, cv=cv) for _ in range(n_repetitions)
-    )
-    scores = [score for (_, scores) in scoress for score in scores]  # type: ignore
-    df = pd.DataFrame(scores, columns=["rmse"])
-    df["rmse"] = df["rmse"] * -1.0
-    return df
 
 
 def diff_logs(log1, log2, ignore_timestamp: bool = True) -> Optional[Tuple[str, str]]:

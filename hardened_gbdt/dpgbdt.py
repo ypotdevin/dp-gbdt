@@ -15,7 +15,6 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         privacy_budget: float = 1.0,
         ensemble_rejector_budget_split: float = 0.9,
         training_variant: str = "dp_argmax_scoring",
-        tree_rejector: Optional[Union[str, pyestimator.PyTreeRejector]] = None,
         tree_scorer: Optional[Union[str, pyestimator.PyTreeScorer]] = None,
         dp_argmax_privacy_budget: float = 0.1,
         dp_argmax_stopping_prob: float = 0.05,
@@ -56,9 +55,8 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
                 number generator used for ensemble creation. If ``None``,
                 pick a random seed for initializing (each time when the
                 method ``fit`` is called). Defaults to None.
-            privacy_budget (float, optional): The privacy budget
-                allocated to the ensemble (not the tree rejector).
-                Defaults to 1.0.
+            privacy_budget (float, optional): The total available
+                privacy budget. Defaults to 1.0.
             ensemble_rejector_budget_split (float, optional): the
                 trade-off parameter weighing the ensemble's privacy
                 budget against the tree rejector budget (ensemble budget
@@ -67,13 +65,6 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
                 `ensemble_rejector_budget_split`)).
                 Defaults to 0.9.
             training_variant (str, optional):
-            tree_rejector (pyestimator.PyTreeRejector | str, optional):
-                The tree rejector used to optimize the ensemble. May
-                also be the name of a rejector, which is then created at
-                runtime. Use the string if your rejector depends on
-                runtime (hyper)parameters. If ``None``, use an always
-                accepting (never rejecting) tree rejector. Defaults to
-                None.
             tree_scorer (pyestimator.PyTreeScorer | str, optional):
                 The tree scoring mechanism to use. May also be the name
                 of a scorer, which is then created at runtime. Use the
@@ -120,7 +111,6 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         self.privacy_budget = privacy_budget
         self.ensemble_rejector_budget_split = ensemble_rejector_budget_split
         self.training_variant = training_variant
-        self.tree_rejector = tree_rejector
         self.tree_scorer = tree_scorer
         self.dp_argmax_privacy_budget = dp_argmax_privacy_budget
         self.dp_argmax_stopping_prob = dp_argmax_stopping_prob
@@ -190,13 +180,6 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
         X, y = _ensure_float(X, y)
 
         self.rng_ = make_rng(self.seed)
-        # handle the tree_rejector attribute after all other attributes
-        # (as `_make_tree_rejector_from_self` might depend on previous
-        # attributes)
-        if self.tree_rejector is None:
-            self.tree_rejector = make_tree_rejector("constant", decision=False)
-        elif type(self.tree_rejector) is str:
-            self.tree_rejector = _make_tree_rejector_from_self(self)
         if self.tree_scorer is None:
             self.tree_scorer = make_tree_scorer(
                 "dp_rmse",
@@ -222,7 +205,6 @@ class DPGBDTRegressor(RegressorMixin, BaseEstimator):
             privacy_budget=self.privacy_budget,
             ensemble_rejector_budget_split=self.ensemble_rejector_budget_split,
             training_variant=self.training_variant,
-            tree_rejector=self.tree_rejector,
             dp_argmax_privacy_budget=self.dp_argmax_privacy_budget,
             dp_argmax_stopping_prob=self.dp_argmax_stopping_prob,
             tree_scorer=self.tree_scorer,
@@ -389,44 +371,3 @@ def _make_tree_scorer_from_self(self) -> pyestimator.PyTreeScorer:
         )
     else:
         raise NotImplementedError(f"Tree scorer {self.tree_scorer} not implemented!")
-
-
-def make_tree_rejector(which: str, **kwargs) -> pyestimator.PyTreeRejector:
-    selector = dict(
-        constant=pyestimator.PyConstantRejector,
-        quantile_linear_combination=pyestimator.PyQuantileLinearCombinationRejector,
-        dp_rmse=pyestimator.PyDPrMSERejector,
-        approximate_dp_rmse=pyestimator.PyApproxDPrMSERejector,
-    )
-    return selector[which](**kwargs)
-
-
-def _make_tree_rejector_from_self(self) -> pyestimator.PyTreeRejector:
-    if self.tree_rejector == "constant":
-        return make_tree_rejector("constant", decision=self.decision)
-    elif self.tree_rejector == "quantile_linear_combination":
-        return make_tree_rejector(
-            "quantile_linear_combination",
-            qs=self.tr_qs,
-            coefficients=self.tr_coefficients,
-        )
-    elif self.tree_rejector == "dp_rmse":
-        return make_tree_rejector(
-            "dp_rmse",
-            n_trees_to_accept=self.n_trees_to_accept,
-            U=self.tr_U,
-            gamma=self.tr_gamma,
-            rng=self.rng_,
-        )
-    elif self.tree_rejector == "approximate_dp_rmse":
-        return make_tree_rejector(
-            "dp_rmse",
-            n_trees_to_accept=self.n_trees_to_accept,
-            delta=self.tr_delta,
-            U=self.tr_U,
-            rng=self.rng_,
-        )
-    else:
-        raise NotImplementedError(
-            f"Tree rejector {self.tree_rejector} not implemented!"
-        )

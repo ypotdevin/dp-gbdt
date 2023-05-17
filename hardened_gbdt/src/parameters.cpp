@@ -10,8 +10,10 @@ std::ostream &operator<<(std::ostream &os, const ModelParams &mp)
               << "    n_trees_to_accept: " << mp.n_trees_to_accept << std::endl
               << "    learning_rate: " << mp.learning_rate << std::endl
               << "    privacy_budget: " << mp.privacy_budget << std::endl
+              << "    training_variant: " << mp.training_variant << std::endl
               << "    ensemble_rejector_budget_split: " << mp.ensemble_rejector_budget_split << std::endl
-              << "    tree_rejector: " << *mp.tree_rejector << std::endl
+              << "    dp_argmax_privacy_budget: " << mp.dp_argmax_privacy_budget << std::endl
+              << "    dp_argmax_stopping_prob: " << mp.stopping_prob << std::endl
               << "    max_depth: " << mp.max_depth << std::endl
               << "    l2_lambda: " << mp.l2_lambda << std::endl
               << "    l2_threshold: " << mp.l2_threshold << std::endl

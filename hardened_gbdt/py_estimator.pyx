@@ -8,9 +8,6 @@ from cpp_estimator cimport (Estimator,
                             TreeScorer, DPrMSEScorer, DPrMSEScorer2,
                             DPQuantileScorer, BunSteinkeScorer,
                             PrivacyBucketScorer, LeakyRmseScorer,
-                            TreeRejector, ConstantRejector,
-                            QuantileLinearCombinationRejector,
-                            DPrMSERejector, ApproxDPrMSERejector,
                             mt19937,
                             Beta, ConstantBeta)
 from libcpp cimport bool
@@ -250,95 +247,11 @@ cdef class PyPrivacyBucketScorer(PyTreeScorer):
                f"coefficients={self.coefficients},"\
                f"rng={self.rng})"
 
-cdef class PyTreeRejector:
-    cdef shared_ptr[TreeRejector] sptr_tr
-
-
-cdef class PyConstantRejector(PyTreeRejector):
-    cdef bool decision
-
-    def __cinit__(self, bool decision):
-        self.decision = decision
-        self.sptr_tr = shared_ptr[TreeRejector](new ConstantRejector(decision))
-
-    def __reduce__(self):
-        return (self.__class__, (self.decision,))
-
-    def __repr__(self):
-        return f"PyConstantRejector(decision={self.decision})"
-
-cdef class PyQuantileLinearCombinationRejector(PyTreeRejector):
-    cdef list qs, coefficients
-
-    def __cinit__(self, list qs, list coefficients):
-        self.qs = qs
-        self.coefficients = coefficients
-        cdef vector[double] qs_vec = qs
-        cdef vector[double] coefficients_vec = coefficients
-        self.sptr_tr = shared_ptr[TreeRejector](
-            new QuantileLinearCombinationRejector(qs_vec, coefficients_vec)
-        )
-
-    def __reduce__(self):
-        return (self.__class__, (self.qs, self.coefficients))
-
-    def __repr__(self):
-        return f"PyQuantileLinearCombinationRejector(qs={self.qs},"\
-               f"coefficients={self.coefficients})"
-
-cdef class PyDPrMSERejector(PyTreeRejector):
-    cdef int n_trees_to_accept
-    cdef double U, gamma
-    cdef PyMT19937 rng
-
-    def __cinit__(self, int n_trees_to_accept, double U, double gamma, PyMT19937 rng):
-        self.n_trees_to_accept = n_trees_to_accept
-        self.U = U
-        self.gamma = gamma
-        self.rng = rng
-        self.sptr_tr = shared_ptr[TreeRejector](
-            new DPrMSERejector(n_trees_to_accept, U, gamma, rng.c_rng)
-        )
-
-    def __reduce__(self):
-        return (self.__class__, (self.n_trees_to_accept, self.U, self.gamma, self.rng))
-
-    def __repr__(self):
-        return f"PyDPrMSERejector(n_trees_to_accept={self.n_trees_to_accept},"\
-               f"U={self.U},"\
-               f"gamma={self.gamma},"\
-               f"rng={self.rng})"
-
-cdef class PyApproxDPrMSERejector(PyTreeRejector):
-    cdef int n_trees_to_accept
-    cdef double delta, U
-    cdef PyMT19937 rng
-
-    def __cinit__(self, int n_trees_to_accept, double delta, double U, PyMT19937 rng):
-        self.n_trees_to_accept = n_trees_to_accept
-        self.delta = delta
-        self.U = U
-        self.rng = rng
-        self.sptr_tr = shared_ptr[TreeRejector](
-            new ApproxDPrMSERejector(n_trees_to_accept, delta, U, rng.c_rng)
-        )
-
-    def __reduce__(self):
-        return (self.__class__, (self.n_trees_to_accept, self.delta, self.U, self.rng))
-
-    def __repr__(self):
-        return f"PyApproxDPrMSERejector(n_trees_to_accept={self.n_trees_to_accept},"\
-               f"delta={self.delta},"\
-               f"U={self.U},"\
-               f"gamma={self.gamma},"\
-               f"rng={self.rng})"
-
 cdef class PyEstimator:
     cdef Estimator* estimator
     cdef PyMT19937 rng
     cdef double privacy_budget, ensemble_rejector_budget_split, dp_argmax_privacy_budget, dp_argmax_stopping_prob, learning_rate, l2_threshold, l2_lambda
     cdef string training_variant, verbosity
-    cdef PyTreeRejector tree_rejector
     cdef PyTreeScorer tree_scorer
     cdef int n_trees_to_accept, max_depth, min_samples_split
     cdef bool balance_partition, gradient_filtering, leaf_clipping, use_decay
@@ -349,7 +262,6 @@ cdef class PyEstimator:
         double privacy_budget,
         double ensemble_rejector_budget_split,
         str training_variant,
-        PyTreeRejector tree_rejector,
         double dp_argmax_privacy_budget,
         double dp_argmax_stopping_prob,
         PyTreeScorer tree_scorer,
@@ -369,7 +281,6 @@ cdef class PyEstimator:
         self.privacy_budget = privacy_budget
         self.ensemble_rejector_budget_split = ensemble_rejector_budget_split
         self.training_variant = training_variant.encode("UTF-8") # converting to bytes
-        self.tree_rejector = tree_rejector
         self.tree_scorer = tree_scorer
         self.dp_argmax_privacy_budget = dp_argmax_privacy_budget
         self.dp_argmax_stopping_prob = dp_argmax_stopping_prob
@@ -389,7 +300,6 @@ cdef class PyEstimator:
             privacy_budget=privacy_budget,
             ensemble_rejector_budget_split=ensemble_rejector_budget_split,
             training_variant=self.training_variant,
-            tree_rejector=tree_rejector.sptr_tr,
             tree_scorer=tree_scorer.sptr_ts,
             dp_argmax_privacy_budget=dp_argmax_privacy_budget,
             dp_argmax_stopping_prob=dp_argmax_stopping_prob,
@@ -418,10 +328,9 @@ cdef class PyEstimator:
                 self.privacy_budget,
                 self.ensemble_rejector_budget_split,
                 self.training_variant,
-                self.tree_rejector,
+                self.tree_scorer,
                 self.dp_argmax_privacy_budget,
                 self.dp_argmax_stopping_prob,
-                self.tree_scorer,
                 self.learning_rate,
                 self.n_trees_to_accept,
                 self.max_depth,
@@ -441,10 +350,9 @@ cdef class PyEstimator:
                f"privacy_budget={self.privacy_budget},"\
                f"ensemble_rejector_budget_split={self.ensemble_rejector_budget_split},"\
                f"training_variant={self.training_variant},"\
-               f"tree_rejector={self.tree_rejector},"\
+               f"tree_scorer={self.tree_scorer},"\
                f"dp_argmax_privacy_budget={self.dp_argmax_privacy_budget},"\
                f"dp_argmax_stopping_prob={self.dp_argmax_stopping_prob},"\
-               f"tree_scorer={self.tree_scorer},"\
                f"learning_rate={self.learning_rate},"\
                f"n_trees_to_accept={self.n_trees_to_accept},"\
                f"max_depth={self.max_depth},"\
