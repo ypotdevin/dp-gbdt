@@ -64,7 +64,7 @@ void DPTree::fit()
 }
 
 // Recursively build tree, DFS approach, first instance returns root node
-TreeNode *DPTree::make_tree_dfs(int current_depth, vector<int> live_samples)
+shared_ptr<TreeNode> DPTree::make_tree_dfs(int current_depth, vector<int> live_samples)
 {
     int live_size = std::accumulate(live_samples.begin(), live_samples.end(), 0);
     // sgx_printf("live_size: %i\n", live_size);
@@ -72,26 +72,18 @@ TreeNode *DPTree::make_tree_dfs(int current_depth, vector<int> live_samples)
     bool not_enough_live_samples = (live_size < this->params->min_samples_split);
     bool create_leaf_node = constant_time::logical_or(reached_max_depth,
                                                       not_enough_live_samples);
-
-    // max depth reached or not enough samples -> leaf node
-    TreeNode *leaf = make_leaf_node(current_depth, live_samples);
+    if (create_leaf_node)
+    {
+        return make_leaf_node(current_depth, live_samples);
+    }
 
     // find best split
-    TreeNode *node = find_best_split(X_transposed,
-                                     dataset->gradients,
-                                     live_samples,
-                                     current_depth,
-                                     create_leaf_node);
+    shared_ptr<TreeNode> node = find_best_split(X_transposed,
+                                                dataset->gradients,
+                                                live_samples,
+                                                current_depth,
+                                                create_leaf_node);
 
-    // no split found or should create leaf node anyways
-    if (constant_time::logical_or(node->is_leaf, create_leaf_node))
-    {
-        TreeNode *return_node = (TreeNode *)constant_time::select(
-            create_leaf_node,
-            (unsigned long)leaf,
-            (unsigned long)node);
-        return return_node;
-    }
     bool categorical = std::find(this->params->cat_idx.begin(),
                                  this->params->cat_idx.end(),
                                  node->split_attr) !=
@@ -123,9 +115,9 @@ TreeNode *DPTree::make_tree_dfs(int current_depth, vector<int> live_samples)
     return node;
 }
 
-TreeNode *DPTree::make_leaf_node(int current_depth, vector<int> &live_samples)
+shared_ptr<TreeNode> DPTree::make_leaf_node(int current_depth, vector<int> &live_samples)
 {
-    TreeNode *leaf = new TreeNode(true);
+    shared_ptr<TreeNode> leaf = shared_ptr<TreeNode>(new TreeNode(true));
     leaf->depth = current_depth;
 
     // compute prediction
@@ -140,7 +132,7 @@ TreeNode *DPTree::make_leaf_node(int current_depth, vector<int> &live_samples)
                         (live_size + this->params->l2_lambda));
     leaves.push_back(leaf);
 
-    return (leaf);
+    return leaf;
 }
 
 vector<double> DPTree::predict(VVD &X)
@@ -158,7 +150,7 @@ vector<double> DPTree::predict(VVD &X)
 }
 
 // recursively walk through decision tree
-double DPTree::_predict(vector<double> *row, TreeNode *node)
+double DPTree::_predict(vector<double> *row, shared_ptr<TreeNode> node)
 {
     if (node->is_leaf)
     {
@@ -200,7 +192,7 @@ double DPTree::_predict(vector<double> *row, TreeNode *node)
 }
 
 // find best split of data using the exponential mechanism
-TreeNode *DPTree::find_best_split(
+shared_ptr<TreeNode> DPTree::find_best_split(
     VVD &X_transposed,
     vector<double> &gradients_live,
     vector<int> &live_samples,
@@ -344,7 +336,7 @@ TreeNode *DPTree::find_best_split(
     int index = exponential_mechanism(probabilities);
 
     // start by constructing a leaf node
-    TreeNode *node = make_leaf_node(current_depth, live_samples);
+    shared_ptr<TreeNode> node = make_leaf_node(current_depth, live_samples);
 
     // if an internal node should be created, change attributes accordingly
     bool create_internal_node = constant_time::logical_and(
@@ -544,16 +536,4 @@ void DPTree::
         node->prediction += noise;
         LOG_DEBUG("({1:.3f} -> {2:.8f})", node->prediction, node->prediction + noise);
     }
-}
-
-// free allocated ressources
-void DPTree::delete_tree(TreeNode *node)
-{
-    if (not node->is_leaf)
-    {
-        delete_tree(node->left);
-        delete_tree(node->right);
-    }
-    delete node;
-    return;
 }

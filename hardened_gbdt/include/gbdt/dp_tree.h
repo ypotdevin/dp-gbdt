@@ -30,19 +30,19 @@ private:
     DataSet *dataset;
     VVD X_transposed; // for hardened gbdt, we always work on the full X, so we only transpose it once
     size_t tree_index;
-    std::vector<TreeNode *> leaves;
+    std::vector<std::shared_ptr<TreeNode>> leaves;
     const std::vector<std::vector<double>> grid;
     std::uniform_real_distribution<double> random_unit_doubles;
 
     // methods
-    TreeNode *make_tree_dfs(int current_depth, std::vector<int> live_samples);
-    TreeNode *make_leaf_node(int current_depth, std::vector<int> &live_samples);
-    double _predict(std::vector<double> *row, TreeNode *node);
-    TreeNode *find_best_split(VVD &X_transposed,
-                              std::vector<double> &gradients_live,
-                              std::vector<int> &live_samples,
-                              int current_depth,
-                              bool create_leaf_node);
+    std::shared_ptr<TreeNode> make_tree_dfs(int current_depth, std::vector<int> live_samples);
+    std::shared_ptr<TreeNode> make_leaf_node(int current_depth, std::vector<int> &live_samples);
+    double _predict(std::vector<double> *row, std::shared_ptr<TreeNode> node);
+    std::shared_ptr<TreeNode> find_best_split(VVD &X_transposed,
+                                              std::vector<double> &gradients_live,
+                                              std::vector<int> &live_samples,
+                                              int current_depth,
+                                              bool create_leaf_node);
     void samples_left_right_partition(std::vector<int> &lhs,
                                       std::vector<int> &rhs,
                                       VVD &samples,
@@ -67,15 +67,13 @@ public:
            DataSet *dataset,
            size_t tree_index,
            const std::vector<std::vector<double>> &grid);
-    ~DPTree(){};
 
     // fields
-    TreeNode *root_node;
+    std::shared_ptr<TreeNode> root_node;
 
     // methods
     std::vector<double> predict(VVD &X);
     void fit();
-    void delete_tree(TreeNode *node);
 };
 
 #endif // DIFFPRIVTREE_H

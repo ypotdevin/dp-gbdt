@@ -172,14 +172,6 @@ DPEnsemble::DPEnsemble(ModelParams *parameters) : params(parameters)
     this->rng = rng;
 }
 
-DPEnsemble::~DPEnsemble()
-{
-    for (auto &tree : trees)
-    {
-        tree.delete_tree(tree.root_node);
-    }
-}
-
 /** Methods */
 // Note: The training has side effects on the dataset (affecting especially
 // the gradients and the dataset rows).
@@ -406,7 +398,6 @@ void DPEnsemble::dp_argmax(
             this->trees.push_back(tree);
             return;
         }
-        tree.delete_tree(tree.root_node);
         if (biased_coin(mp.rng))
         {
             LOG_INFO("generalized_dp_argmax: early unsuccessful exit");
