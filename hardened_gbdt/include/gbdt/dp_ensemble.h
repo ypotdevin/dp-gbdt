@@ -15,7 +15,6 @@ class DPEnsemble
 public:
     // constructors
     DPEnsemble(ModelParams *params);
-    ~DPEnsemble();
 
     // fields
     std::vector<DPTree> trees;

@@ -9,7 +9,7 @@ namespace custom_cauchy
 {
     class CustomCauchy
     {
-    private:
+    protected:
         double gamma;
 
     public:
@@ -38,7 +38,6 @@ namespace custom_cauchy
     class NaiveCustomCauchy : public CustomCauchy
     {
     private:
-        double gamma;
         std::vector<double> standard_support;
         std::mt19937 rng;
         std::discrete_distribution<size_t> index_distribution;
@@ -63,7 +62,6 @@ namespace custom_cauchy
     class AdvancedCustomCauchy : public CustomCauchy
     {
     private:
-        double gamma;
         std::mt19937 rng;
         std::gamma_distribution<double> alpha_gamma;
         std::gamma_distribution<double> beta_gamma;

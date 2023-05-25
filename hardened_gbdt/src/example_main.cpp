@@ -174,5 +174,8 @@ void privacy_buckets_rmse()
 
 int main(int argc, char **argv)
 {
+    vanilla();
+    nissim_rmse();
     bun_steinke_rmse();
+    privacy_buckets_rmse();
 }
